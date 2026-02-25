@@ -1,0 +1,37 @@
+{
+    "project": [
+        {
+            "HierarchyName": "Global",
+            "DeviceList": null,
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ]
+        },
+        {
+            "HierarchyName": "Global/ONTARIO",
+            "DeviceList": null,
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ]
+        },
+        {
+            "HierarchyName": "Global/ONTARIO/OSHAWA/HOME/FLOOR 1",
+            "DeviceList": "10.1.1.10",
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": "Titanium-PnP-Jinja-Template.j2", "TemplateTag": "DEMO", "Project": "Day0Templates", "TemplateTarget": ["10.1.1.10"], "DeployTemplate": true }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": "BUILD-MasterBuild.j2", "TemplateTag": "DEMO", "Project": "DayNTemplates", "TemplateTarget": ["10.1.1.10"], "DeployTemplate": true }
+            ]
+        }
+    ]
+}
