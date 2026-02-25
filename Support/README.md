@@ -6,10 +6,14 @@ Support for Project for **TECOPS-2599** Network Orchestration via Catalyst Cente
 
 ```
 main
-  |-Projects
-  |    |-Ansible
-  |    |-CML
-  |    |-Python
-  |    |-Workflows
+  |-Support
+  |   |-Labs
+  |   |   |-Lab 1 - Workflows
+  |   |   |-Lab 2 - Ansible
+  |   |-Resources
+  |   |   |-Ansible
+  |   |   |-CML
+  |   |   |-Python
+  |   |   |-Workflows
 
 ```
