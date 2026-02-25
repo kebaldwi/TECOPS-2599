@@ -13,6 +13,7 @@ main
   |   |-Resources
   |   |   |-Ansible
   |   |   |-CML
+  |   |   |-Docs
   |   |   |-Python
   |   |   |-Workflows
 
