@@ -1,6 +1,6 @@
-# NetworkOrchestration
+# TECOPS-2599
 
-Project for Network Orchestration via Catalyst Center utilizing Cisco Workflows for Development
+Project for **TECOPS-2599** Network Orchestration via Catalyst Center utilizing Cisco Workflows and Ansible for Development
 
 ## Folder structure
 
@@ -9,12 +9,18 @@ main
   |-Projects
   |    |-BGP_EVPN
   |    |   |-Configs
+  |    |   |-Day0Templates
+  |    |   |-DayNTemplates
   |    |   |-Settings
-  |    |   |-Templates
-  |    |-RCDN
+  |    |-TRADITIONAL
   |    |   |-Configs
+  |    |   |-Day0Templates
+  |    |   |-DayNTemplates
   |    |   |-Settings
-  |    |   |-Templates
-  |-Workflows
+  |-Projects
+  |    |-Ansible
+  |    |-CML
+  |    |-Python
+  |    |-Workflows
 
 ```
