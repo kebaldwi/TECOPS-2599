@@ -2,3 +2,7 @@
 *.DS_Store
 */.DS_Store
 */*/.DS_Store
+
+# Ansible Vault password files
+.vault_pass
+**/.vault_pass
