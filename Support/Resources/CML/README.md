@@ -1,14 +1,60 @@
-# CML
+# Cisco Modeling Labs (CML) Resources
 
-CML for Project **TECOPS-2599**
+CML topology files, startup configurations, and utility scripts for project **TECOPS-2599 — Cisco Live 2026**.
+
+---
+
+## Table of Contents
+
+1. [Directory Structure](#directory-structure)
+2. [Available Topologies](#available-topologies)
+3. [Topology Diagram](#topology-diagram)
+4. [CML Version Compatibility](#cml-version-compatibility)
+5. [Importing a Topology](#importing-a-topology)
+6. [Starting the Lab](#starting-the-lab)
+7. [Accessing Node Consoles](#accessing-node-consoles)
+8. [References](#references)
+
+---
+
+## Directory Structure
+
+```
+CML/
+├── Topology/
+│   ├── EN-Sandbox-Lab-v1.yaml          # Enterprise Network Sandbox — Version 1
+│   ├── EVPN_Campus_v1.yaml             # EVPN Campus topology — Version 1
+│   ├── EVPN_Campus_v2.yaml             # EVPN Campus topology — Version 2 (recommended)
+│   └── EVPN_Campus_v2_normalized.yaml  # Version 2 normalized for CML < 2.9.1
+├── Startup Configs/
+│   ├── README.md                       # IP addressing schema (198.18.128.0/18)
+│   ├── spine01_startup.cfg
+│   ├── spine02_startup.cfg
+│   ├── leaf01_startup.cfg
+│   ├── leaf02_startup.cfg
+│   ├── border01_startup.cfg
+│   ├── border02_startup.cfg
+│   ├── core01.cfg
+│   ├── core02.cfg
+│   ├── fw.cfg
+│   ├── dhcp.cfg
+│   └── dmz01_startup.cfg
+└── Scripts/
+    └── cml_normalize.py                # Normalizes topology files for CML < 2.9.1
+```
+
+---
 
 ## Available Topologies
 
 | File | Description |
 |------|-------------|
-| `EN-Sandbox-Lab-v1.yaml` | Enterprise Network Sandbox Lab - Version 1 |
-| `EVPN_Campus_v1.yaml` | EVPN Campus Topology - Version 1 |
-| `EVPN_Campus_v2.yaml` | EVPN Campus Topology - Version 2 |
+| `Topology/EN-Sandbox-Lab-v1.yaml` | Enterprise Network Sandbox — Version 1 |
+| `Topology/EVPN_Campus_v1.yaml` | EVPN Campus topology — Version 1 |
+| `Topology/EVPN_Campus_v2.yaml` | EVPN Campus topology — Version 2 (current) |
+| `Topology/EVPN_Campus_v2_normalized.yaml` | Version 2 pre-normalized for CML < 2.9.1 |
+
+**Recommended:** Use `EVPN_Campus_v2.yaml` on CML 2.9.1 or later. Use `EVPN_Campus_v2_normalized.yaml` on earlier versions.
 
 ---
 
@@ -18,97 +64,87 @@ CML for Project **TECOPS-2599**
 
 ---
 
-## CML Compatibility
+## CML Version Compatibility
 
-> **Important:** The topology files in this repository were generated using **Cisco CML 2.9.1**. Importing them into an earlier version of CML may fail or produce unexpected results due to schema differences between versions.
+> **Important:** The topology files in this repository were generated with **Cisco CML 2.9.1**. Importing them into an earlier version may fail or produce unexpected results due to schema differences between releases.
 
-### Importing into an Earlier CML Version
+### Importing into CML < 2.9.1
 
-If you need to import a topology into a CML version older than 2.9.1, use the included Python script to normalize the file first:
-
-```bash
-python cml_normalize.py <topo.yml>
-```
-
-This will produce a normalized version of the topology compatible with earlier CML releases. Replace `<topo.yml>` with the actual topology filename, for example:
+A pre-normalized file (`EVPN_Campus_v2_normalized.yaml`) is already included. If you need to normalize a different topology file, use the provided Python script:
 
 ```bash
-python cml_normalize.py EVPN_Campus_v2.yaml
+cd Scripts
+python cml_normalize.py ../Topology/EVPN_Campus_v2.yaml
 ```
+
+The script applies the following changes to produce a backward-compatible file:
+
+| Field | Original | Normalized |
+|-------|----------|------------|
+| Lab version | `0.3.0` | `0.0.1` |
+| `mac_address` | `null` | removed |
+| `smart_annotations` | `[]` | removed |
+
+The normalized file is written to the same directory as the input file with a `_normalized` suffix.
 
 ---
 
-## Importing a CML Topology into Cisco CML
-
-Follow these Cisco Validated steps to import a topology file (`.yaml`) into your Cisco CML instance.
+## Importing a Topology
 
 ### Prerequisites
 
 - Access to a running Cisco CML server (version 2.x or later)
-- A valid CML topology file (`.yaml`) from this directory
-- A user account with **Lab Manager** or **Admin** privileges on the CML server
+- A valid CML topology file (`.yaml`) from the `Topology/` directory
+- A user account with **Lab Manager** or **Admin** privileges
 
----
+### Steps
 
-### Step 1 — Log In to Cisco CML
-
-1. Open a web browser and navigate to your CML server URL:
+1. Open a browser and navigate to your CML server:
    ```
    https://<CML-SERVER-IP-OR-HOSTNAME>
    ```
-2. Enter your **username** and **password**.
-3. Click **Login**.
+2. Log in with your credentials and confirm you are on the **Dashboard → Labs** view.
+3. Click **Import** (top-right), then **Choose File** or drag and drop the desired `.yaml` file.
+4. Click **Import** to confirm.
+
+> **Note:** CML validates the topology during import. If node images referenced in the file are not available on your server, you will receive a warning. Ensure all required node definitions and images are installed before starting the lab.
 
 ---
 
-### Step 2 — Navigate to the Dashboard
+## Starting the Lab
 
-1. After logging in, you will land on the **Dashboard**.
-2. Confirm you are in the **Labs** view (top navigation menu).
+1. Click the imported lab name in the Dashboard to open the **Topology Editor**.
+2. Review nodes and links, then click the **Start Lab** button (▶) in the toolbar.
+3. Monitor node status indicators until all required nodes reach **Green (Running)**:
 
----
+   | Colour | Status |
+   |--------|--------|
+   | Gray | Not started |
+   | Yellow | Booting |
+   | Green | Running |
 
-### Step 3 — Import the Topology File
-
-1. Click the **Import** button (top-right area of the Dashboard).
-2. In the dialog that appears, click **Choose File** (or drag and drop).
-3. Browse to the location where you saved the topology `.yaml` file from this repository.
-4. Select the desired file (e.g., `EVPN_Campus_v2.yaml`) and click **Open**.
-5. Click **Import** to confirm.
-
-> **Note:** CML will validate the topology file during import. If any node images referenced in the topology are not available on your CML server, you will receive a warning. Ensure the required node definitions and images are installed before starting the lab.
+4. Proceed with configuration only after all nodes are in the **Running** state.
 
 ---
 
-### Step 4 — Open the Imported Lab
+## Accessing Node Consoles
 
-1. The imported lab will appear in your **Labs** list on the Dashboard.
-2. Click the lab name to open it in the **Topology Editor**.
-
----
-
-### Step 5 — Start the Lab
-
-1. In the Topology Editor, review the topology to confirm all nodes and links are correct.
-2. Click the **Start Lab** button (▶) in the toolbar.
-3. CML will begin booting all nodes. Monitor the node status indicators:
-   - **Gray** — Not started
-   - **Yellow** — Booting
-   - **Green** — Running
-4. Wait until all required nodes reach **Green** (Running) state before proceeding with configuration.
+- Click any node in the Topology Editor to open the **Node Details** panel, then click **Open Console** for an in-browser terminal session.
+- If External Connectors are configured, nodes are also reachable via SSH from the management network (`198.18.128.0/24`). See `Startup Configs/README.md` for the full IP addressing schema.
 
 ---
 
-### Step 6 — Access Node Consoles
-
-1. Click on any node in the topology to open the **Node Details** panel.
-2. Click **Open Console** to launch an in-browser terminal session to the device.
-3. Alternatively, use the **External Connectors** (if configured) to access nodes via SSH.
-
----
-
-### Additional References
+## References
 
 - [Cisco CML Documentation](https://developer.cisco.com/docs/modeling-labs/)
-- [CML REST API](https://developer.cisco.com/docs/modeling-labs/#!rest-api-reference)
-- [Cisco DevNet CML](https://developer.cisco.com/modeling-labs/)
+- [CML REST API Reference](https://developer.cisco.com/docs/modeling-labs/#!rest-api-reference)
+- [Cisco DevNet — Modeling Labs](https://developer.cisco.com/modeling-labs/)
+
+---
+
+## Author
+
+**Igor Manassypov**  
+Systems Engineer, Cisco Systems  
+[imanassy@cisco.com](mailto:imanassy@cisco.com)  
+Copyright © 2024–2026 Cisco Systems, Inc. All rights reserved.
