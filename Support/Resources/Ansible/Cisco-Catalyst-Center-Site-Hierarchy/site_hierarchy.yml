@@ -1,0 +1,368 @@
+# ============================================================================
+# Authors
+# ============================================================================
+# | Name            | Role                              | Contact              |
+# |-----------------|-----------------------------------|----------------------|
+# | Igor Manassypov | Systems Engineer                  | imanassy@cisco.com   |
+# Copyright © 2024-2026 Cisco Systems, Inc. All rights reserved.
+# ============================================================================
+
+---
+- name: Build Catalyst Center Site Hierarchy from devices.json
+  hosts: catalyst_center
+  gather_facts: no
+  vars_files:
+    - vault.yml
+
+  module_defaults:
+    cisco.dnac.site_workflow_manager:
+      dnac_host: "{{ dnac_host }}"
+      dnac_username: "{{ dnac_username }}"
+      dnac_password: "{{ dnac_password }}"
+      dnac_verify: "{{ dnac_verify }}"
+      dnac_port: "{{ dnac_port }}"
+      dnac_version: "{{ dnac_version }}"
+      dnac_debug: "{{ dnac_debug }}"
+      dnac_log_level: "{{ dnac_log_level }}"
+      dnac_log: "{{ dnac_log }}"
+
+  tasks:
+
+    # ── Step 1: Load input data ───────────────────────────────────────────────
+    # Resolve path: absolute paths used as-is; relative paths resolved from
+    # the playbook directory so callers can pass paths relative to the repo root.
+    - name: Resolve devices_json_path to absolute
+      # If the caller supplied a relative path (e.g. ../../../../Projects/...),
+      # prepend playbook_dir so slurp gets a fully-qualified filesystem path.
+      # Absolute paths (starting with /) pass through unchanged.
+      set_fact:
+        _resolved_json_path: >-
+          {{ devices_json_path if devices_json_path.startswith('/')
+             else (playbook_dir + '/' + devices_json_path) }}
+
+    - name: Load site input JSON
+      # slurp reads the file as base64-encoded content into _json_raw.content.
+      # Using slurp instead of the file lookup plugin ensures the path is
+      # evaluated on the target (localhost) rather than the Ansible controller's
+      # search-path, which avoids lookup resolution issues.
+      ansible.builtin.slurp:
+        src: "{{ _resolved_json_path }}"
+      register: _json_raw
+
+    - name: Parse site input JSON
+      # b64decode reverses the slurp encoding; from_json converts the string
+      # to a native Ansible dict/list so subsequent Jinja2 can index into it.
+      set_fact:
+        site_data: "{{ _json_raw.content | b64decode | from_json }}"
+
+    - name: Validate that project key exists in input data
+      # Fail fast with a helpful message if the JSON has the wrong shape,
+      # rather than producing cryptic errors deeper in the playbook.
+      assert:
+        that: site_data.project is defined and site_data.project | length > 0
+        fail_msg: "Input JSON must contain a non-empty 'project' list."
+        success_msg: "Input data loaded — {{ site_data.project | length }} entries found."
+
+    # ── Step 2: Build lookup maps from the JSON entries ───────────────────────
+    #
+    # site_type_map    : { "Global/X/Y": "area" | "building" | "floor" }
+    # building_info_map: { "Global/X/Y": { address, country, latitude, longitude } }
+    # floor_info_map   : { "Global/X/Y": { rf_model, width, length, height, floor_number } }
+    #
+    # Sample (BGP_EVPN/Settings/devices.json):
+    #
+    # site_type_map:
+    #   {
+    #     "Global/PODS":                           "area",
+    #     "Global/PODS/POD 0":                     "area",
+    #     "Global/PODS/POD 0/Building P0":         "building",
+    #     "Global/PODS/POD 0/Building P0/Floor 1": "floor"
+    #   }
+    #
+    # building_info_map:
+    #   {
+    #     "Global/PODS/POD 0/Building P0": {
+    #       "address":   "1 Cisco Way, San Jose, CA 95134",
+    #       "country":   "United States",
+    #       "latitude":  37.3382,
+    #       "longitude": -121.8863
+    #     }
+    #   }
+    #
+    # floor_info_map:
+    #   {
+    #     "Global/PODS/POD 0/Building P0/Floor 1": {
+    #       "rf_model":     "Cubes And Walled Offices",
+    #       "width":        100,
+    #       "length":       100,
+    #       "height":       10,
+    #       "floor_number": 1
+    #     }
+    #   }
+    #
+    - name: Build typed lookup maps from JSON entries
+      # Three dicts are built in one set_fact to avoid three separate task round-trips.
+      # Each iterates site_data.project and indexes only entries with a matching SiteType.
+      # Inventory vars supply defaults for any optional fields absent from the JSON entry.
+      # These maps are keyed by the full HierarchyName path for O(1) lookup in Step 4.
+      set_fact:
+        site_type_map: >-
+          {%- set m = {} -%}
+          {%- for entry in site_data.project -%}
+            {%- if entry.SiteType is defined and entry.SiteType -%}
+              {%- set _ = m.update({entry.HierarchyName: entry.SiteType | lower}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ m }}
+
+        # building_info_map — one entry per path where SiteType == "building".
+        # All four fields are always present; missing JSON fields fall back to inventory defaults.
+        # Used in Step 4 to populate the building sub-dict passed to the module.
+        #
+        # Sample (BGP_EVPN/Settings/devices.json):
+        #   {
+        #     "Global/PODS/POD 0/Building P0": {
+        #       "address":   "1 Cisco Way, San Jose, CA 95134",  ← entry.address or default_building_address
+        #       "country":   "United States",                   ← entry.country or default_building_country
+        #       "latitude":  37.3382,                           ← entry.latitude or default_building_latitude
+        #       "longitude": -121.8863                          ← entry.longitude or default_building_longitude
+        #     }
+        #   }
+        building_info_map: >-
+          {%- set m = {} -%}
+          {%- for entry in site_data.project -%}
+            {%- if entry.SiteType is defined and entry.SiteType | lower == 'building' -%}
+              {%- set info = {
+                'address'  : entry.address   | default(default_building_address),
+                'country'  : entry.country   | default(default_building_country),
+                'latitude' : entry.latitude  | default(default_building_latitude)  | float,
+                'longitude': entry.longitude | default(default_building_longitude) | float
+              } -%}
+              {%- set _ = m.update({entry.HierarchyName: info}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ m }}
+
+        # floor_info_map — one entry per path where SiteType == "floor".
+        # All five fields are always present; missing JSON fields fall back to inventory defaults.
+        # Used in Step 4 to populate the floor sub-dict passed to the module.
+        #
+        # Sample (BGP_EVPN/Settings/devices.json):
+        #   {
+        #     "Global/PODS/POD 0/Building P0/Floor 1": {
+        #       "rf_model":     "Cubes And Walled Offices",  ← entry.rfModel / rf_model or default_floor_rf_model
+        #       "width":        100,                         ← entry.width or default_floor_width
+        #       "length":       100,                         ← entry.length or default_floor_length
+        #       "height":       10,                          ← entry.height or default_floor_height
+        #       "floor_number": 1                            ← entry.floor_number or default_floor_number
+        #     }
+        #   }
+        floor_info_map: >-
+          {%- set m = {} -%}
+          {%- for entry in site_data.project -%}
+            {%- if entry.SiteType is defined and entry.SiteType | lower == 'floor' -%}
+              {%- set info = {
+                'rf_model'    : entry.rfModel       | default(entry.rf_model | default(default_floor_rf_model)),
+                'width'       : entry.width         | default(default_floor_width)        | int,
+                'length'      : entry.length        | default(default_floor_length)       | int,
+                'height'      : entry.height        | default(default_floor_height)       | int,
+                'floor_number': entry.floor_number  | default(default_floor_number)       | int
+              } -%}
+              {%- set _ = m.update({entry.HierarchyName: info}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ m }}
+
+    # ── Step 3: Generate all unique paths (including intermediates) ───────────
+    #
+    # Walk every HierarchyName, emit all prefix subpaths (depth >= 2), dedupe,
+    # then sort by path depth so parent sites are always created before children.
+    # "Global" (depth 1) is skipped — it always pre-exists in CatC.
+    #
+    # Sample (BGP_EVPN/Settings/devices.json):
+    #
+    # all_site_paths:
+    #   [
+    #     "Global/PODS",                           # depth 2 — area
+    #     "Global/PODS/POD 0",                     # depth 3 — area
+    #     "Global/PODS/POD 0/Building P0",         # depth 4 — building
+    #     "Global/PODS/POD 0/Building P0/Floor 1"  # depth 5 — floor
+    #   ]
+    #
+    - name: Collect all unique hierarchy paths including intermediate nodes
+      # The JSON only needs to list leaf paths; this task fills in any missing
+      # parent levels automatically.  Example: a single entry
+      # "Global/PODS/POD 0/Building P0/Floor 1" expands to all four sub-paths.
+      #
+      # Two-pass approach:
+      #   Pass 1 (inner loop)  — slice each HierarchyName at every depth >= 2
+      #                          and accumulate unique paths in ns.paths.
+      #   Pass 2 (outer range) — bucket ns.paths by depth (2..19) into ns.result,
+      #                          producing a list sorted shallow-first so CatC
+      #                          never receives a child before its parent exists.
+      set_fact:
+        all_site_paths: >-
+          {%- set ns = namespace(paths=[], result=[]) -%}
+          {%- for entry in site_data.project -%}
+            {%- set parts = entry.HierarchyName.split('/') -%}
+            {%- for depth in range(2, parts | length + 1) -%}
+              {%- set path = parts[:depth] | join('/') -%}
+              {%- if path not in ns.paths -%}
+                {%- set ns.paths = ns.paths + [path] -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+          {%- for d in range(2, 20) -%}
+            {%- for p in ns.paths -%}
+              {%- if p.split('/') | length == d -%}
+                {%- set ns.result = ns.result + [p] -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+          {{ ns.result }}
+
+    - name: Display site paths to be provisioned ({{ all_site_paths | length }} total)
+      # Informational — shows the ordered path list before any API calls are made.
+      # For state=merged the list is shallow-first (parents created first).
+      # For state=deleted it will be reversed below (children deleted first).
+      debug:
+        msg: "{{ all_site_paths }}"
+
+    # ── Step 4: Create or delete sites ─────────────────────────────────────────────
+    #
+    # Two separate tasks — only one executes per run, gated by `when:`:
+    #   state=merged  (default) → Step 4a runs, Step 4b skipped
+    #   state=deleted           → Step 4b runs, Step 4a skipped
+    #
+    # Loop order differs intentionally:
+    #   Create: parents-first (shallow → deep) — CatC requires a parent to
+    #           exist before a child can be created beneath it.
+    #   Delete: children-first (deep → shallow, reversed list) — CatC rejects
+    #           deletion of a parent that still has children.
+    #
+    # Sample site_configs_list (BGP_EVPN/Settings/devices.json, two entries shown):
+    #
+    # site_configs_list:
+    #   [
+    #     {
+    #       "site_type": "area",
+    #       "site": { "area": { "name": "PODS", "parent_name": "Global" } }
+    #     },
+    #     {
+    #       "site_type": "area",
+    #       "site": { "area": { "name": "POD 0", "parent_name": "Global/PODS" } }
+    #     },
+    #     {
+    #       "site_type": "building",
+    #       "site": { "building": { "name": "Building P0",
+    #                               "parent_name": "Global/PODS/POD 0",
+    #                               "address":   "1 Cisco Way, San Jose, CA 95134",
+    #                               "country":   "United States",
+    #                               "latitude":  37.3382,
+    #                               "longitude": -121.8863 } }
+    #     },
+    #     {
+    #       "site_type": "floor",
+    #       "site": { "floor": { "name": "Floor 1",
+    #                            "parent_name": "Global/PODS/POD 0/Building P0",
+    #                            "rf_model":     "Cubes And Walled Offices",
+    #                            "width":        100,
+    #                            "length":       100,
+    #                            "height":       10,
+    #                            "floor_number": 1 } }
+    #     }
+    #   ]
+    #
+    - name: Pre-compute site config payload list
+      # Ansible evaluates all vars: entries in a task in a single pass, so
+      # variables cannot reference siblings defined earlier in the same vars:
+      # block.  To work around this, the entire config list is pre-built here
+      # in one Jinja2 expression before the loop task runs — every variable
+      # (site_name, site_parent, site_type, metadata) is resolved sequentially
+      # inside the template rather than across task-level vars: keys.
+      #
+      # Each iteration appends one dict to ns.result with the shape:
+      #   { site_type: "area"|"building"|"floor",
+      #     site: { <type>: { name, parent_name, ...type-specific fields } } }
+      #
+      # The site_type top-level key is required by cisco.dnac.site_workflow_manager
+      # in addition to the nested site.<type> dict.
+      set_fact:
+        site_configs_list: >-
+          {%- set ns = namespace(result=[]) -%}
+          {%- for path in all_site_paths -%}
+            {%- set site_name   = path.split('/')[-1] -%}
+            {%- set site_parent = path.split('/')[:-1] | join('/') -%}
+            {%- set name_upper  = site_name | upper -%}
+
+            {%- if path in site_type_map -%}
+              {%- set site_type = site_type_map[path] | trim -%}
+            {%- elif name_upper | regex_search('^(FLOOR|FL[-_ ]|FL[0-9]|F[0-9])') -%}
+              {%- set site_type = 'floor' -%}
+            {%- elif name_upper | regex_search('^(BUILDING|BLDG)') -%}
+              {%- set site_type = 'building' -%}
+            {%- else -%}
+              {%- set site_type = 'area' -%}
+            {%- endif -%}
+
+            {%- if site_type == 'building' -%}
+              {%- if path in building_info_map -%}
+                {%- set bld = building_info_map[path] -%}
+              {%- else -%}
+                {%- set bld = {'address': default_building_address, 'country': default_building_country, 'latitude': default_building_latitude | float, 'longitude': default_building_longitude | float} -%}
+              {%- endif -%}
+              {%- set payload = {'site_type': 'building', 'site': {'building': {'name': site_name, 'parent_name': site_parent, 'address': bld.address, 'country': bld.country, 'latitude': bld.latitude, 'longitude': bld.longitude}}} -%}
+            {%- elif site_type == 'floor' -%}
+              {%- if path in floor_info_map -%}
+                {%- set flr = floor_info_map[path] -%}
+              {%- else -%}
+                {%- set flr = {'rf_model': default_floor_rf_model, 'width': default_floor_width | int, 'length': default_floor_length | int, 'height': default_floor_height | int, 'floor_number': default_floor_number | int} -%}
+              {%- endif -%}
+              {%- set payload = {'site_type': 'floor', 'site': {'floor': {'name': site_name, 'parent_name': site_parent, 'rf_model': flr.rf_model, 'width': flr.width, 'length': flr.length, 'height': flr.height, 'floor_number': flr.floor_number}}} -%}
+            {%- else -%}
+              {%- set payload = {'site_type': 'area', 'site': {'area': {'name': site_name, 'parent_name': site_parent}}} -%}
+            {%- endif -%}
+
+            {%- set ns.result = ns.result + [payload] -%}
+          {%- endfor -%}
+          {{ ns.result }}
+
+    - name: Display computed site payloads
+      # Informational — shows the fully-resolved config dicts before the API
+      # loop runs, making it easy to spot wrong types or missing fields.
+      debug:
+        msg: "{{ site_configs_list }}"
+
+    # ── Step 4a: Create / update sites (state=merged, default) ───────────────
+    - name: "Create site: {{ item.site_type }} — {{ (item.site.values() | list | first).name }}"
+      # Idempotent create/update. Loops parents-first (shallow → deep) so CatC
+      # never receives a child before its parent exists.
+      # Only runs when state is 'merged' (or unset — merged is the default).
+      cisco.dnac.site_workflow_manager:
+        state: merged
+        config:
+          - "{{ item }}"
+      loop: "{{ site_configs_list }}"
+      register: site_create_results
+      when: (state | default('merged')) == 'merged'
+
+    # ── Step 4b: Delete sites (state=deleted) ────────────────────────────────
+    - name: "Delete site: {{ item.site_type }} — {{ (item.site.values() | list | first).name }}"
+      # Loops children-first (deep → shallow, i.e. site_configs_list reversed)
+      # so CatC never tries to remove a parent that still has children.
+      # Only runs when -e state=deleted is passed explicitly.
+      cisco.dnac.site_workflow_manager:
+        state: deleted
+        config:
+          - "{{ item }}"
+      loop: "{{ site_configs_list | reverse | list }}"
+      register: site_delete_results
+      when: (state | default('merged')) == 'deleted'
+
+    # ── Step 5: Summary ───────────────────────────────────────────────────────
+    - name: Site hierarchy provisioning complete
+      # Final confirmation message — no API call, purely informational.
+      debug:
+        msg: >-
+          {{ 'Deleted' if (state | default('merged')) == 'deleted' else 'Successfully provisioned' }}
+          {{ all_site_paths | length }} site(s).

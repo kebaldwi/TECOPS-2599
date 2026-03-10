@@ -1,0 +1,73 @@
+{
+    "project": [
+        {
+            "HierarchyName": "Global",
+            "SiteType": null,
+            "DeviceList": null,
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ]
+        },
+        {
+            "HierarchyName": "Global/ONTARIO",
+            "SiteType": "area",
+            "DeviceList": null,
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ]
+        },
+        {
+            "HierarchyName": "Global/ONTARIO/OSHAWA",
+            "SiteType": "area",
+            "DeviceList": null,
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ]
+        },
+        {
+            "HierarchyName": "Global/ONTARIO/OSHAWA/HOME",
+            "SiteType": "building",
+            "address": "100 King St W, Oshawa, ON L1H 1B5, Canada",
+            "country": "Canada",
+            "latitude": 43.8971,
+            "longitude": -78.8658,
+            "DeviceList": null,
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ]
+        },
+        {
+            "HierarchyName": "Global/ONTARIO/OSHAWA/HOME/FLOOR 1",
+            "SiteType": "floor",
+            "rf_model": "Cubes And Walled Offices",
+            "width": 200,
+            "length": 150,
+            "height": 10,
+            "floor_number": 1,
+            "DeviceList": "10.1.1.10",
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": "Titanium-PnP-Jinja-Template.j2", "TemplateTag": "DEMO", "Project": "Day0Templates", "TemplateTarget": ["10.1.1.10"], "DeployTemplate": true }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": "BUILD-MasterBuild.j2", "TemplateTag": "DEMO", "Project": "DayNTemplates", "TemplateTarget": ["10.1.1.10"], "DeployTemplate": true }
+            ]
+        }
+    ]
+}
