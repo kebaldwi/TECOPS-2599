@@ -2,6 +2,7 @@
     "project": [
         {
             "HierarchyName": "Global",
+            "SiteType": null,
             "DeviceList": null,
             "NetworkProfile": null,
             "Day0TemplateNames": [
@@ -13,6 +14,31 @@
         },
         {
             "HierarchyName": "Global/ONTARIO",
+            "SiteType": "area",
+            "DeviceList": null,
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ]
+        },
+        {
+            "HierarchyName": "Global/ONTARIO/OSHAWA",
+            "SiteType": "area",
+            "DeviceList": null,
+            "NetworkProfile": null,
+            "Day0TemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ],
+            "DayNTemplateNames": [
+            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            ]
+        },
+        {
+            "HierarchyName": "Global/ONTARIO/OSHAWA/HOME",
+            "SiteType": "building",
             "DeviceList": null,
             "NetworkProfile": null,
             "Day0TemplateNames": [
@@ -24,6 +50,7 @@
         },
         {
             "HierarchyName": "Global/ONTARIO/OSHAWA/HOME/FLOOR 1",
+            "SiteType": "floor",
             "DeviceList": "10.1.1.10",
             "NetworkProfile": null,
             "Day0TemplateNames": [

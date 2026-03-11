@@ -1,116 +1,78 @@
 {
     "project": [
         {
-            "HierarchyArea": null,
-            "HierarchyBldg": null,
-            "HierarchyFloor": null,
-            "HierarchyParent": "Global",
-            "HierarchyBldgAddress": null,
-            "domainName": "dcloud.cisco.com",
-            "dnsServer1": "198.18.133.1",
-            "dnsServer2": null,
-            "dhcpServer": "198.18.133.1",
-            "snmpServer": "198.18.133.27",
-            "snmpBoolean": true,
-            "syslogServer": "198.18.133.27",
-            "syslogBoolean": true,
-            "netflowServer": "198.18.133.27",
-            "netflowPort": 6007,
-            "netflowBoolean": true,
-            "ntpServer": "198.18.133.1",
-            "timeZone": "EST5EDT",
-            "bannerMessage": "DNAC Template Lab!",
-            "bannerBoolean": true,
-            "aaaEndpointServer": null,
-            "aaaEndpointIpAddress": null,
-            "aaaEndpointProtocol": null,
-            "aaaEndpointSharedSecret": null,
-            "DcloudUser": "netadmin",
-            "DcloudPwd": "C1sco12345",
-            "DcloudSnmpRO-Desc": "RO",
-            "DcloudSnmpRO": "ro",
-            "DcloudSnmpRW-Desc": "RW",
-            "DcloudSnmpRW": "rw",
-            "DcloudNetconf": 830,
-            "DeviceList": null,
-            "Project": null,
-            "TemplateName": null,
-            "TemplateTarget": null,
-            "DeployTemplate": null
-        },
-        {
-            "HierarchyArea": "PODS",
-            "HierarchyBldg": null,
-            "HierarchyFloor": null,
-            "HierarchyParent": "Global",
-            "HierarchyBldgAddress": null,
-            "domainName": "dcloud.cisco.com",
-            "dnsServer1": "198.18.133.1",
-            "dnsServer2": null,
-            "dhcpServer": "198.18.133.1",
-            "snmpServer": "198.18.133.27",
-            "snmpBoolean": true,
-            "syslogServer": "198.18.133.27",
-            "syslogBoolean": true,
-            "netflowServer": "198.18.133.27",
-            "netflowPort": 6007,
-            "netflowBoolean": true,
-            "ntpServer": "198.18.133.1",
-            "timeZone": "EST5EDT",
-            "bannerMessage": "DNAC Template Lab!",
-            "bannerBoolean": true,
-            "aaaEndpointServer": null,
-            "aaaEndpointIpAddress": null,
-            "aaaEndpointProtocol": null,
-            "aaaEndpointSharedSecret": null,
-            "DcloudUser": null,
-            "DcloudPwd": null,
-            "DcloudSnmpRO-Desc": null,
-            "DcloudSnmpRO": null,
-            "DcloudSnmpRW-Desc": null,
-            "DcloudSnmpRW": null,
-            "DcloudNetconf": null,
-            "DeviceList": null,
-            "Project": null,
-            "TemplateName": null,
-            "TemplateTarget": null,
-            "DeployTemplate": null
-        },
-        {
             "HierarchyArea": "POD 0",
             "HierarchyBldg": "Building P0",
-            "HierarchyFloor": "Floor 1",
+            "HierarchyFloor": null,
             "HierarchyParent": "Global/PODS",
-            "HierarchyBldgAddress": "300 E Tasman Dr, Bldg 10, San Jose, CA 95134",
-            "domainName": "dcloud.cisco.com",
-            "dnsServer1": "198.18.133.1",
-            "dnsServer2": null,
-            "dhcpServer": "198.18.133.1",
-            "snmpServer": "198.18.133.27",
-            "snmpBoolean": true,
-            "syslogServer": "198.18.133.27",
-            "syslogBoolean": true,
-            "netflowServer": "198.18.133.27",
-            "netflowPort": 6007,
-            "netflowBoolean": true,
-            "ntpServer": "198.18.133.1",
-            "timeZone": "EST5EDT",
-            "bannerMessage": "DNAC Template Lab P0!",
-            "bannerBoolean": true,
-            "aaaEndpointServer": "ISE",
-            "aaaEndpointIpAddress": "198.18.133.27",
-            "aaaEndpointProtocol": "RADIUS",
-            "aaaEndpointSharedSecret": "C1sco12345",
-            "DcloudUser": "netadmin",
-            "DcloudPwd": "C1sco12345",
-            "DcloudSnmpRO-Desc": "RO",
-            "DcloudSnmpRO": "ro",
-            "DcloudSnmpRW-Desc": "RW",
-            "DcloudSnmpRW": "rw",
-            "DcloudNetconf": 830,
-            "DeviceList": "198.18.140.1,198.18.10.2,198.18.20.2",
-            "DeployDay0Templates": true,
-            "DeployDayNTemplates": true
+            "network_settings": {
+                "dhcp_server": ["198.18.133.1"],
+                "dns_server": {
+                    "domain_name": "dcloud.cisco.com",
+                    "primary_ip_address": "198.18.133.1",
+                    "secondary_ip_address": null
+                },
+                "ntp_server": ["198.18.133.1"],
+                "timezone": "America/Toronto",
+                "message_of_the_day": {
+                    "banner_message": "DNAC Template Lab P0!",
+                    "retain_existing_banner": false
+                },
+                "snmp_server": {
+                    "configure_dnac_ip": true
+                },
+                "syslog_server": {
+                    "configure_dnac_ip": true
+                },
+                "network_aaa": {
+                    "server_type": "ISE",
+                    "primary_server_address": "198.18.133.27",
+                    "pan_address": "198.18.133.27",
+                    "protocol": "RADIUS",
+                    "secondary_server_address": null
+                },
+                "client_and_endpoint_aaa": {
+                    "server_type": "ISE",
+                    "primary_server_address": "198.18.133.27",
+                    "pan_address": "198.18.133.27",
+                    "protocol": "RADIUS",
+                    "shared_secret": "C1sco12345",
+                    "secondary_server_address": null
+                }
+            },
+            "device_credentials": {
+                "cli_credential": [{
+                    "description": "CLI-net-admin",
+                    "username": "net-admin",
+                    "password": "Cisco123",
+                    "enable_password": "Cisco123"
+                }],
+                "snmp_v2c_read": [{
+                    "description": "RO",
+                    "read_community": "ro"
+                }],
+                "snmp_v2c_write": [{
+                    "description": "RW",
+                    "write_community": "rw"
+                }],
+                "netconf_credential": [{
+                    "description": "NETCONF-netadmin",
+                    "netconf_port": "830"
+                }]
+            },
+            "assign_credentials": {
+                "site_name": ["Global/PODS/POD 0/Building P0"],
+                "cli_credential": {
+                    "description": "CLI-net-admin",
+                    "username": "net-admin"
+                },
+                "snmp_v2c_read": {
+                    "description": "RO"
+                },
+                "snmp_v2c_write": {
+                    "description": "RW"
+                }
+            }
         }
     ]
 }

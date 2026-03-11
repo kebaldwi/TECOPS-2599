@@ -2,3 +2,15 @@
 *.DS_Store
 */.DS_Store
 */*/.DS_Store
+
+# Ansible Vault password files and encrypted vaults
+.vault_pass
+**/.vault_pass
+.ansible/
+vault.yml
+**/vault.yml
+
+# Ansible / DNAC runtime logs
+dnac.log
+**/dnac.log
+*.log

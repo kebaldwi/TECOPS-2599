@@ -1,0 +1,13 @@
+# Ansible Galaxy collection requirements for Cisco-Catalyst-Center-Settings
+# Compatible with Cisco Catalyst Center version 2.3.7.6
+# Install with: ansible-galaxy collection install -r requirements.yml
+#
+# Modules used:
+#   cisco.dnac.network_settings_workflow_manager — DNS, DHCP, NTP, SNMP,
+#     Syslog, NetFlow, Banner, AAA settings per site
+#   cisco.dnac.device_credential_workflow_manager — global CLI/SNMP/NETCONF
+#     credential create and site assignment
+
+collections:
+  - name: cisco.dnac
+    version: "6.46.0"
