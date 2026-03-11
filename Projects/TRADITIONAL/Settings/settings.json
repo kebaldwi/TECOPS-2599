@@ -5,38 +5,48 @@
             "HierarchyBldg": null,
             "HierarchyFloor": null,
             "HierarchyParent": "Global",
-            "HierarchyBldgAddress": null,
-            "domainName": "dcloud.cisco.com",
-            "dnsServer1": "198.18.128.1",
-            "dnsServer2": null,
-            "dhcpServer": null,
-            "snmpServer": null,
-            "snmpBoolean": false,
-            "syslogServer": null,
-            "syslogBoolean": true,
-            "netflowServer": null,
-            "netflowPort": 6007,
-            "netflowBoolean": false,
-            "ntpServer": "198.18.128.1",
-            "timeZone": "America/Toronto",
-            "bannerMessage": "CATC TEMPLATE LAB!",
-            "bannerBoolean": true,
-            "aaaEndpointServer": null,
-            "aaaEndpointIpAddress": null,
-            "aaaEndpointProtocol": null,
-            "aaaEndpointSharedSecret": null,
-            "DcloudUser": "net-admin",
-            "DcloudPwd": "Cisco123",
-            "DcloudSnmpRO-Desc": "RO",
-            "DcloudSnmpRO": "ro",
-            "DcloudSnmpRW-Desc": "RW",
-            "DcloudSnmpRW": "rw",
-            "DcloudNetconf": 830,
-            "DeviceList": null,
-            "Project": null,
-            "TemplateName": null,
-            "TemplateTarget": null,
-            "DeployTemplate": null
+            "network_settings": {
+                "dns_server": {
+                    "domain_name": "dcloud.cisco.com",
+                    "primary_ip_address": "198.18.128.1",
+                    "secondary_ip_address": null
+                },
+                "ntp_server": ["198.18.128.1"],
+                "timezone": "America/Toronto",
+                "message_of_the_day": {
+                    "banner_message": "CATC TEMPLATE LAB!",
+                    "retain_existing_banner": false
+                },
+                "snmp_server": {
+                    "configure_dnac_ip": true
+                },
+                "syslog_server": {
+                    "configure_dnac_ip": true
+                },
+                "network_aaa": null,
+                "client_and_endpoint_aaa": null
+            },
+            "device_credentials": {
+                "cli_credential": [{
+                    "description": "CLI-net-admin",
+                    "username": "net-admin",
+                    "password": "Cisco123",
+                    "enable_password": "Cisco123"
+                }],
+                "snmp_v2c_read": [{
+                    "description": "RO",
+                    "read_community": "ro"
+                }],
+                "snmp_v2c_write": [{
+                    "description": "RW",
+                    "write_community": "rw"
+                }],
+                "netconf_credential": [{
+                    "description": "NETCONF-net-admin",
+                    "netconf_port": "830"
+                }]
+            },
+            "assign_credentials": null
         }
     ]
 }
