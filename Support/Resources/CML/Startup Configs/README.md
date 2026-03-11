@@ -23,18 +23,18 @@
 | Subnet             | Purpose                  | Notes                          |
 |--------------------|--------------------------|--------------------------------|
 | `198.18.128.0/18`  | Out-of-Band Management   | VRF `Mgmt-vrf` / `management` |
-| `198.19.2.0/24`    | Fabric P2P Links         | /30 subnets (`.0` – `.75` used, `.76`–`.255` reserved) |
+| `198.19.2.0/24`    | Fabric P2P Links         | /30 subnets (`.0` – `.78` used, `.80`–`.255` reserved) |
 | `198.19.1.0/24`    | Loopback Addresses       | /32 host routes                |
-| `198.18.134.0/24`  | Tenant: **red**          | VXLAN EVPN VRF `red`           |
-| `198.18.137.0/24`  | Tenant: **red** (reserved)   | Additional subnet 1        |
-| `198.18.138.0/24`  | Tenant: **red** (reserved)   | Additional subnet 2        |
-| `198.18.135.0/24`  | Tenant: **green**        | VXLAN EVPN VRF `green`         |
-| `198.18.139.0/24`  | Tenant: **green** (reserved) | Additional subnet 1        |
-| `198.18.140.0/24`  | Tenant: **green** (reserved) | Additional subnet 2        |
-| `198.18.136.0/24`  | Tenant: **blue**         | VXLAN EVPN VRF `blue`          |
-| `198.18.141.0/24`  | Tenant: **blue** (reserved)  | Additional subnet 1        |
-| `198.18.142.0/24`  | Tenant: **blue** (reserved)  | Additional subnet 2        |
-| `198.18.143.0/24` – `198.19.255.0/24` | _Available_ | Unallocated within dCloud block |
+| `10.1.100.0/24`    | Tenant: **red**              | VXLAN EVPN VRF `red` — DEFN_LOOP_OVERLAY |
+| `10.1.101.0/24`    | Tenant: **red** (reserved)   | DHCP pool red-101, vlan 101 (corp-101)     |
+| `10.1.102.0/24`    | Tenant: **red** (reserved)   | DHCP pool red-102, vlan 102 (corp-102)     |
+| `10.1.200.0/24`    | Tenant: **blue**             | VXLAN EVPN VRF `blue` — DEFN_LOOP_OVERLAY   |
+| `10.1.201.0/24`    | Tenant: **blue** (reserved)  | DHCP pool blue-201, vlan 201 (iot-blue-201)  |
+| `10.1.220.0/24`    | Tenant: **green**            | VXLAN EVPN VRF `green` — DEFN_LOOP_OVERLAY |
+| `10.1.221.0/24`    | Tenant: **green** (reserved) | DHCP pool green-221, vlan 221 (iot-green-221) |
+| `198.18.143.0/24`  | dmz1 VRF: **green**  | Vlan100 SVI / DHCP server Gi2.100      |
+| `198.18.144.0/24`  | dmz1 VRF: **blue**   | Vlan110 SVI / DHCP server Gi2.110      |
+| `198.18.145.0/24` – `198.19.255.0/24` | _Available_ | Unallocated within dCloud block |
 | `198.18.0.0/15`    | **Total dCloud Block**   | `198.18.0.0 – 198.19.255.255`   |
 
 > **Fabric P2P links** use `/30` subnets from `198.19.2.0/24`, keeping all lab addresses within the dCloud-allocated block.
@@ -60,7 +60,8 @@
 | Border-02  | IOS-XE      | GigabitEthernet0/0 | `198.18.128.106/18` |
 | dmz1       | IOS-XE      | GigabitEthernet0/0 | `198.18.128.107/18` |
 | core1      | NX-OS       | mgmt0              | `198.18.128.108/18` |
-| core2      | NX-OS       | mgmt0              | `198.18.128.109/18` |
+| core2       | NX-OS       | mgmt0              | `198.18.128.109/18` |
+| dhcp-server | IOS-XE      | GigabitEthernet1   | `198.18.128.110/18` |
 
 ---
 
@@ -144,15 +145,12 @@ Three Layer-3 VRF tenants are deployed over the VXLAN EVPN fabric. Each tenant i
 
 | Tenant | VRF Name | Subnet            | VLAN  | VNI   | Route Targets       |
 |--------|----------|-------------------|-------|-------|---------------------|
-| Red    | `red`    | `198.18.134.0/24` | 134   | 50134 | `65001:134`         |
-| Red    | `red`    | `198.18.137.0/24` | —     | —     | Reserved            |
-| Red    | `red`    | `198.18.138.0/24` | —     | —     | Reserved            |
-| Green  | `green`  | `198.18.135.0/24` | 135   | 50135 | `65001:135`         |
-| Green  | `green`  | `198.18.139.0/24` | —     | —     | Reserved            |
-| Green  | `green`  | `198.18.140.0/24` | —     | —     | Reserved            |
-| Blue   | `blue`   | `198.18.136.0/24` | 136   | 50136 | `65001:136`         |
-| Blue   | `blue`   | `198.18.141.0/24` | —     | —     | Reserved            |
-| Blue   | `blue`   | `198.18.142.0/24` | —     | —     | Reserved            |
+| Red    | `red`    | `10.1.100.0/24`   | 100   | 50100 | `65001:100`         |
+| Red    | `red`    | `198.18.151.0/24` | —     | —     | Reserved            |
+| Green  | `green`  | `10.1.220.0/24`   | 220   | 50220 | `65001:220`         |
+| Green  | `green`  | `10.1.221.0/24`   | 221   | 50221 | `65001:221`         |
+| Blue   | `blue`   | `10.1.200.0/24`   | 210   | 50210 | `65001:210`         |
+| Blue   | `blue`   | `10.1.201.0/24`   | 201   | 50201 | `65001:201`         |
 
 > VNI numbering convention: `50000 + VLAN ID`. Route targets follow `<BGP-ASN>:<VLAN-ID>`.
 
@@ -230,7 +228,10 @@ Three Layer-3 VRF tenants are deployed over the VXLAN EVPN fabric. Each tenant i
 | Loopback0     | Loopback0          | `198.19.1.200/32`      |
 | To core1      | Gi1/0/1            | `198.19.2.66/30`       |
 | To core2      | Gi1/0/2            | `198.19.2.70/30`       |
-| To FW         | Gi1/0/3            | `198.19.2.73/30`       |
+| To FW              | Gi1/0/3            | `198.19.2.73/30`       |
+| To dhcp-server     | Vlan120 SVI        | `198.19.2.77/30`       |
+| VRF green SVI      | Vlan100            | `198.18.143.1/24`      |
+| VRF blue SVI       | Vlan110            | `198.18.144.1/24`      |
 
 ### core1 (NX-OS)
 
@@ -244,6 +245,7 @@ Three Layer-3 VRF tenants are deployed over the VXLAN EVPN fabric. Each tenant i
 | To dmz1          | Eth1/3       | `198.19.2.65/30`        |
 | PIM (Spine-01)   | Eth1/1.2     | `198.19.2.49/30`        |
 | PIM (Spine-02)   | Eth1/2.2     | `198.19.2.57/30`        |
+| External Network | Eth1/4       | `198.18.128.111/18`     |
 
 ### core2 (NX-OS)
 
@@ -257,6 +259,16 @@ Three Layer-3 VRF tenants are deployed over the VXLAN EVPN fabric. Each tenant i
 | To dmz1          | Eth1/3       | `198.19.2.69/30`        |
 | PIM (Spine-01)   | Eth1/1.2     | `198.19.2.53/30`        |
 | PIM (Spine-02)   | Eth1/2.2     | `198.19.2.61/30`        |
+| External Network | Eth1/4       | `198.18.128.112/18`     |
+
+### dhcp-server (IOS-XE)
+
+| Address Type          | Interface             | Address                  |
+|-----------------------|-----------------------|--------------------------|
+| Management            | GigabitEthernet1      | `198.18.128.110/18`      |
+| VRF green (Vlan100)   | GigabitEthernet2.100  | `198.18.143.100/24`      |
+| VRF blue (Vlan110)    | GigabitEthernet2.110  | `198.18.144.100/24`      |
+| CORP-RED (Vlan120)    | GigabitEthernet2.120  | `198.19.2.78/30`         |
 
 ---
 
@@ -306,9 +318,9 @@ Three Layer-3 VRF tenants are deployed over the VXLAN EVPN fabric. Each tenant i
 |-----------------------|------------------------------------------------|
 | `198.18.128.1`        | Management network default gateway             |
 | `198.19.1.254/32`   | PIM Anycast RP (shared loopback on core1/core2)|
-| `198.19.1.0/24`     | BGP network statement + `Null0` summary (spines)|
+| `198.19.1.0/24`     | OSPF→BGP redistribution on spines (`FABRIC-LOOPBACKS` prefix-list) |
 | `198.19.1.200/32`   | dmz1 Loopback0 — BGP update-source for AS65003 sessions |
-| `10.10.120.0/24`      | DHCP Server subnet (redistributed into OSPF via spine route-map) |
+| `198.19.2.76/30`    | dmz1 Vlan120 ↔ dhcp-server Gi2.120 (CORP-RED-UNDERLAY-DHCP P2P) |
 
 ---
 
@@ -354,6 +366,7 @@ graph TD
     C1 -- "198.19.2.64/30\n.65 ↔ .66" --- DMZ1
     C2 -- "198.19.2.68/30\n.69 ↔ .70" --- DMZ1
     DMZ1 -- "198.19.2.72/30\n.73 ↔ .74" --- FW["FW"]
+    DMZ1 -- "198.19.2.76/30\n.77 ↔ .78" --- DHCP["dhcp-server"]
 ```
 
 ### P2P Subnet Allocation Table
@@ -378,9 +391,10 @@ graph TD
 | `198.19.2.60/30` | core2 ↔ Spine-02 (PIM) | `198.19.2.61` | `198.19.2.62` | Eth1/2.2 | — |
 | `198.19.2.64/30` | core1 ↔ dmz1 | `198.19.2.65` | `198.19.2.66` | Eth1/3 | Gi1/0/1 |
 | `198.19.2.68/30` | core2 ↔ dmz1 | `198.19.2.69` | `198.19.2.70` | Eth1/3 | Gi1/0/2 |
-| `198.19.2.72/30` | dmz1 ↔ FW    | `198.19.2.73` | `198.19.2.74` | Gi1/0/3 | Gi1 |
+| `198.19.2.72/30` | dmz1 ↔ FW                  | `198.19.2.73` | `198.19.2.74` | Gi1/0/3     | Gi1      |
+| `198.19.2.76/30` | dmz1 Vlan120 ↔ dhcp-server | `198.19.2.77` | `198.19.2.78` | Vlan120 SVI | Gi2.120  |
 
-> Subnets `198.19.2.76/30` through `198.19.2.252/30` remain available for future expansion.
+> Subnets `198.19.2.80/30` through `198.19.2.252/30` remain available for future expansion.
 
 ---
 
