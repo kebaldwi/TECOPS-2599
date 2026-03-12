@@ -18,7 +18,7 @@ all:
       # ── Catalyst Center Connection ─────────────────────────────────────────
       dnac_host: 198.18.129.100
       dnac_port: 443
-      dnac_version: 2.3.7.6
+      dnac_version: 2.3.7.9   # CatC appliance is 2.3.7.10; SDK max known is 2.3.7.9
       dnac_verify: false
       dnac_debug: false
       dnac_log: true

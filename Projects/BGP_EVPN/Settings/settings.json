@@ -72,6 +72,12 @@
                 "snmp_v2c_write": {
                     "description": "RW"
                 }
+            },
+            "network_profile": {
+                "profile_name": "BGP-EVPN-Switching",
+                "site_names": ["Global/PODS/POD 0/Building P0/Floor 1"],
+                "day_n_templates": ["BGP-EVPN-BUILD.j2"],
+                "onboarding_templates": null
             }
         }
     ]
