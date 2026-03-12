@@ -30,16 +30,16 @@
                 "cli_credential": [{
                     "description": "CLI-net-admin",
                     "username": "net-admin",
-                    "password": "Cisco123",
-                    "enable_password": "Cisco123"
+                    "password": "cisco",
+                    "enable_password": "cisco"
                 }],
                 "snmp_v2c_read": [{
                     "description": "RO",
-                    "read_community": "ro"
+                    "read_community": "RO"
                 }],
                 "snmp_v2c_write": [{
                     "description": "RW",
-                    "write_community": "rw"
+                    "write_community": "RO"
                 }],
                 "netconf_credential": [{
                     "description": "NETCONF-net-admin",
