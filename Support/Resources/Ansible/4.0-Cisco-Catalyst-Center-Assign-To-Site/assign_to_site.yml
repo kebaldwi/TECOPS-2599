@@ -1,0 +1,107 @@
+# ============================================================================
+# Authors
+# ============================================================================
+# | Name            | Role                              | Contact              |
+# |-----------------|-----------------------------------|----------------------|
+# | Igor Manassypov | Systems Engineer                  | imanassy@cisco.com   |
+# Copyright © 2024-2026 Cisco Systems, Inc. All rights reserved.
+# ============================================================================
+
+---
+- name: Assign Devices to Site in Catalyst Center from devices.json
+  hosts: catalyst_center
+  gather_facts: no
+  vars_files:
+    - vault.yml
+  vars:
+    DEBUG: "{{ lookup('env', 'DEBUG') | default(false) | bool }}"
+
+  module_defaults:
+    cisco.dnac.inventory_workflow_manager:
+      dnac_host: "{{ dnac_host }}"
+      dnac_username: "{{ dnac_username }}"
+      dnac_password: "{{ dnac_password }}"
+      dnac_verify: "{{ dnac_verify }}"
+      dnac_port: "{{ dnac_port }}"
+      dnac_version: "{{ dnac_version }}"
+      dnac_debug: "{{ dnac_debug }}"
+      dnac_log_level: "{{ dnac_log_level }}"
+      dnac_log: "{{ dnac_log }}"
+
+  tasks:
+
+    # ── Step 1: Load input data ───────────────────────────────────────────────
+    - name: Resolve devices_json_path to absolute
+      set_fact:
+        _resolved_json_path: >-
+          {{ devices_json_path if devices_json_path.startswith('/')
+             else (playbook_dir + '/' + devices_json_path) }}
+
+    - name: Load devices input JSON
+      ansible.builtin.slurp:
+        src: "{{ _resolved_json_path }}"
+      register: _json_raw
+
+    - name: Parse devices input JSON
+      set_fact:
+        devices_data: "{{ _json_raw.content | b64decode | from_json }}"
+
+    - name: Validate that project key exists in input data
+      assert:
+        that: devices_data.project is defined and devices_data.project | length > 0
+        fail_msg: "Input JSON must contain a non-empty 'project' list."
+        success_msg: "Input data loaded — {{ devices_data.project | length }} entries found."
+
+    # ── Step 2: Build site assignment config list ─────────────────────────────
+    #
+    # Each entry in devices.json that has a non-null DeviceList produces one
+    # assignment config.  The DeviceList is a comma-separated string of IPs;
+    # each IP is mapped to the entry's HierarchyName as its site.
+    #
+    - name: Build site assignment config list
+      set_fact:
+        assignment_list: >-
+          {%- set ns = namespace(result=[]) -%}
+          {%- for entry in devices_data.project -%}
+            {%- if entry.DeviceList -%}
+              {%- set ips = entry.DeviceList.split(',') | map('trim') | list -%}
+              {%- set devices = [] -%}
+              {%- for ip in ips -%}
+                {%- set _ = devices.append({'management_ip_address': ip, 'site_name': entry.HierarchyName}) -%}
+              {%- endfor -%}
+              {%- set ns.result = ns.result + devices -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ ns.result }}
+
+    - name: --DEBUG-- Site assignment config list
+      when: DEBUG
+      debug:
+        msg: "{{ assignment_list }}"
+
+    - name: Validate assignment list is non-empty
+      assert:
+        that: assignment_list | length > 0
+        fail_msg: "No entries with DeviceList found in input JSON."
+        success_msg: "{{ assignment_list | length }} device(s) to assign to site."
+
+    # ── Step 3: Assign devices to their site ─────────────────────────────────
+    - name: Assign devices to site
+      cisco.dnac.inventory_workflow_manager:
+        state: merged
+        config: "{{ assignment_list }}"
+      register: assignment_results
+
+    - name: --DEBUG-- Assignment results
+      when: DEBUG
+      debug:
+        msg: "{{ assignment_results }}"
+
+    # ── Step 4: Summary ────────────────────────────────────────────────────────
+    - name: Site assignment complete
+      debug:
+        msg:
+          - "Device-to-site assignment submitted successfully"
+          - "Devices assigned: {{ assignment_list | length }}"
+          - "Targets: {{ assignment_list | map(attribute='management_ip_address') | join(', ') }}"
+          - "Site: {{ assignment_list | map(attribute='site_name') | unique | join(', ') }}"
