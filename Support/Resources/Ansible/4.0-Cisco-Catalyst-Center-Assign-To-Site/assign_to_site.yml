@@ -17,7 +17,7 @@
     DEBUG: "{{ lookup('env', 'DEBUG') | default(false) | bool }}"
 
   module_defaults:
-    cisco.dnac.inventory_workflow_manager:
+    cisco.dnac.site_info:
       dnac_host: "{{ dnac_host }}"
       dnac_username: "{{ dnac_username }}"
       dnac_password: "{{ dnac_password }}"
@@ -25,8 +25,14 @@
       dnac_port: "{{ dnac_port }}"
       dnac_version: "{{ dnac_version }}"
       dnac_debug: "{{ dnac_debug }}"
-      dnac_log_level: "{{ dnac_log_level }}"
-      dnac_log: "{{ dnac_log }}"
+    cisco.dnac.assign_device_to_site:
+      dnac_host: "{{ dnac_host }}"
+      dnac_username: "{{ dnac_username }}"
+      dnac_password: "{{ dnac_password }}"
+      dnac_verify: "{{ dnac_verify }}"
+      dnac_port: "{{ dnac_port }}"
+      dnac_version: "{{ dnac_version }}"
+      dnac_debug: "{{ dnac_debug }}"
 
   tasks:
 
@@ -52,44 +58,64 @@
         fail_msg: "Input JSON must contain a non-empty 'project' list."
         success_msg: "Input data loaded — {{ devices_data.project | length }} entries found."
 
-    # ── Step 2: Build site assignment config list ─────────────────────────────
+    # ── Step 2: Build per-site assignment map ─────────────────────────────────
     #
-    # Each entry in devices.json that has a non-null DeviceList produces one
-    # assignment config.  The DeviceList is a comma-separated string of IPs;
-    # each IP is mapped to the entry's HierarchyName as its site.
+    # Group IPs by their target HierarchyName so we can look up the site UUID
+    # once per unique site and call assign_device_to_site once per site.
     #
-    - name: Build site assignment config list
+    - name: Build per-site assignment map
       set_fact:
-        assignment_list: >-
-          {%- set ns = namespace(result=[]) -%}
+        site_device_map: >-
+          {%- set ns = namespace(result={}) -%}
           {%- for entry in devices_data.project -%}
             {%- if entry.DeviceList -%}
               {%- set ips = entry.DeviceList.split(',') | map('trim') | list -%}
-              {%- set devices = [] -%}
-              {%- for ip in ips -%}
-                {%- set _ = devices.append({'management_ip_address': ip, 'site_name': entry.HierarchyName}) -%}
-              {%- endfor -%}
-              {%- set ns.result = ns.result + devices -%}
+              {%- set site = entry.HierarchyName -%}
+              {%- if site in ns.result -%}
+                {%- set ns.result = ns.result | combine({site: ns.result[site] + ips}) -%}
+              {%- else -%}
+                {%- set ns.result = ns.result | combine({site: ips}) -%}
+              {%- endif -%}
             {%- endif -%}
           {%- endfor -%}
           {{ ns.result }}
 
-    - name: --DEBUG-- Site assignment config list
+    - name: --DEBUG-- Per-site assignment map
       when: DEBUG
       debug:
-        msg: "{{ assignment_list }}"
+        msg: "{{ site_device_map }}"
 
-    - name: Validate assignment list is non-empty
+    - name: Validate assignment map is non-empty
       assert:
-        that: assignment_list | length > 0
+        that: site_device_map | length > 0
         fail_msg: "No entries with DeviceList found in input JSON."
-        success_msg: "{{ assignment_list | length }} device(s) to assign to site."
+        success_msg: "{{ site_device_map | length }} site(s) to assign devices to."
 
-    # ── Step 3: Assign devices to their site ─────────────────────────────────
+    # ── Step 3: Look up site UUID for each target site ────────────────────────
+    - name: Look up site UUID — "{{ item.key }}"
+      cisco.dnac.site_info:
+        name: "{{ item.key }}"
+      loop: "{{ site_device_map | dict2items }}"
+      register: site_info_results
+
+    - name: --DEBUG-- Site info results
+      when: DEBUG
+      debug:
+        msg: "{{ site_info_results }}"
+
+    # ── Step 4: Assign devices to their site ─────────────────────────────────
     - name: Assign devices to site
-      cisco.dnac.inventory_workflow_manager:
-        state: merged
-        config: "{{ assignment_list }}"
+      cisco.dnac.assign_device_to_site:
+        siteId: "{{ item.dnac_response.response[0].id }}"
+        device: >-
+          {%- set ns = namespace(result=[]) -%}
+          {%- for ip in site_device_map[item.item.key] -%}
+            {%- set ns.result = ns.result + [{'ip': ip}] -%}
+          {%- endfor -%}
+          {{ ns.result }}
+      loop: "{{ site_info_results.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
       register: assignment_results
 
     - name: --DEBUG-- Assignment results
@@ -97,11 +123,10 @@
       debug:
         msg: "{{ assignment_results }}"
 
-    # ── Step 4: Summary ────────────────────────────────────────────────────────
+    # ── Step 5: Summary ────────────────────────────────────────────────────────
     - name: Site assignment complete
       debug:
         msg:
           - "Device-to-site assignment submitted successfully"
-          - "Devices assigned: {{ assignment_list | length }}"
-          - "Targets: {{ assignment_list | map(attribute='management_ip_address') | join(', ') }}"
-          - "Site: {{ assignment_list | map(attribute='site_name') | unique | join(', ') }}"
+          - "Sites processed: {{ site_device_map.keys() | list | join(', ') }}"
+          - "Total devices assigned: {{ site_device_map.values() | map('length') | sum }}"
