@@ -13,7 +13,7 @@
             ]
         },
         {
-            "HierarchyName": "Global/PODS",
+            "HierarchyName": "Global/ONTARIO",
             "SiteType": "area",
             "DeviceList": null,
             "NetworkProfile": null,
@@ -25,7 +25,7 @@
             ]
         },
         {
-            "HierarchyName": "Global/PODS/POD 0",
+            "HierarchyName": "Global/ONTARIO/OSHAWA",
             "SiteType": "area",
             "DeviceList": null,
             "NetworkProfile": null,
@@ -37,8 +37,12 @@
             ]
         },
         {
-            "HierarchyName": "Global/PODS/POD 0/Building P0",
+            "HierarchyName": "Global/ONTARIO/OSHAWA/HOME",
             "SiteType": "building",
+            "address": "100 King St W, Oshawa, ON L1H 1B5, Canada",
+            "country": "Canada",
+            "latitude": 43.8971,
+            "longitude": -78.8658,
             "DeviceList": null,
             "NetworkProfile": null,
             "Day0TemplateNames": [
@@ -49,15 +53,20 @@
             ]
         },
         {
-            "HierarchyName": "Global/PODS/POD 0/Building P0/Floor 1",
+            "HierarchyName": "Global/ONTARIO/OSHAWA/HOME/FLOOR 1",
             "SiteType": "floor",
-            "DeviceList": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6",
+            "rf_model": "Cubes And Walled Offices",
+            "width": 200,
+            "length": 150,
+            "height": 10,
+            "floor_number": 1,
+            "DeviceList": "10.1.1.10",
             "NetworkProfile": null,
             "Day0TemplateNames": [
-            { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+            { "TemplateName": "Titanium-PnP-Jinja-Template.j2", "TemplateTag": "DEMO", "Project": "Day0Templates", "TemplateTarget": ["10.1.1.10"], "DeployTemplate": true }
             ],
             "DayNTemplateNames": [
-            { "TemplateName": "BGP-EVPN-BUILD.j2", "TemplateTag": "DEMO", "Project": "Building P0", "TemplateTarget": ["198.19.1.1","198.19.1.2","198.19.1.3","198.19.1.4","198.19.1.5","198.19.1.6"], "DeployTemplate": true }
+            { "TemplateName": "BUILD-MasterBuild.j2", "TemplateTag": "DEMO", "Project": "DayNTemplates", "TemplateTarget": ["10.1.1.10"], "DeployTemplate": true }
             ]
         }
     ]
