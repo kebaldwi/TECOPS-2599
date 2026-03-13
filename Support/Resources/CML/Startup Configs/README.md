@@ -92,6 +92,13 @@
 | core1 `loopback1`    | `198.19.1.254/32`  | PIM Anycast RP (shared with core2)  |
 | core2 `loopback1`    | `198.19.1.254/32`  | PIM Anycast RP (shared with core1)  |
 
+### Fabric RP (PIM)
+
+| Interface              | Address             | Description                                          |
+|------------------------|---------------------|------------------------------------------------------|
+| Spine-01 `Loopback2`   | `198.19.1.100/32` | Fabric PIM RP — advertised via OSPF, shared anycast  |
+| Spine-02 `Loopback2`   | `198.19.1.100/32` | Fabric PIM RP — advertised via OSPF, shared anycast  |
+
 ---
 
 ## Fabric Point-to-Point Links
