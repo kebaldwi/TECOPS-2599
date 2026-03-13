@@ -18,26 +18,13 @@ all:
       # ── Catalyst Center Connection ─────────────────────────────────────────
       dnac_host: 198.18.129.100
       dnac_port: 443
-      dnac_version: 2.3.7.6
+      dnac_version: 2.3.7.9   # CatC appliance is 2.3.7.10; SDK max known is 2.3.7.9
       dnac_verify: false
       dnac_debug: false
       dnac_log: true
       dnac_log_level: INFO
 
       # ── Input file ────────────────────────────────────────────────────────
-      # Path to the devices.json-formatted input file.
-      # Can be overridden at runtime: -e devices_json_path=myfile.json
-      devices_json_path: "site_input.json"
-
-      # ── Building defaults (used when address/lat/lon not in JSON) ─────────
-      default_building_address: "1 Cisco Way, San Jose, CA 95134"
-      default_building_country: "United States"
-      default_building_latitude: 37.3382
-      default_building_longitude: -121.8863
-
-      # ── Floor defaults (used when rf_model/dimensions not in JSON) ──────────
-      default_floor_rf_model: "Cubes And Walled Offices"
-      default_floor_width: 100
-      default_floor_length: 100
-      default_floor_height: 10
-      default_floor_number: 1
+      # Path to the settings.json-formatted input file.
+      # Can be overridden at runtime: -e settings_json_path=myfile.json
+      settings_json_path: "../../../../Projects/BGP_EVPN/Settings/settings.json"

@@ -1,5 +1,5 @@
 # Ansible Galaxy collection requirements for Cisco-Catalyst-Center-Site-Hierarchy
-# Compatible with Cisco Catalyst Center version 2.3.7.6
+# Compatible with Cisco Catalyst Center version 2.3.7.10
 # Install with: ansible-galaxy collection install -r requirements.yml
 #
 # Modules used:
