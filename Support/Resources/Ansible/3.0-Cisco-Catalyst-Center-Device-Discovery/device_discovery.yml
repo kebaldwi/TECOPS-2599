@@ -71,14 +71,16 @@
             {%- if entry.DeviceList -%}
               {%- set ips = entry.DeviceList.split(',') | map('trim') | list -%}
               {%- set disc = {
-                'discovery_name': entry.Project | default('Device-Discovery'),
+                'discovery_name': entry.HierarchyName | default('Device-Discovery'),
                 'discovery_type': 'MULTI RANGE',
                 'ip_address_list': ips,
                 'protocol_order': 'ssh',
                 'retry': 5,
                 'timeout': 3,
-                'net_conf_port': '830',
                 'preferred_mgmt_ip_method': 'UseLoopBack',
+                'discovery_specific_credentials': {
+                  'net_conf_port': '830'
+                },
                 'global_credentials': {
                   'cli_credentials_list': [{'description': 'CLI-net-admin', 'username': 'net-admin'}],
                   'snmp_v2_read_credential_list': [{'description': 'RO'}],
@@ -103,7 +105,7 @@
         success_msg: "{{ discovery_list | length }} discovery task(s) to run."
 
     # ── Step 3: Run device discovery ─────────────────────────────────────────
-    - name: Discover devices — "{{ item.discovery_name }}"
+    - name: "Discover devices"
       cisco.dnac.discovery_workflow_manager:
         state: merged
         config:

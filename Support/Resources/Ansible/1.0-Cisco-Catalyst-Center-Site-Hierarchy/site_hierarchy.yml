@@ -334,7 +334,7 @@
         msg: "{{ site_configs_list }}"
 
     # ── Step 4a: Create / update sites (state=merged, default) ───────────────
-    - name: "Create site: {{ item.site_type }} — {{ (item.site.values() | list | first).name }}"
+    - name: "Create / update site entries"
       # Idempotent create/update. Loops parents-first (shallow → deep) so CatC
       # never receives a child before its parent exists.
       # Only runs when state is 'merged' (or unset — merged is the default).
@@ -347,7 +347,7 @@
       when: (state | default('merged')) == 'merged'
 
     # ── Step 4b: Delete sites (state=deleted) ────────────────────────────────
-    - name: "Delete site: {{ item.site_type }} — {{ (item.site.values() | list | first).name }}"
+    - name: "Delete site entries"
       # Loops children-first (deep → shallow, i.e. site_configs_list reversed)
       # so CatC never tries to remove a parent that still has children.
       # Only runs when -e state=deleted is passed explicitly.

@@ -27,7 +27,7 @@ all:
       # ── Input file ────────────────────────────────────────────────────────
       # Path to the devices.json-formatted input file.
       # Can be overridden at runtime: -e devices_json_path=myfile.json
-      devices_json_path: "site_input.json"
+      devices_json_path: "../../../../Projects/BGP_EVPN/Settings/devices.json"
 
       # ── Building defaults (used when address/lat/lon not in JSON) ─────────
       default_building_address: "1 Cisco Way, San Jose, CA 95134"

@@ -33,3 +33,15 @@ Avoid any construct that opens an interactive continuation prompt (`dquote>`, `h
 ### Command chaining
 Chain independent steps with `&&` on a single line. For complex sequences that require
 multi-line messages, split into: (1) write temp file, (2) run command referencing the file.
+
+## Git Branch / PR Workflow
+
+### `origin/main` is protected — never push directly
+`git push origin main` will always be rejected. The correct workflow is:
+
+1. Create a feature branch: `git checkout -b <branch-name>`
+2. Commit changes on the branch.
+3. Push the branch: `git push origin <branch-name>`
+4. Open a Pull Request from the branch into `main` via GitHub.
+
+When asked to "merge changes back onto main", always follow the branch → PR workflow above instead of attempting a direct push to `main`.
