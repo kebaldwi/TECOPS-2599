@@ -39,7 +39,7 @@ annotations:
     text_content: |-
       vrf green vlans:
       221:10221 10.1.221.0/24
-      901:50901 Loopback1
+      903:50903 Loopback1
     text_font: monospace
     text_italic: false
     text_size: 12
@@ -47,7 +47,7 @@ annotations:
     thickness: 1
     type: text
     x1: 720.0
-    y1: 560.0
+    y1: 520.0
     z_index: 22
   - border_color: '#00000000'
     border_style: ''
@@ -64,24 +64,9 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 560.0
-    y1: 320.0
+    x1: 160.0
+    y1: 520.0
     z_index: 23
-  - border_color: '#00000000'
-    border_style: ''
-    color: '#FA0000'
-    rotation: 0
-    text_bold: false
-    text_content: 101:10.1.101.x
-    text_font: monospace
-    text_italic: false
-    text_size: 12
-    text_unit: pt
-    thickness: 1
-    type: text
-    x1: -104.90505616584923
-    y1: 328.63001137800694
-    z_index: 27
   - border_color: '#00000000'
     border_style: ''
     color: '#FF0000'
@@ -96,8 +81,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: -120.0
-    y1: 680.0
+    x1: -360.0
+    y1: 720.0
     z_index: 28
   - border_color: '#00000000'
     border_style: ''
@@ -111,8 +96,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 315.5823392409333
-    y1: 414.84488293644637
+    x1: 200.0
+    y1: 480.0
     z_index: 29
   - border_color: '#00000000'
     border_style: ''
@@ -126,8 +111,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: -120.0
-    y1: 400.0
+    x1: -480.0
+    y1: 440.0
     z_index: 30
   - border_color: '#00000000'
     border_style: ''
@@ -141,13 +126,13 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 23.0
-    y1: 397.0
+    x1: -120.0
+    y1: 440.0
     z_index: 31
   - border_color: '#808080FF'
     border_radius: 0
     border_style: ''
-    color: '#064CFF1B'
+    color: '#9FC2DF'
     rotation: 0
     thickness: 1
     type: rectangle
@@ -183,8 +168,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 440.0
-    y1: 680.0
+    x1: 760.0
+    y1: 480.0
     z_index: 35
   - border_color: '#00000000'
     border_style: ''
@@ -198,8 +183,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 320.0
-    y1: 360.0
+    x1: 200.0
+    y1: 400.0
     z_index: 36
   - border_color: '#00000000'
     border_style: ''
@@ -213,8 +198,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 440.0
-    y1: 600.0
+    x1: 760.0
+    y1: 400.0
     z_index: 37
   - border_color: '#00000000'
     border_style: ''
@@ -243,8 +228,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: -120.0
-    y1: 560.0
+    x1: -510.8168256869948
+    y1: 606.1141956359593
     z_index: 59
   - border_color: '#00000000'
     border_style: ''
@@ -258,8 +243,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 160.0
-    y1: 560.0
+    x1: -80.0
+    y1: 600.0
     z_index: 60
   - border_color: '#00000000'
     border_style: ''
@@ -277,56 +262,9 @@ annotations:
     y1: -520.0
     z_index: 61
   - border_color: '#808080FF'
-    border_style: ''
-    color: '#ACA7A7'
-    rotation: 0
-    thickness: 1
-    type: ellipse
-    x1: 760.0
-    y1: 0.0
-    x2: 40.0
-    y2: 40.0
-    z_index: 62
-  - border_color: '#808080FF'
-    border_style: ''
-    color: '#FFFFFFFF'
-    line_end: null
-    line_start: null
-    thickness: 10
-    type: line
-    x1: 200.0
-    y1: -400.0
-    x2: 760.0
-    y2: 0.0
-    z_index: 63
-  - border_color: '#001FFF'
-    border_style: ''
-    color: '#FFFFFFFF'
-    line_end: null
-    line_start: null
-    thickness: 10
-    type: line
-    x1: 520.0
-    y1: 320.0
-    x2: 760.0
-    y2: 0.0
-    z_index: 64
-  - border_color: '#14FF00'
-    border_style: ''
-    color: '#FFFFFFFF'
-    line_end: null
-    line_start: null
-    thickness: 10
-    type: line
-    x1: 640.0
-    y1: 560.0
-    x2: 760.0
-    y2: 0.0
-    z_index: 65
-  - border_color: '#808080FF'
     border_radius: 0
     border_style: ''
-    color: '#AEFB9E49'
+    color: '#AEFB9E'
     rotation: 0
     thickness: 1
     type: rectangle
@@ -393,8 +331,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: -480.0
-    y1: 320.0
+    x1: -400.0
+    y1: 800.0
     z_index: 70
   - border_color: '#00000000'
     border_style: ''
@@ -402,7 +340,7 @@ annotations:
     rotation: 0
     text_bold: false
     text_content: |-
-      Lo2: 198.19.1.200
+      Lo2: 198.19.1.100
       (Enterprise Anycast RP)
     text_font: monospace
     text_italic: false
@@ -473,6 +411,57 @@ annotations:
     x1: 200.0
     y1: -360.0
     z_index: 21
+  - border_color: '#80808000'
+    border_radius: 0
+    border_style: ''
+    color: '#EEECEC'
+    rotation: 0
+    thickness: 1
+    type: rectangle
+    x1: 200.0
+    y1: -400.0
+    x2: 600.0
+    y2: 40.0
+    z_index: 71
+  - border_color: '#80808000'
+    border_radius: 0
+    border_style: ''
+    color: '#EEECEC'
+    rotation: 0
+    thickness: 1
+    type: rectangle
+    x1: 760.0
+    y1: -360.0
+    x2: 40.0
+    y2: 520.0
+    z_index: 72
+  - border_color: '#80808000'
+    border_radius: 0
+    border_style: ''
+    color: '#EEECEC'
+    rotation: 0
+    thickness: 1
+    type: rectangle
+    x1: 560.0
+    y1: 120.0
+    x2: 200.0
+    y2: 40.0
+    z_index: 73
+  - border_color: '#00000000'
+    border_style: ''
+    color: '#808080FF'
+    rotation: 0
+    text_bold: false
+    text_content: IOT VXLAN PEERING
+    text_font: monospace
+    text_italic: false
+    text_size: 12
+    text_unit: pt
+    thickness: 1
+    type: text
+    x1: 428.80252219314104
+    y1: -387.4782377846176
+    z_index: 74
 smart_annotations:
   - tag: blue-201
     is_on: true
@@ -529,7 +518,7 @@ smart_annotations:
   - tag: green-202
     is_on: true
     padding: 35
-    label: green-202
+    label: green-221
     tag_offset_x: 0
     tag_offset_y: 0
     tag_size: 14
@@ -568,7 +557,7 @@ smart_annotations:
   - tag: leaf
     is_on: true
     padding: 35
-    label: leaf
+    label: edge node
     tag_offset_x: 0
     tag_offset_y: 0
     tag_size: 14
@@ -620,7 +609,7 @@ smart_annotations:
   - tag: spine
     is_on: true
     padding: 35
-    label: border-spine
+    label: cp-border
     tag_offset_x: 0
     tag_offset_y: 0
     tag_size: 14
@@ -1793,11 +1782,14 @@ nodes:
       - name: node.cfg
         content: |-
           # this is a shell script which will be sourced at boot
-          hostname client2
+          hostname red02
           # configurable user account
           USERNAME=cisco
           PASSWORD=cisco
 
+          kill $(cat /var/run/udhcpc.eth0.pid 2>/dev/null) 2>/dev/null
+          ip addr flush dev eth0
+          ip link set dev eth0 address 00:00:00:01:01:02
           ip addr add 10.1.101.20/24 dev eth0
           ip route add default via 10.1.101.1
     cpu_limit: null
@@ -1806,15 +1798,15 @@ nodes:
     hide_links: false
     id: n5
     image_definition: null
-    label: client2
+    label: red02
     node_definition: alpine
     parameters: {}
     ram: null
     tags:
       - red
       - red-101
-    x: 80
-    y: 360
+    x: -160
+    y: 400
     interfaces:
       - id: i0
         label: eth0
@@ -1825,10 +1817,15 @@ nodes:
     configuration:
       - name: node.cfg
         content: |-
-          hostname: Client1
-          username: cisco
-          password: cisco
+          # this is a shell script which will be sourced at boot
+          hostname red01
+          # configurable user account
+          USERNAME=cisco
+          PASSWORD=cisco
 
+          kill $(cat /var/run/udhcpc.eth0.pid 2>/dev/null) 2>/dev/null
+          ip addr flush dev eth0
+          ip link set dev eth0 address 00:00:00:01:01:01
           ip addr add 10.1.101.10/24 dev eth0
           ip route add default via 10.1.101.1
     cpu_limit: null
@@ -1837,15 +1834,15 @@ nodes:
     hide_links: false
     id: n6
     image_definition: null
-    label: client1
+    label: red01
     node_definition: alpine
     parameters: {}
     ram: null
     tags:
       - red
       - red-101
-    x: -160
-    y: 360
+    x: -400
+    y: 400
     interfaces:
       - id: i0
         label: eth0
@@ -2853,8 +2850,8 @@ nodes:
         content: |2-
 
           !Command: show running-config
-          !Running configuration last done at: Thu Mar 12 15:50:34 2026
-          !Time: Thu Mar 12 15:50:34 2026
+          !Running configuration last done at: Fri Mar 13 16:54:48 2026
+          !Time: Fri Mar 13 16:54:49 2026
 
           version 10.5(3) Bios:version
           hostname core1
@@ -2900,7 +2897,7 @@ nodes:
           ip prefix-list LOOPBACKS seq 40 permit 198.19.1.4/32
           ip prefix-list LOOPBACKS seq 50 permit 198.19.1.5/32
           ip prefix-list LOOPBACKS seq 60 permit 198.19.1.6/32
-          ip prefix-list TO_CAMPUS seq 5 permit 0.0.0.0/0 le 32
+          ip prefix-list TO_CAMPUS seq 5 permit 0.0.0.0/0
           route-map BGP-TO-OSPF permit 10
             match ip address prefix-list LOOPBACKS
           route-map TO_CAMPUS permit 10
@@ -2951,6 +2948,12 @@ nodes:
             no shutdown
 
           interface Ethernet1/5
+            description core2
+            no switchport
+            ip address 198.19.2.81/30
+            ip ospf network point-to-point
+            ip router ospf 1 area 0.0.0.0
+            no shutdown
 
           interface Ethernet1/6
 
@@ -3106,9 +3109,9 @@ nodes:
               remote-as 65002
               update-source loopback0
               ebgp-multihop 4
-            neighbor 198.19.1.200
-              remote-as 65003
-              ebgp-multihop 2
+            neighbor 198.19.1.9
+              inherit peer-session PEER-SESSION
+              remote-as 65002
               address-family ipv4 unicast
             neighbor 198.19.2.33
               inherit peer-session FABRIC-SESSION
@@ -3122,10 +3125,15 @@ nodes:
               remote-as 65001
               address-family ipv4 unicast
                 route-map TO_CAMPUS out
+                soft-reconfiguration inbound
             neighbor 198.19.2.58
               remote-as 65001
               address-family ipv4 unicast
                 route-map TO_CAMPUS out
+                soft-reconfiguration inbound
+            neighbor 198.19.2.66
+              remote-as 65003
+              address-family ipv4 unicast
 
           no logging console
     cpu_limit: null
@@ -3172,14 +3180,19 @@ nodes:
         mac_address: null
         type: physical
         slot: 4
+      - id: i6
+        label: Ethernet1/5
+        mac_address: null
+        type: physical
+        slot: 5
   - boot_disk_size: null
     configuration:
       - name: nxos_config.txt
         content: |2-
 
           !Command: show running-config
-          !Running configuration last done at: Thu Mar 12 15:51:04 2026
-          !Time: Thu Mar 12 15:51:05 2026
+          !Running configuration last done at: Fri Mar 13 16:54:57 2026
+          !Time: Fri Mar 13 16:54:58 2026
 
           version 10.5(3) Bios:version
           hostname core2
@@ -3223,7 +3236,7 @@ nodes:
           ip prefix-list LOOPBACKS seq 40 permit 198.19.1.4/32
           ip prefix-list LOOPBACKS seq 50 permit 198.19.1.5/32
           ip prefix-list LOOPBACKS seq 60 permit 198.19.1.6/32
-          ip prefix-list TO_CAMPUS seq 5 permit 0.0.0.0/0 le 32
+          ip prefix-list TO_CAMPUS seq 5 permit 0.0.0.0/0
           route-map BGP-TO-OSPF permit 10
             match ip address prefix-list LOOPBACKS
           route-map TO_CAMPUS permit 10
@@ -3274,6 +3287,12 @@ nodes:
             no shutdown
 
           interface Ethernet1/5
+            description core1
+            no switchport
+            ip address 198.19.2.82/30
+            ip ospf network point-to-point
+            ip router ospf 1 area 0.0.0.0
+            no shutdown
 
           interface Ethernet1/6
 
@@ -3429,6 +3448,10 @@ nodes:
               remote-as 65002
               update-source loopback0
               ebgp-multihop 4
+            neighbor 198.19.1.8
+              inherit peer-session PEER-SESSION
+              remote-as 65002
+              address-family ipv4 unicast
             neighbor 198.19.1.200
               remote-as 65003
               ebgp-multihop 2
@@ -3445,10 +3468,15 @@ nodes:
               remote-as 65001
               address-family ipv4 unicast
                 route-map TO_CAMPUS out
+                soft-reconfiguration inbound
             neighbor 198.19.2.62
               remote-as 65001
               address-family ipv4 unicast
                 route-map TO_CAMPUS out
+                soft-reconfiguration inbound
+            neighbor 198.19.2.70
+              remote-as 65003
+              address-family ipv4 unicast
 
           no logging console
     cpu_limit: null
@@ -3495,16 +3523,24 @@ nodes:
         mac_address: null
         type: physical
         slot: 4
+      - id: i6
+        label: Ethernet1/5
+        mac_address: null
+        type: physical
+        slot: 5
   - boot_disk_size: null
     configuration:
       - name: node.cfg
         content: |-
           # this is a shell script which will be sourced at boot
-          hostname client4
+          hostname red04
           # configurable user account
           USERNAME=cisco
           PASSWORD=cisco
 
+          kill $(cat /var/run/udhcpc.eth0.pid 2>/dev/null) 2>/dev/null
+          ip addr flush dev eth0
+          ip link set dev eth0 address 00:00:00:01:02:04
           ip addr add 10.1.102.20/24 dev eth0
           ip route add default via 10.1.102.1
     cpu_limit: null
@@ -3513,15 +3549,15 @@ nodes:
     hide_links: false
     id: n12
     image_definition: null
-    label: client4
+    label: red04
     node_definition: alpine
     parameters: {}
     ram: null
     tags:
       - red
       - red-102
-    x: 200
-    y: 600
+    x: -120
+    y: 640
     interfaces:
       - id: i0
         label: eth0
@@ -3533,60 +3569,30 @@ nodes:
       - name: node.cfg
         content: |-
           # this is a shell script which will be sourced at boot
-          hostname client3
+          hostname blue01
           # configurable user account
           USERNAME=cisco
           PASSWORD=cisco
 
-          ip addr add 10.1.102.10/24 dev eth0
-          ip route add default via 10.1.102.1
-    cpu_limit: null
-    cpus: null
-    data_volume: null
-    hide_links: false
-    id: n13
-    image_definition: null
-    label: client3
-    node_definition: alpine
-    parameters: {}
-    ram: null
-    tags:
-      - red
-      - red-102
-    x: 40
-    y: 600
-    interfaces:
-      - id: i0
-        label: eth0
-        mac_address: null
-        type: physical
-        slot: 0
-  - boot_disk_size: null
-    configuration:
-      - name: node.cfg
-        content: |-
-          # this is a shell script which will be sourced at boot
-          hostname iot1
-          # configurable user account
-          USERNAME=cisco
-          PASSWORD=cisco
-
+          kill $(cat /var/run/udhcpc.eth0.pid 2>/dev/null) 2>/dev/null
+          ip addr flush dev eth0
+          ip link set dev eth0 address 00:00:00:02:01:01
           ip addr add 10.1.201.10/24 dev eth0
           ip route add default via 10.1.201.1
     cpu_limit: null
     cpus: null
     data_volume: null
     hide_links: false
-    id: n14
+    id: n13
     image_definition: null
-    label: iot1
+    label: blue01
     node_definition: alpine
     parameters: {}
     ram: null
     tags:
       - blue-201
-    x: 280
-    y: 360
+    x: 160
+    y: 400
     interfaces:
       - id: i0
         label: eth0
@@ -3598,27 +3604,30 @@ nodes:
       - name: node.cfg
         content: |-
           # this is a shell script which will be sourced at boot
-          hostname iot2
+          hostname green01
           # configurable user account
           USERNAME=cisco
           PASSWORD=cisco
 
-          ip addr add 10.1.202.10/24 dev eth0
-          ip route add default via 10.1.202.1
+          kill $(cat /var/run/udhcpc.eth0.pid 2>/dev/null) 2>/dev/null
+          ip addr flush dev eth0
+          ip link set dev eth0 address 00:00:00:02:21:01
+          ip addr add 10.1.221.10/24 dev eth0
+          ip route add default via 10.1.221.1
     cpu_limit: null
     cpus: null
     data_volume: null
     hide_links: false
-    id: n15
+    id: n14
     image_definition: null
-    label: iot2
+    label: green01
     node_definition: alpine
     parameters: {}
     ram: null
     tags:
       - green-202
-    x: 400
-    y: 600
+    x: 720
+    y: 400
     interfaces:
       - id: i0
         label: eth0
@@ -3628,28 +3637,28 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 17187 bytes\n\
-          !\n! Last configuration change at 21:18:07 UTC Wed Mar 11 2026\n!\nversion\
-          \ 17.15\nservice timestamps debug datetime msec\nservice timestamps log\
-          \ datetime msec\n!\nhostname dmz1\n!\n!\nvrf definition Mgmt-vrf\n !\n address-family\
-          \ ipv4\n exit-address-family\n !\n address-family ipv6\n exit-address-family\n\
-          !\nvrf definition blue\n description VRF blue definition\n rd 172.18.200.1:902\n\
-          \ !\n address-family ipv4\n  mdt auto-discovery vxlan\n  mdt default vxlan\
-          \ 239.190.0.2\n  mdt data vxlan 239.190.2.0 0.0.0.255\n  mdt data threshold\
-          \ 1\n  mdt overlay use-bgp\n  route-target export 65003:902\n  route-target\
-          \ import 65003:902\n  route-target import 65003:1000\n  route-target export\
-          \ 65003:902 stitching\n  route-target import 65003:902 stitching\n exit-address-family\n\
-          !\nvrf definition green\n description VRF green definition\n rd 172.18.200.1:903\n\
-          \ !\n address-family ipv4\n  mdt auto-discovery vxlan\n  mdt default vxlan\
-          \ 239.190.0.3\n  mdt data vxlan 239.190.3.0 0.0.0.255\n  mdt data threshold\
-          \ 1\n  mdt overlay use-bgp\n  route-target export 65003:903\n  route-target\
-          \ import 65003:903\n  route-target import 65003:1000\n  route-target export\
-          \ 65003:903 stitching\n  route-target import 65003:903 stitching\n exit-address-family\n\
-          !\nvrf definition shared\n rd 172.18.200.1:1000\n !\n address-family ipv4\n\
-          \  route-replicate from vrf blue unicast all\n  route-replicate from vrf\
-          \ green unicast all\n  route-target export 65003:1000\n  route-target import\
-          \ 65003:902\n  route-target import 65003:903\n exit-address-family\n!\n\
-          no logging console\naaa new-model\n!\n!\naaa authentication login default\
+        content: "Building configuration...\n\nCurrent configuration : 15135 bytes\n\
+          !\n! Last configuration change at 16:19:21 UTC Sun Mar 15 2026 by cisco\n\
+          !\nversion 17.15\nservice timestamps debug datetime msec\nservice timestamps\
+          \ log datetime msec\n!\nhostname dmz1\n!\n!\nvrf definition Mgmt-vrf\n !\n\
+          \ address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
+          \ exit-address-family\n!\nvrf definition blue\n description VRF blue definition\n\
+          \ rd 172.18.200.1:902\n !\n address-family ipv4\n  mdt auto-discovery vxlan\n\
+          \  mdt default vxlan 239.190.0.2\n  mdt data vxlan 239.190.2.0 0.0.0.255\n\
+          \  mdt data threshold 1\n  mdt overlay use-bgp\n  route-target export 65003:902\n\
+          \  route-target import 65003:902\n  route-target import 65003:1000\n  route-target\
+          \ export 65003:902 stitching\n  route-target import 65003:902 stitching\n\
+          \ exit-address-family\n!\nvrf definition green\n description VRF green definition\n\
+          \ rd 172.18.200.1:903\n !\n address-family ipv4\n  mdt auto-discovery vxlan\n\
+          \  mdt default vxlan 239.190.0.3\n  mdt data vxlan 239.190.3.0 0.0.0.255\n\
+          \  mdt data threshold 1\n  mdt overlay use-bgp\n  route-target export 65003:903\n\
+          \  route-target import 65003:903\n  route-target import 65003:1000\n  route-target\
+          \ export 65003:903 stitching\n  route-target import 65003:903 stitching\n\
+          \ exit-address-family\n!\nvrf definition shared\n rd 172.18.200.1:1000\n\
+          \ !\n address-family ipv4\n  route-replicate from vrf blue unicast all\n\
+          \  route-replicate from vrf green unicast all\n  route-target export 65003:1000\n\
+          \  route-target import 65003:902\n  route-target import 65003:903\n exit-address-family\n\
+          !\nno logging console\naaa new-model\n!\n!\naaa authentication login default\
           \ local\naaa authorization exec default local\n!\n!\naaa session-id common\n\
           switch 1 provision c9kv-uadp-8p\n!\n!\n!\n!\nip routing\n!\n!\n!\n!\n!\n\
           ip multicast-routing\nip multicast-routing vrf blue\nip multicast-routing\
@@ -3755,111 +3764,84 @@ nodes:
           \ description ICMPGEN,BROADCAST,ICMP,L2LVXCntrl,ProtoSnoop,PuntWebauth,MCASTData,Transit,DOT1XAuth,Swfwd,LOGGING,L2LVXData,ForusTraffic,ForusARP,McastEndStn,Openflow,Exception,EGRExcption,NflSampled,RpfFailed\n\
           !\npolicy-map system-cpp-policy\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\ninterface\
           \ Loopback0\n description Routing Loopback\n ip address 198.19.1.200 255.255.255.255\n\
-          \ ip pim sparse-mode\n ip ospf 1 area 0\n!\ninterface GigabitEthernet0/0\n\
-          \ vrf forwarding Mgmt-vrf\n ip address 198.18.128.107 255.255.192.0\n negotiation\
-          \ auto\n ipv6 dhcp client request vendor\n ipv6 address dhcp\n ipv6 address\
-          \ autoconfig\n ipv6 enable\n!\ninterface GigabitEthernet1/0/1\n description\
-          \ Core1\n no switchport\n ip address 198.19.2.66 255.255.255.252\n ip pim\
-          \ sparse-mode\n ip ospf network point-to-point\n ip ospf 1 area 0\n!\ninterface\
-          \ GigabitEthernet1/0/2\n description Core2\n no switchport\n ip address\
-          \ 198.19.2.70 255.255.255.252\n ip pim sparse-mode\n ip ospf network point-to-point\n\
-          \ ip ospf 1 area 0\n!\ninterface GigabitEthernet1/0/3\n description FW\n\
-          \ no switchport\n vrf forwarding shared\n ip address 198.19.2.73 255.255.255.252\n\
-          \ load-interval 30\n!\ninterface GigabitEthernet1/0/4\n device-tracking\
-          \ attach-policy IPDT_POLICY\n!\ninterface GigabitEthernet1/0/5\n description\
-          \ dhcp-server-multivrf\n switchport trunk allowed vlan 100,110,120\n switchport\
-          \ mode trunk\n device-tracking attach-policy IPDT_POLICY\n!\ninterface GigabitEthernet1/0/6\n\
-          \ device-tracking attach-policy IPDT_POLICY\n!\ninterface GigabitEthernet1/0/7\n\
-          \ device-tracking attach-policy IPDT_POLICY\n!\ninterface GigabitEthernet1/0/8\n\
-          \ device-tracking attach-policy IPDT_POLICY\n!\ninterface Vlan1\n no ip\
-          \ address\n shutdown\n!\ninterface Vlan100\n vrf forwarding green\n ip address\
-          \ 198.18.143.1 255.255.255.0\n!\ninterface Vlan110\n vrf forwarding blue\n\
-          \ ip address 198.18.144.1 255.255.255.0\n!\ninterface Vlan120\n description\
-          \ CORP-RED-UNDERLAY-DHCP\n ip address 198.19.2.77 255.255.255.252\n ip pim\
-          \ sparse-mode\n!\ninterface Vlan902\n description ** SVI for blue L3VNI\
-          \ **\n vrf forwarding blue\n ip unnumbered Loopback0\n no ip redirects\n\
-          \ no ip unreachables\n ip pim sparse-mode\n no autostate\n!\ninterface Vlan903\n\
-          \ description ** SVI for green L3VNI **\n vrf forwarding green\n ip unnumbered\
-          \ Loopback0\n no ip redirects\n no ip unreachables\n ip pim sparse-mode\n\
-          \ no autostate\n!\ninterface nve1\n no ip address\n source-interface Loopback0\n\
-          \ host-reachability protocol bgp\n member vni 50902 vrf blue\n member vni\
-          \ 50903 vrf green\n!\nrouter ospf 1\n router-id 198.19.1.200\n!\nrouter\
-          \ bgp 65003\n template peer-policy PEER-POLICY\n  soft-reconfiguration inbound\n\
-          \ exit-peer-policy\n !\n template peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n\
-          \  soft-reconfiguration inbound\n  send-community both\n exit-peer-policy\n\
-          \ !\n template peer-session PEER-SESSION\n  remote-as 65002\n  ebgp-multihop\
-          \ 4\n  update-source Loopback0\n exit-peer-session\n !\n template peer-session\
+          \ ip pim sparse-mode\n!\ninterface GigabitEthernet0/0\n vrf forwarding Mgmt-vrf\n\
+          \ ip address 198.18.128.107 255.255.192.0\n negotiation auto\n ipv6 dhcp\
+          \ client request vendor\n ipv6 address dhcp\n ipv6 address autoconfig\n\
+          \ ipv6 enable\n!\ninterface GigabitEthernet1/0/1\n description Core1\n no\
+          \ switchport\n ip address 198.19.2.66 255.255.255.252\n ip pim sparse-mode\n\
+          \ ip ospf network point-to-point\n!\ninterface GigabitEthernet1/0/2\n description\
+          \ Core2\n no switchport\n ip address 198.19.2.70 255.255.255.252\n ip pim\
+          \ sparse-mode\n ip ospf network point-to-point\n!\ninterface GigabitEthernet1/0/3\n\
+          \ description FW\n no switchport\n vrf forwarding shared\n ip address 198.19.2.73\
+          \ 255.255.255.252\n load-interval 30\n!\ninterface GigabitEthernet1/0/4\n\
+          \ device-tracking attach-policy IPDT_POLICY\n!\ninterface GigabitEthernet1/0/5\n\
+          \ description dhcp-server-multivrf\n switchport trunk allowed vlan 100,110,120\n\
+          \ switchport mode trunk\n device-tracking attach-policy IPDT_POLICY\n!\n\
+          interface GigabitEthernet1/0/6\n device-tracking attach-policy IPDT_POLICY\n\
+          !\ninterface GigabitEthernet1/0/7\n device-tracking attach-policy IPDT_POLICY\n\
+          !\ninterface GigabitEthernet1/0/8\n device-tracking attach-policy IPDT_POLICY\n\
+          !\ninterface Vlan1\n no ip address\n shutdown\n!\ninterface Vlan100\n vrf\
+          \ forwarding green\n ip address 198.18.143.1 255.255.255.0\n!\ninterface\
+          \ Vlan110\n vrf forwarding blue\n ip address 198.18.144.1 255.255.255.0\n\
+          !\ninterface Vlan120\n description CORP-RED-UNDERLAY-DHCP\n ip address 198.19.2.77\
+          \ 255.255.255.252\n ip pim sparse-mode\n!\ninterface Vlan902\n description\
+          \ ** SVI for blue L3VNI **\n vrf forwarding blue\n ip unnumbered Loopback0\n\
+          \ no ip redirects\n no ip unreachables\n ip pim sparse-mode\n no autostate\n\
+          !\ninterface Vlan903\n description ** SVI for green L3VNI **\n vrf forwarding\
+          \ green\n ip unnumbered Loopback0\n no ip redirects\n no ip unreachables\n\
+          \ ip pim sparse-mode\n no autostate\n!\ninterface nve1\n no ip address\n\
+          \ source-interface Loopback0\n host-reachability protocol bgp\n member vni\
+          \ 50902 vrf blue\n member vni 50903 vrf green\n!\nrouter bgp 65003\n template\
+          \ peer-policy PEER-POLICY\n  soft-reconfiguration inbound\n exit-peer-policy\n\
+          \ !\n template peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n  soft-reconfiguration\
+          \ inbound\n  send-community both\n exit-peer-policy\n !\n template peer-session\
           \ OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n  remote-as 65001\n  description\
           \ VXLAN-GW-2-LEAF-EVPN-PEER\n  log-neighbor-changes\n  ebgp-multihop 255\n\
           \  update-source Loopback0\n exit-peer-session\n !\n bgp router-id interface\
-          \ Loopback0\n bgp log-neighbor-changes\n neighbor 172.16.255.6 inherit peer-session\
-          \ OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n neighbor 172.16.255.7 inherit\
-          \ peer-session OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n neighbor 172.16.255.8\
-          \ remote-as 65002\n neighbor 172.16.255.8 inherit peer-session PEER-SESSION\n\
-          \ neighbor 172.16.255.9 remote-as 65002\n neighbor 172.16.255.9 inherit\
-          \ peer-session PEER-SESSION\n neighbor 198.18.132.8 remote-as 65002\n neighbor\
-          \ 198.18.132.8 inherit peer-session PEER-SESSION\n neighbor 198.18.132.9\
-          \ remote-as 65002\n neighbor 198.18.132.9 inherit peer-session PEER-SESSION\n\
-          \ neighbor 198.19.1.6 inherit peer-session OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n\
-          \ neighbor 198.19.1.7 inherit peer-session OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n\
-          \ neighbor 198.19.1.8 remote-as 65002\n neighbor 198.19.1.8 inherit peer-session\
-          \ PEER-SESSION\n neighbor 198.19.1.9 remote-as 65002\n neighbor 198.19.1.9\
-          \ inherit peer-session PEER-SESSION\n !\n address-family ipv4\n  redistribute\
-          \ connected route-map TO-BGP\n  no neighbor 172.16.255.6 activate\n  no\
-          \ neighbor 172.16.255.7 activate\n  neighbor 172.16.255.8 activate\n  neighbor\
-          \ 172.16.255.8 inherit peer-policy PEER-POLICY\n  neighbor 172.16.255.9\
-          \ activate\n  neighbor 172.16.255.9 inherit peer-policy PEER-POLICY\n  neighbor\
-          \ 198.18.132.8 activate\n  neighbor 198.18.132.8 inherit peer-policy PEER-POLICY\n\
-          \  neighbor 198.18.132.9 activate\n  neighbor 198.18.132.9 inherit peer-policy\
-          \ PEER-POLICY\n  no neighbor 198.19.1.6 activate\n  no neighbor 198.19.1.7\
-          \ activate\n  neighbor 198.19.1.8 activate\n  neighbor 198.19.1.8 inherit\
-          \ peer-policy PEER-POLICY\n  neighbor 198.19.1.9 activate\n  neighbor 198.19.1.9\
-          \ inherit peer-policy PEER-POLICY\n  maximum-paths 2\n exit-address-family\n\
+          \ Loopback0\n bgp log-neighbor-changes\n neighbor 198.19.1.5 inherit peer-session\
+          \ OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n neighbor 198.19.1.6 inherit\
+          \ peer-session OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n neighbor 198.19.2.65\
+          \ remote-as 65002\n neighbor 198.19.2.69 remote-as 65002\n !\n address-family\
+          \ ipv4\n  redistribute connected route-map TO-BGP\n  no neighbor 198.19.1.5\
+          \ activate\n  no neighbor 198.19.1.6 activate\n  neighbor 198.19.2.65 activate\n\
+          \  neighbor 198.19.2.69 activate\n  maximum-paths 2\n exit-address-family\n\
           \ !\n address-family l2vpn evpn\n  bgp additional-paths select all\n  bgp\
-          \ additional-paths send receive\n  rewrite-evpn-rt-asn\n  neighbor 172.16.255.6\
-          \ activate\n  neighbor 172.16.255.6 send-community both\n  neighbor 172.16.255.6\
-          \ inherit peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n  neighbor 172.16.255.6\
-          \ route-map EVPN-TYPE5-ONLY in\n  neighbor 172.16.255.6 route-map DMZ-policy-out\
-          \ out\n  neighbor 172.16.255.7 activate\n  neighbor 172.16.255.7 send-community\
-          \ both\n  neighbor 172.16.255.7 inherit peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n\
-          \  neighbor 172.16.255.7 route-map EVPN-TYPE5-ONLY in\n  neighbor 172.16.255.7\
-          \ route-map DMZ-policy-out out\n  neighbor 198.19.1.6 activate\n  neighbor\
-          \ 198.19.1.6 send-community both\n  neighbor 198.19.1.6 inherit peer-policy\
-          \ OVERLAY-Border-EVPN-PEER-POLICY\n  neighbor 198.19.1.6 route-map EVPN-TYPE5-ONLY\
-          \ in\n  neighbor 198.19.1.6 route-map DMZ-policy-out out\n  neighbor 198.19.1.7\
-          \ activate\n  neighbor 198.19.1.7 send-community both\n  neighbor 198.19.1.7\
-          \ inherit peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n  neighbor 198.19.1.7\
-          \ route-map EVPN-TYPE5-ONLY in\n  neighbor 198.19.1.7 route-map DMZ-policy-out\
-          \ out\n exit-address-family\n !\n address-family ipv4 vrf blue\n  advertise\
-          \ l2vpn evpn\n  import path selection all\n  redistribute static\n  redistribute\
-          \ connected\n  maximum-paths 2\n  default-information originate\n exit-address-family\n\
-          \ !\n address-family ipv4 vrf green\n  advertise l2vpn evpn\n  import path\
-          \ selection all\n  redistribute static\n  redistribute connected\n  maximum-paths\
-          \ ibgp 2\n  default-information originate\n exit-address-family\n !\n address-family\
-          \ ipv4 vrf shared\n  advertise l2vpn evpn\n  network 0.0.0.0\n  redistribute\
-          \ connected\n  default-information originate\n exit-address-family\n!\n\
-          ip forward-protocol nd\nip tcp mss 1280\nip tcp window-size 212000\nip http\
-          \ server\nip http authentication local\nip http secure-server\nip http client\
-          \ source-interface GigabitEthernet0/0\nip pim rp-address 198.19.1.254\n\
-          ip pim spt-threshold 0\nip pim vrf blue rp-address 172.17.254.100\nip pim\
-          \ vrf green rp-address 172.17.254.100\nip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0\
-          \ 198.18.128.1\nip route vrf blue 0.0.0.0 0.0.0.0 198.18.130.74\nip route\
-          \ vrf blue 0.0.0.0 0.0.0.0 198.19.2.74\nip route vrf green 0.0.0.0 0.0.0.0\
-          \ 198.18.130.74\nip route vrf green 0.0.0.0 0.0.0.0 198.19.2.74\nip route\
-          \ vrf shared 0.0.0.0 0.0.0.0 198.18.130.74\nip route vrf shared 0.0.0.0\
-          \ 0.0.0.0 198.19.2.74\nip ssh bulk-mode 131072\nip ssh source-interface\
-          \ GigabitEthernet0/0\n!\nip as-path access-list 1 permit _$\n!\n!\nip prefix-list\
-          \ evpn-to-shared seq 5 permit 0.0.0.0/0 le 32\n!\nip prefix-list shared-to-evpn\
-          \ seq 5 permit 0.0.0.0/0\nlogging source-interface GigabitEthernet0/0 vrf\
-          \ Mgmt-vrf\nlogging host 10.0.10.104 vrf Mgmt-vrf\nlogging host 10.0.10.86\
-          \ vrf Mgmt-vrf\nroute-map DMZ-policy-out permit 10\n match as-path 1\n!\n\
-          route-map EVPN-TYPE5-ONLY permit 10\n match evpn route-type 5\n!\nroute-map\
-          \ TO-BGP permit 10\n match interface Loopback0\n!\nroute-map TO-BGP permit\
-          \ 20\n match interface Vlan120\n!\nsnmp-server community RO RO\nsnmp-server\
-          \ community RW RW\n!\n!\n!\n!\ncontrol-plane\n service-policy input system-cpp-policy\n\
-          !\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout\
-          \ 0 0\n transport input ssh\nline vty 5 15\n transport input ssh\n!\n!\n\
-          !\n!\n!\n!\n!\nnetconf-yang\nend"
+          \ additional-paths send receive\n  rewrite-evpn-rt-asn\n  neighbor 198.19.1.5\
+          \ activate\n  neighbor 198.19.1.5 send-community both\n  neighbor 198.19.1.5\
+          \ inherit peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n  neighbor 198.19.1.5\
+          \ route-map EVPN-TYPE5-ONLY in\n  neighbor 198.19.1.5 route-map DMZ-policy-out\
+          \ out\n  neighbor 198.19.1.6 activate\n  neighbor 198.19.1.6 send-community\
+          \ both\n  neighbor 198.19.1.6 inherit peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n\
+          \  neighbor 198.19.1.6 route-map EVPN-TYPE5-ONLY in\n  neighbor 198.19.1.6\
+          \ route-map DMZ-policy-out out\n exit-address-family\n !\n address-family\
+          \ ipv4 vrf blue\n  advertise l2vpn evpn\n  import path selection all\n \
+          \ redistribute static\n  redistribute connected\n  maximum-paths 2\n  default-information\
+          \ originate\n exit-address-family\n !\n address-family ipv4 vrf green\n\
+          \  advertise l2vpn evpn\n  import path selection all\n  redistribute static\n\
+          \  redistribute connected\n  maximum-paths ibgp 2\n  default-information\
+          \ originate\n exit-address-family\n !\n address-family ipv4 vrf shared\n\
+          \  advertise l2vpn evpn\n  network 0.0.0.0\n  redistribute connected\n \
+          \ default-information originate\n exit-address-family\n!\nip forward-protocol\
+          \ nd\nip tcp mss 1280\nip tcp window-size 212000\nip http server\nip http\
+          \ authentication local\nip http secure-server\nip http client source-interface\
+          \ GigabitEthernet0/0\nip pim rp-address 198.19.1.254\nip pim spt-threshold\
+          \ 0\nip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 198.18.128.1\nip route vrf blue\
+          \ 0.0.0.0 0.0.0.0 198.18.130.74\nip route vrf blue 0.0.0.0 0.0.0.0 198.19.2.74\n\
+          ip route vrf green 0.0.0.0 0.0.0.0 198.18.130.74\nip route vrf green 0.0.0.0\
+          \ 0.0.0.0 198.19.2.74\nip route vrf shared 0.0.0.0 0.0.0.0 198.19.2.74\n\
+          ip ssh bulk-mode 131072\nip ssh source-interface GigabitEthernet0/0\n!\n\
+          ip as-path access-list 1 permit _$\n!\n!\nip prefix-list evpn-to-shared\
+          \ seq 5 permit 0.0.0.0/0 le 32\n!\nip prefix-list shared-to-evpn seq 5 permit\
+          \ 0.0.0.0/0\nlogging source-interface GigabitEthernet0/0 vrf Mgmt-vrf\n\
+          logging host 10.0.10.104 vrf Mgmt-vrf\nlogging host 10.0.10.86 vrf Mgmt-vrf\n\
+          route-map DMZ-policy-out permit 10\n match as-path 1\n!\nroute-map EVPN-TYPE5-ONLY\
+          \ permit 10\n match evpn route-type 5\n!\nroute-map TO-BGP permit 10\n match\
+          \ interface Loopback0\n!\nroute-map TO-BGP permit 20\n match interface Vlan120\n\
+          !\nsnmp-server community RO RO\nsnmp-server community RW RW\n!\n!\n!\n!\n\
+          control-plane\n service-policy input system-cpp-policy\n!\n!\n!\nline con\
+          \ 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout 0 0\n transport\
+          \ input ssh\nline vty 5 15\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\n\
+          netconf-yang\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -3998,7 +3980,7 @@ nodes:
     cpus: null
     data_volume: null
     hide_links: false
-    id: n16
+    id: n15
     image_definition: null
     label: dmz1
     node_definition: cat9000v-uadp
@@ -4063,27 +4045,30 @@ nodes:
       - name: node.cfg
         content: |-
           # this is a shell script which will be sourced at boot
-          hostname iot3
+          hostname blue02
           # configurable user account
           USERNAME=cisco
           PASSWORD=cisco
 
+          kill $(cat /var/run/udhcpc.eth0.pid 2>/dev/null) 2>/dev/null
+          ip addr flush dev eth0
+          ip link set dev eth0 address 00:00:00:02:01:02
           ip addr add 10.1.201.20/24 dev eth0
           ip route add default via 10.1.201.1
     cpu_limit: null
     cpus: null
     data_volume: null
     hide_links: false
-    id: n17
+    id: n16
     image_definition: null
-    label: iot-3
+    label: blue02
     node_definition: alpine
     parameters: {}
     ram: null
     tags:
       - blue-201
-    x: 480
-    y: 360
+    x: 360
+    y: 400
     interfaces:
       - id: i0
         label: eth0
@@ -4093,8 +4078,8 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 7623 bytes\n\
-          !\n! Last configuration change at 22:02:16 UTC Wed Mar 11 2026 by net-admin\n\
+        content: "Building configuration...\n\nCurrent configuration : 7613 bytes\n\
+          !\n! Last configuration change at 17:03:17 UTC Fri Mar 13 2026 by net-admin\n\
           !\nversion 17.16\nservice timestamps debug datetime msec\nservice timestamps\
           \ log datetime msec\nplatform qfp utilization monitor load 80\nplatform\
           \ sslvpn use-pd\nplatform console serial\n!\nhostname dhcp-server\n!\nboot-start-marker\n\
@@ -4180,29 +4165,28 @@ nodes:
           \ cisco privilege 15 password 0 cisco\nusername net-admin privilege 15 password\
           \ 0 Cisco123\n!\nredundancy\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\ninterface GigabitEthernet1\n\
           \ vrf forwarding Mgmt-vrf\n ip address 198.18.128.110 255.255.192.0\n negotiation\
-          \ auto\n!\ninterface GigabitEthernet2\n no ip address\n shutdown\n negotiation\
-          \ auto\n!\ninterface GigabitEthernet2.100\n description dhcp-server-green\n\
-          \ encapsulation dot1Q 100\n vrf forwarding green\n ip address 198.18.143.100\
-          \ 255.255.255.0\n!\ninterface GigabitEthernet2.110\n description dhcp-server-blue\n\
-          \ encapsulation dot1Q 110\n vrf forwarding blue\n ip address 198.18.144.100\
-          \ 255.255.255.0\n!\ninterface GigabitEthernet2.120\n description dhcp-server-global\n\
-          \ encapsulation dot1Q 120\n ip address 198.19.2.78 255.255.255.252\n!\n\
-          interface GigabitEthernet3\n no ip address\n shutdown\n negotiation auto\n\
-          !\ninterface GigabitEthernet4\n no ip address\n shutdown\n negotiation auto\n\
-          !\nip forward-protocol nd\nip forward-protocol udp\n!\nno ip http server\n\
-          ip http secure-server\nip route 0.0.0.0 0.0.0.0 198.19.2.77\nip route vrf\
-          \ Mgmt-vrf 0.0.0.0 0.0.0.0 198.18.128.1\nip route vrf blue 0.0.0.0 0.0.0.0\
-          \ 198.18.144.1\nip route vrf green 0.0.0.0 0.0.0.0 198.18.143.1\nip ssh\
-          \ bulk-mode 131072\n!\n!\n!\n!\n!\ncontrol-plane\n!\n!\nline con 0\n exec-timeout\
-          \ 0 0\n stopbits 1\nline aux 0\nline vty 0\n exec-timeout 0 0\n transport\
-          \ input ssh\nline vty 1\n exec-timeout 0 0\n length 0\n transport input\
-          \ ssh\nline vty 2 4\n exec-timeout 0 0\n transport input ssh\n!\n!\n!\n\
-          !\n!\n!\n!\nend"
+          \ auto\n!\ninterface GigabitEthernet2\n no ip address\n negotiation auto\n\
+          !\ninterface GigabitEthernet2.100\n description dhcp-server-green\n encapsulation\
+          \ dot1Q 100\n vrf forwarding green\n ip address 198.18.143.100 255.255.255.0\n\
+          !\ninterface GigabitEthernet2.110\n description dhcp-server-blue\n encapsulation\
+          \ dot1Q 110\n vrf forwarding blue\n ip address 198.18.144.100 255.255.255.0\n\
+          !\ninterface GigabitEthernet2.120\n description dhcp-server-global\n encapsulation\
+          \ dot1Q 120\n ip address 198.19.2.78 255.255.255.252\n!\ninterface GigabitEthernet3\n\
+          \ no ip address\n shutdown\n negotiation auto\n!\ninterface GigabitEthernet4\n\
+          \ no ip address\n shutdown\n negotiation auto\n!\nip forward-protocol nd\n\
+          ip forward-protocol udp\n!\nno ip http server\nip http secure-server\nip\
+          \ route 0.0.0.0 0.0.0.0 198.19.2.77\nip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0\
+          \ 198.18.128.1\nip route vrf blue 0.0.0.0 0.0.0.0 198.18.144.1\nip route\
+          \ vrf green 0.0.0.0 0.0.0.0 198.18.143.1\nip ssh bulk-mode 131072\n!\n!\n\
+          !\n!\n!\ncontrol-plane\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits 1\n\
+          line aux 0\nline vty 0\n exec-timeout 0 0\n transport input ssh\nline vty\
+          \ 1\n exec-timeout 0 0\n length 0\n transport input ssh\nline vty 2 4\n\
+          \ exec-timeout 0 0\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\nend"
     cpu_limit: null
     cpus: null
     data_volume: null
     hide_links: false
-    id: n18
+    id: n17
     image_definition: null
     label: dhcp-server
     node_definition: cat8000v
@@ -4241,25 +4225,27 @@ nodes:
       - name: node.cfg
         content: |-
           # this is a shell script which will be sourced at boot
-          hostname iot-dhcp
+          hostname green02
           # configurable user account
           USERNAME=cisco
           PASSWORD=cisco
+          ip link set dev eth0 address 00:00:00:02:21:02
+          udhcpc -i eth0
     cpu_limit: null
     cpus: null
     data_volume: null
     hide_links: false
-    id: n19
+    id: n18
     image_definition: null
-    label: iot-dhcp-client
+    label: green02(dhcp)
     node_definition: alpine
     parameters: {}
     ram: null
     tags:
       - green-202
       - dhcp-client
-    x: 600
-    y: 600
+    x: 920
+    y: 400
     interfaces:
       - id: i0
         label: eth0
@@ -4271,17 +4257,19 @@ nodes:
       - name: node.cfg
         content: |-
           # this is a shell script which will be sourced at boot
-          hostname green-dhcp-client
+          hostname red03
           # configurable user account
           USERNAME=cisco
           PASSWORD=cisco
+          ip link set dev eth0 address 00:00:00:01:02:03
+          udhcpc -i eth0
     cpu_limit: null
     cpus: null
     data_volume: null
     hide_links: false
-    id: n20
+    id: n19
     image_definition: null
-    label: green-dhcp-client
+    label: red03(dhcp)
     node_definition: alpine
     parameters: {}
     ram: null
@@ -4289,8 +4277,8 @@ nodes:
       - red
       - red-102
       - dhcp-client
-    x: -280
-    y: 600
+    x: -440
+    y: 640
     interfaces:
       - id: i0
         label: eth0
@@ -4300,8 +4288,8 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 5971 bytes\n\
-          !\n! Last configuration change at 21:18:14 UTC Wed Mar 11 2026\n!\nversion\
+        content: "Building configuration...\n\nCurrent configuration : 6132 bytes\n\
+          !\n! Last configuration change at 16:19:31 UTC Sun Mar 15 2026\n!\nversion\
           \ 17.16\nservice timestamps debug datetime msec\nservice timestamps log\
           \ datetime msec\nplatform qfp utilization monitor load 80\nplatform sslvpn\
           \ use-pd\nplatform console serial\n!\nhostname FW\n!\nboot-start-marker\n\
@@ -4367,27 +4355,29 @@ nodes:
           \ C62A73CF DD8FB788\n  761B34CD 72858D74 41A1D5B3 0F3C17C3 9E3E\n  \tquit\n\
           !\n!\nlicense udi pid C8000V sn 9S4GW64MRS7\nmemory free low-watermark processor\
           \ 165529\ndiagnostic bootup level minimal\n!\n!\n!\nusername net-admin privilege\
-          \ 15 password 0 Cisco123\nusername cisco privilege 15 secret 9 $9$o/3ALsI8GupKsE$bAx43O15CniGOmmr9OCwOERe/QMvf28jiufGd8zLV3I\n\
+          \ 15 password 0 cisco\nusername cisco privilege 15 secret 9 $9$o/3ALsI8GupKsE$bAx43O15CniGOmmr9OCwOERe/QMvf28jiufGd8zLV3I\n\
           !\nredundancy\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\ninterface GigabitEthernet1\n\
           \ description dmz1-Gi1/0/3\n ip address 198.19.2.74 255.255.255.252\n ip\
-          \ nat inside\n negotiation auto\n!\ninterface GigabitEthernet2\n ip address\
-          \ 198.18.134.200 255.255.192.0\n ip nat outside\n negotiation auto\n!\n\
-          interface GigabitEthernet3\n no ip address\n shutdown\n negotiation auto\n\
-          !\ninterface GigabitEthernet4\n no ip address\n shutdown\n negotiation auto\n\
-          !\nip forward-protocol nd\nip forward-protocol udp\n!\nno ip http server\n\
-          ip http secure-server\nip route 0.0.0.0 0.0.0.0 198.18.128.1\nip route 10.1.0.0\
-          \ 255.255.0.0 198.18.130.73\nip route 10.1.0.0 255.255.0.0 198.19.2.73\n\
+          \ nat inside\n ip access-group BLOCK-BLUE-GREEN in\n negotiation auto\n\
+          !\ninterface GigabitEthernet2\n ip address 198.18.134.200 255.255.192.0\n\
+          \ ip nat outside\n negotiation auto\n!\ninterface GigabitEthernet3\n no\
+          \ ip address\n shutdown\n negotiation auto\n!\ninterface GigabitEthernet4\n\
+          \ no ip address\n shutdown\n negotiation auto\n!\nip forward-protocol nd\n\
+          ip forward-protocol udp\n!\nno ip http server\nip http secure-server\nip\
+          \ route 0.0.0.0 0.0.0.0 198.18.128.1\nip route 10.1.0.0 255.255.0.0 198.19.2.73\n\
           ip nat inside source list NAT-INSIDE interface GigabitEthernet2 overload\n\
-          ip ssh bulk-mode 131072\n!\nip access-list extended NAT-INSIDE\n 10 permit\
-          \ ip 10.1.0.0 0.0.255.255 any\n 20 permit ip 1.1.1.0 0.0.0.3 any\n!\n!\n\
-          control-plane\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits 1\nline aux\
-          \ 0\nline vty 0 4\n exec-timeout 0 0\n login local\n transport input ssh\n\
-          !\n!\n!\n!\n!\n!\n!\nend"
+          ip ssh bulk-mode 131072\n!\nip access-list extended BLOCK-BLUE-GREEN\n 10\
+          \ deny ip 10.1.201.0 0.0.0.255 10.1.221.0 0.0.0.255\n 20 deny ip 10.1.221.0\
+          \ 0.0.0.255 10.1.201.0 0.0.0.255\n 30 permit ip any any\nip access-list\
+          \ extended NAT-INSIDE\n 10 permit ip 10.1.0.0 0.0.255.255 any\n 20 permit\
+          \ ip 1.1.1.0 0.0.0.3 any\n!\n!\ncontrol-plane\n!\n!\nline con 0\n exec-timeout\
+          \ 0 0\n stopbits 1\nline aux 0\nline vty 0 4\n exec-timeout 0 0\n login\
+          \ local\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\nend"
     cpu_limit: null
     cpus: null
     data_volume: null
     hide_links: false
-    id: n21
+    id: n20
     image_definition: null
     label: FW-SHARED-SERVICES
     node_definition: cat8000v
@@ -4584,117 +4574,117 @@ links:
     conditioning: {}
     label: spine2-GigabitEthernet1/0/6<->core2-Ethernet1/2
   - id: l23
-    n1: n13
-    n2: n3
-    i1: i0
-    i2: i5
-    conditioning: {}
-    label: client3-eth0<->leaf1-GigabitEthernet1/0/4
-  - id: l24
     n1: n12
     n2: n2
     i1: i0
     i2: i5
     conditioning: {}
     label: client4-eth0<->leaf2-GigabitEthernet1/0/4
-  - id: l25
-    n1: n14
+  - id: l24
+    n1: n13
     n2: n2
     i1: i0
     i2: i6
     conditioning: {}
     label: iot1-eth0<->leaf2-GigabitEthernet1/0/5
-  - id: l26
-    n1: n15
+  - id: l25
+    n1: n14
     n2: n3
     i1: i0
     i2: i6
     conditioning: {}
     label: iot2-eth0<->leaf1-GigabitEthernet1/0/5
-  - id: l27
-    n1: n16
+  - id: l26
+    n1: n15
     n2: n4
     i1: i1
     i2: i10
     conditioning: {}
     label: dmz1-GigabitEthernet0/0<->iol-l2-0-Ethernet2/1
-  - id: l28
+  - id: l27
     n1: n10
-    n2: n16
+    n2: n15
     i1: i4
     i2: i2
     conditioning: {}
     label: core1-Ethernet1/3<->dmz1-GigabitEthernet1/0/1
-  - id: l29
+  - id: l28
     n1: n11
-    n2: n16
+    n2: n15
     i1: i4
     i2: i3
     conditioning: {}
     label: core2-Ethernet1/3<->dmz1-GigabitEthernet1/0/2
-  - id: l30
-    n1: n17
+  - id: l29
+    n1: n16
     n2: n3
     i1: i0
     i2: i7
     conditioning: {}
     label: iot-3-eth0<->leaf1-GigabitEthernet1/0/6
-  - id: l31
-    n1: n18
+  - id: l30
+    n1: n17
     n2: n4
     i1: i1
     i2: i11
     conditioning: {}
     label: dhcp-server-GigabitEthernet1<->iol-l2-0-Ethernet2/2
-  - id: l32
-    n1: n18
-    n2: n16
+  - id: l31
+    n1: n17
+    n2: n15
     i1: i2
     i2: i6
     conditioning: {}
     label: dhcp-server-GigabitEthernet2<->dmz1-GigabitEthernet1/0/5
-  - id: l33
-    n1: n20
+  - id: l32
+    n1: n19
     n2: n2
     i1: i0
     i2: i7
     conditioning: {}
     label: green-dhcp-client-eth0<->leaf2-GigabitEthernet1/0/6
-  - id: l34
-    n1: n19
+  - id: l33
+    n1: n18
     n2: n2
     i1: i0
     i2: i8
     conditioning: {}
     label: iot-dhcp-client-eth0<->leaf2-GigabitEthernet1/0/7
-  - id: l35
-    n1: n16
-    n2: n21
+  - id: l34
+    n1: n15
+    n2: n20
     i1: i4
     i2: i1
     conditioning: {}
     label: dmz1-GigabitEthernet1/0/3<->FW-SHARED-SERVICES-GigabitEthernet1
-  - id: l36
-    n1: n21
+  - id: l35
+    n1: n20
     n2: n4
     i1: i2
     i2: i12
     conditioning: {}
     label: FW-SHARED-SERVICES-GigabitEthernet2<->iol-l2-0-Ethernet2/3
-  - id: l37
+  - id: l36
     n1: n11
     n2: n4
     i1: i5
     i2: i13
     conditioning: {}
     label: core2-Ethernet1/4<->iol-l2-0-Ethernet3/0
-  - id: l38
+  - id: l37
     n1: n10
     n2: n4
     i1: i5
     i2: i14
     conditioning: {}
     label: core1-Ethernet1/4<->iol-l2-0-Ethernet3/1
+  - id: l38
+    n1: n10
+    n2: n11
+    i1: i6
+    i2: i6
+    conditioning: {}
+    label: core1-Ethernet1/5<->core2-Ethernet1/5
 lab:
   description: To be used for BGP EVPN Fabric Builds with GitOps via Ansible and or
     Cisco Workflows
