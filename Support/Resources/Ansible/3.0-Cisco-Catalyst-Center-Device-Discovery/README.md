@@ -191,9 +191,9 @@ ip_address_list:
 
 > Entries where `DeviceList` is `null` (e.g., area or building nodes that have no directly managed devices) are automatically skipped.
 
-### The `Project` Field
+### The `HierarchyName` Field and Discovery Job Name
 
-The optional `Project` field on each entry, if present, is used as the `discovery_name` passed to the module. This name appears in the CatC **Discovery** view and in the discovery job history. If `Project` is absent, it defaults to `"Device-Discovery"`.
+The `HierarchyName` field on each entry is used as the `discovery_name` passed to the module. This name appears in the CatC **Discovery** view and in the discovery job history, making it immediately clear which site the devices were discovered into (e.g. `Global/PODS/POD 0/Building P0`). If `HierarchyName` is absent, it defaults to `"Device-Discovery"`.
 
 ### Full Example
 
@@ -257,14 +257,16 @@ Same `slurp` → `b64decode` → `from_json` → `assert` pipeline as all playbo
         {%- if entry.DeviceList -%}
           {%- set ips = entry.DeviceList.split(',') | map('trim') | list -%}
           {%- set disc = {
-            'discovery_name': entry.Project | default('Device-Discovery'),
+            'discovery_name': entry.HierarchyName | default('Device-Discovery'),
             'discovery_type': 'MULTI RANGE',
             'ip_address_list': ips,
             'protocol_order': 'ssh',
             'retry': 5,
             'timeout': 3,
-            'net_conf_port': '830',
             'preferred_mgmt_ip_method': 'UseLoopBack',
+            'discovery_specific_credentials': {
+              'net_conf_port': '830'
+            },
             'global_credentials': {
               'cli_credentials_list': [{'description': 'CLI-net-admin', 'username': 'net-admin'}],
               'snmp_v2_read_credential_list': [{'description': 'RO'}],
@@ -283,7 +285,6 @@ Same `slurp` → `b64decode` → `from_json` → `assert` pipeline as all playbo
 ```
 Input entry:
   HierarchyName: "Global/PODS/POD 0/Building P0/Floor 1"
-  Project:       "Building P0"
   DeviceList:    "198.19.1.1,198.19.1.2,198.19.1.3"
 
 Processing:
@@ -295,14 +296,16 @@ Processing:
 
 Output discovery_list[0]:
   {
-    "discovery_name":           "Building P0",
+    "discovery_name":           "Global/PODS/POD 0/Building P0/Floor 1",
     "discovery_type":           "MULTI RANGE",
     "ip_address_list":          ["198.19.1.1", "198.19.1.2", "198.19.1.3"],
     "protocol_order":           "ssh",
     "retry":                    5,
     "timeout":                  3,
-    "net_conf_port":            "830",
     "preferred_mgmt_ip_method": "UseLoopBack",
+    "discovery_specific_credentials": {
+      "net_conf_port": "830"
+    },
     "global_credentials": {
       "cli_credentials_list":           [{"description": "CLI-net-admin", "username": "net-admin"}],
       "snmp_v2_read_credential_list":  [{"description": "RO"}],
@@ -317,7 +320,7 @@ Output discovery_list[0]:
 **Purpose:** Loop over `discovery_list` and submit each job to CatC.
 
 ```yaml
-- name: Discover devices — "{{ item.discovery_name }}"
+- name: "Discover devices"
   cisco.dnac.discovery_workflow_manager:
     state: merged
     config:
@@ -364,7 +367,7 @@ The `map(attribute='ip_address_list') | flatten` pattern extracts and flattens t
 | `protocol_order` | `ssh` | Primary protocol for device communication. Can also be `telnet` or `ssh,telnet`. |
 | `retry` | `5` | Number of connection retry attempts per device. |
 | `timeout` | `3` | Seconds to wait for each connection attempt. |
-| `net_conf_port` | `830` | NETCONF port (must match the credential registered in 2.0). |
+| `discovery_specific_credentials.net_conf_port` | `830` | NETCONF port number passed to the discovery job. Must be placed under `discovery_specific_credentials` — the module reads it from there (top-level `netconf_port` is silently ignored). |
 | `preferred_mgmt_ip_method` | `UseLoopBack` | Prefer loopback interfaces as the management IP. Use `None` to use the discovery IP as-is. |
 
 ---
@@ -382,7 +385,7 @@ devices.json
               │
               ▼ Build disc dict
         discovery_list[n] = {
-          discovery_name: "Building P0",
+          discovery_name: "Global/PODS/POD 0/Building P0/Floor 1",
           discovery_type: "MULTI RANGE",
           ip_address_list: [...],
           global_credentials: {
@@ -446,7 +449,7 @@ ok: [catalyst_center] => { "msg": "Input data loaded — 5 entries found." }
 TASK [Validate discovery list is non-empty] ************************************
 ok: [catalyst_center] => { "msg": "1 discovery task(s) to run." }
 
-TASK [Discover devices — "Building P0"] ****************************************
+TASK [Discover devices] ********************************************************
 changed: [catalyst_center]
 
 TASK [Device discovery complete] ***********************************************
@@ -475,6 +478,6 @@ After discovery completes, devices appear in **CatC → Provision → Inventory*
 | Discovery job stuck / times out | Devices unreachable from CatC | Verify IP reachability: `ping` from the CatC appliance to the device IPs |
 | Devices show `Unreachable` | Wrong credentials or SSH not enabled | Verify CLI credentials in playbook 2.0 match the device configuration |
 | `NETCONF connection refused` | NETCONF not enabled on device | Configure `netconf-yang` on the device, or remove the NETCONF credential from the discovery config |
-| Duplicate discovery job name | `Project` field not unique across entries | Ensure each `DeviceList` entry has a unique `Project` name |
+| Duplicate discovery job name | Multiple entries have the same `HierarchyName` | Each `HierarchyName` must be unique — discovery job names are derived from it |
 | `dnac_version mismatch` | SDK version exceeds appliance version | Set `dnac_version: 2.3.7.9` in `inventory.yml` |
 | TLS errors | Self-signed certificate | Set `dnac_verify: false` for lab environments |
