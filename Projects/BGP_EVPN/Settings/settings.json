@@ -6,7 +6,7 @@
             "HierarchyFloor": null,
             "HierarchyParent": "Global/PODS",
             "network_settings": {
-                "dhcp_server": ["198.18.133.1"],
+                "dhcp_server": null,
                 "dns_server": {
                     "domain_name": "dcloud.cisco.com",
                     "primary_ip_address": "198.18.133.1",
@@ -24,13 +24,7 @@
                 "syslog_server": {
                     "configure_dnac_ip": true
                 },
-                "network_aaa": {
-                    "server_type": "ISE",
-                    "primary_server_address": "198.18.133.27",
-                    "pan_address": "198.18.133.27",
-                    "protocol": "RADIUS",
-                    "secondary_server_address": null
-                },
+                "network_aaa": null,
                 "client_and_endpoint_aaa": {
                     "server_type": "ISE",
                     "primary_server_address": "198.18.133.27",
