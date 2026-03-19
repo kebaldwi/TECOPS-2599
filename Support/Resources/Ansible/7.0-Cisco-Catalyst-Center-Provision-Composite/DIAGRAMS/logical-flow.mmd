@@ -1,7 +1,7 @@
 flowchart TD
     START([Start]) --> A
 
-    A["Load devices.json<br/>slurp -&gt; from_json -&gt; assert"]
+    A["Load devices.json<br/>lookup('file') -&gt; from_json -&gt; assert"]
     A --> B{Deploy entries<br/>found?}
     B -->|No| FAIL_A([Fail: no deploy<br/>entries found])
     B -->|Yes| C

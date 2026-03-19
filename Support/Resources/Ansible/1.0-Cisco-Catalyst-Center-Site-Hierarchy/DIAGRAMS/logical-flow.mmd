@@ -1,7 +1,7 @@
 flowchart TD
     START([Start]) --> A
 
-    A["Load devices.json<br/>slurp -&gt; b64decode -&gt; from_json"]
+    A["Load devices.json<br/>lookup('file') -&gt; from_json"]
     A --> B{project key<br/>exists &amp; non-empty?}
     B -->|No| FAIL_A([Fail: invalid<br/>input JSON shape])
     B -->|Yes| C
