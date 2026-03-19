@@ -12,6 +12,7 @@
 ## Table of Contents
 
 1. [Overview](#overview)
+   - [Logical Flow](#logical-flow)
 2. [Prerequisites](#prerequisites)
 3. [Directory Structure](#directory-structure)
 4. [Installation](#installation)
@@ -57,6 +58,14 @@ Both operations are fully idempotent. If a setting already matches the desired s
 | Applies DNS, DHCP, NTP, SNMP, Syslog, Banner, NetFlow, AAA per site | `ansible.builtin.uri` → `PUT /dna/intent/api/v1/network/{siteId}` |
 | Creates/updates global CLI, SNMPv2c R/O, SNMPv2c R/W, NETCONF credentials | `cisco.dnac.device_credential_workflow_manager` |
 | Assigns global credentials to designated sites | `cisco.dnac.device_credential_workflow_manager` |
+
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+![Logical Flow](DIAGRAMS/logical-flow.png)
+
+> Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
 
 ### Playbook ordering dependency
 
@@ -128,7 +137,10 @@ The `PUT /dna/intent/api/v1/network/{siteId}` endpoint accepts a composite setti
 ├── vault.yml.example           # Plain-text credential template
 ├── .vault_pass                 # Vault password file (git-ignored, chmod 600)
 ├── requirements.txt            # Python pip dependencies
-└── requirements.yml            # Ansible Galaxy collection dependencies
+├── requirements.yml            # Ansible Galaxy collection dependencies
+└── DIAGRAMS/
+    ├── logical-flow.mmd        # Mermaid source — re-render with mmdc
+    └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
 The playbook reads from the shared `settings.json` in the project tree:

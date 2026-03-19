@@ -12,6 +12,7 @@
 ## Table of Contents
 
 1. [Overview](#overview)
+   - [Logical Flow](#logical-flow)
 2. [Prerequisites](#prerequisites)
 3. [Directory Structure](#directory-structure)
 4. [Installation](#installation)
@@ -50,6 +51,14 @@ Site assignment is a prerequisite for template deployment, SWIM software managem
 | Groups IPs by target site path | `set_fact` with dict accumulation |
 | Resolves site name → UUID | `cisco.dnac.site_info` |
 | Assigns IP list to site UUID | `cisco.dnac.assign_device_to_site` |
+
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+![Logical Flow](DIAGRAMS/logical-flow.png)
+
+> Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
 
 ### Playbook ordering dependency
 
@@ -90,7 +99,10 @@ Devices must exist in the CatC inventory (discovered by 3.0) before they can be 
 ├── vault.yml.example           # Plain-text credential template
 ├── .vault_pass                 # Vault password file (git-ignored, chmod 600)
 ├── requirements.txt            # Python pip dependencies
-└── requirements.yml            # Ansible Galaxy collection dependencies
+├── requirements.yml            # Ansible Galaxy collection dependencies
+└── DIAGRAMS/
+    ├── logical-flow.mmd        # Mermaid source — re-render with mmdc
+    └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
 Input data comes from the shared `devices.json`:

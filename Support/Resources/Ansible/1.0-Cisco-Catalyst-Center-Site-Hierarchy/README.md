@@ -12,6 +12,7 @@
 ## Table of Contents
 
 1. [Overview](#overview)
+   - [Logical Flow](#logical-flow)
 2. [Prerequisites](#prerequisites)
 3. [Directory Structure](#directory-structure)
 4. [Installation](#installation)
@@ -53,6 +54,14 @@ The playbook is data-driven and fully **idempotent**: it reads a `devices.json` 
 | Creates areas, buildings, floors | `state: merged` |
 | Deletes in reverse order (children first) | `state: deleted` with reversed list |
 
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+![Logical Flow](DIAGRAMS/logical-flow.png)
+
+> Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
+
 ---
 
 ## Prerequisites
@@ -81,7 +90,10 @@ The playbook is data-driven and fully **idempotent**: it reads a `devices.json` 
 ├── vault.yml.example           # Plain-text credential template
 ├── .vault_pass                 # Vault password file (git-ignored, chmod 600)
 ├── requirements.txt            # Python pip dependencies
-└── requirements.yml            # Ansible Galaxy collection dependencies
+├── requirements.yml            # Ansible Galaxy collection dependencies
+└── DIAGRAMS/
+    ├── logical-flow.mmd        # Mermaid source — re-render with mmdc
+    └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
 The playbook references `devices.json` from the project tree by default:

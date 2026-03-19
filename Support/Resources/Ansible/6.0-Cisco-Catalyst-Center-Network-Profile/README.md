@@ -12,6 +12,7 @@
 ## Table of Contents
 
 1. [Overview](#overview)
+   - [Logical Flow](#logical-flow)
 2. [Prerequisites](#prerequisites)
 3. [Directory Structure](#directory-structure)
 4. [Installation](#installation)
@@ -52,6 +53,14 @@ The playbook is data-driven: it reads a `settings.json` file (shared with other 
 | Assigns the profile to one or more sites | `site_names` list in the payload |
 | Attaches Day-N and/or onboarding templates | `day_n_templates` / `onboarding_templates` keys |
 
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+![Logical Flow](DIAGRAMS/logical-flow.png)
+
+> Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
+
 ---
 
 ## Prerequisites
@@ -81,6 +90,9 @@ The playbook is data-driven: it reads a `settings.json` file (shared with other 
 ├── .vault_pass                 # Vault password file (git-ignored, chmod 600)
 ├── requirements.txt            # Python pip dependencies
 ├── requirements.yml            # Ansible Galaxy collection dependencies
+├── DIAGRAMS/
+│   ├── logical-flow.mmd        # Mermaid source — re-render with mmdc
+│   └── logical-flow.png        # Rendered flowchart (referenced by README)
 └── README.md                   # This document
 ```
 

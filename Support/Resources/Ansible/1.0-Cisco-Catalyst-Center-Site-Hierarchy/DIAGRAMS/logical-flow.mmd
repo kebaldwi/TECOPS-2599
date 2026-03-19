@@ -1,0 +1,41 @@
+flowchart TD
+    START([Start]) --> A
+
+    A["Load devices.json<br/>slurp -&gt; b64decode -&gt; from_json"]
+    A --> B{project key<br/>exists &amp; non-empty?}
+    B -->|No| FAIL_A([Fail: invalid<br/>input JSON shape])
+    B -->|Yes| C
+
+    C["Step 2 - Build lookup maps<br/>site_type_map: path → area/building/floor<br/>building_info_map: path → address/lat/lon<br/>floor_info_map: path → rf_model/dims/number"]
+    C --> D
+
+    D["Step 3 - Expand all unique paths<br/>Walk each HierarchyName<br/>emit all prefix sub-paths (depth ≥ 2)<br/>deduplicate → sort shallow-first"]
+    D --> E{any paths<br/>collected?}
+    E -->|No| FAIL_B([Fail: no site paths<br/>derived from input])
+    E -->|Yes| F
+
+    F(["For each path in depth-sorted list"])
+    F --> G{site type<br/>known?}
+
+    G -->|area| H["Build area payload<br/>{ name, parentName }"]
+    G -->|building| I["Build building payload<br/>{ name, parentName,<br/>address, lat, lon, country }"]
+    G -->|floor| J["Build floor payload<br/>{ name, parentName,<br/>rf_model, width, length,<br/>height, floor_number }"]
+    G -->|none / intermediate| K["Build minimal area payload<br/>type = area, name + parentName only"]
+
+    H --> L
+    I --> L
+    J --> L
+    K --> L
+
+    L["site_workflow_manager<br/>state: merged<br/>creates site if absent<br/>updates if present (idempotent)"]
+    L --> M{More<br/>paths?}
+    M -->|Yes| F
+    M -->|No| N
+
+    N["Step 4 - Summary<br/>sites created / already-present count"]
+    N --> DONE([Done])
+
+    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    style FAIL_B fill:#c0392b,color:#fff,stroke:#922b21
+    style DONE fill:#27ae60,color:#fff,stroke:#1e8449
+    style START fill:#2980b9,color:#fff,stroke:#1a5276

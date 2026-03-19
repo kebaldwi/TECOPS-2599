@@ -12,6 +12,7 @@
 ## Table of Contents
 
 1. [Overview](#overview)
+   - [Logical Flow](#logical-flow)
 2. [Prerequisites](#prerequisites)
 3. [Directory Structure](#directory-structure)
 4. [Installation](#installation)
@@ -51,6 +52,14 @@ Catalyst Center's discovery engine then attempts to reach each IP using SSH (pre
 | Builds one discovery job config per site entry | `set_fact` with `namespace` |
 | Submits all discovery jobs | `cisco.dnac.discovery_workflow_manager` — `state: merged` |
 
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+![Logical Flow](DIAGRAMS/logical-flow.png)
+
+> Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
+
 ### Playbook ordering dependency
 
 This playbook should run **after** [2.0 — Settings](../2.0-Cisco-Catalyst-Center-Settings/README.md). Global credentials must exist in CatC before discovery can reference them by description. Discovery does not assign devices to sites — that is handled by [4.0 — Assign To Site](../4.0-Cisco-Catalyst-Center-Assign-To-Site/README.md).
@@ -81,7 +90,10 @@ This playbook should run **after** [2.0 — Settings](../2.0-Cisco-Catalyst-Cent
 ├── vault.yml.example           # Plain-text credential template
 ├── .vault_pass                 # Vault password file (git-ignored, chmod 600)
 ├── requirements.txt            # Python pip dependencies
-└── requirements.yml            # Ansible Galaxy collection dependencies
+├── requirements.yml            # Ansible Galaxy collection dependencies
+└── DIAGRAMS/
+    ├── logical-flow.mmd        # Mermaid source — re-render with mmdc
+    └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
 Input data comes from the shared `devices.json`:
