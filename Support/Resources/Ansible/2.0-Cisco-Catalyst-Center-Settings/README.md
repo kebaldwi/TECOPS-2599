@@ -1,7 +1,7 @@
 # 2.0 — Cisco Catalyst Center: Network Settings & Device Credentials Automation
 
 > **Playbook:** `network_settings.yml`  
-> **Modules:** `cisco.dnac.network_settings_workflow_manager`, `cisco.dnac.device_credential_workflow_manager`  
+> **Modules:** `ansible.builtin.uri` (network settings), `cisco.dnac.device_credential_workflow_manager` (credentials)  
 > **Minimum Catalyst Center version:** 2.3.7.6  
 > **Minimum Ansible version:** 2.15  
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  
@@ -24,21 +24,23 @@
    - [The `device_credentials` Block](#the-device_credentials-block)
    - [The `assign_credentials` Block](#the-assign_credentials-block)
    - [Full Example](#full-example)
-7. [Playbook Walkthrough — Step by Step](#playbook-walkthrough--step-by-step)
+7. [Design Decision — Why Not `network_settings_workflow_manager`?](#design-decision--why-not-network_settings_workflow_manager)
+8. [Playbook Walkthrough — Step by Step](#playbook-walkthrough--step-by-step)
    - [Step 1: Load and Validate Input Data](#step-1-load-and-validate-input-data)
    - [Step 2: Derive Site Names](#step-2-derive-site-names)
-   - [Step 3: Build Network Settings Payload](#step-3-build-network-settings-payload)
-   - [Step 4: Build Global Credential Payload](#step-4-build-global-credential-payload)
-   - [Step 5: Build Credential Assignment Payload](#step-5-build-credential-assignment-payload)
-   - [Step 6: Apply Network Settings](#step-6-apply-network-settings)
-   - [Step 7: Create/Update Global Device Credentials](#step-7-createupdate-global-device-credentials)
-   - [Step 8: Assign Credentials to Sites](#step-8-assign-credentials-to-sites)
-   - [Step 9: Summary](#step-9-summary)
-8. [Data Transformation Reference](#data-transformation-reference)
-9. [Running the Playbook](#running-the-playbook)
-10. [Debug Mode](#debug-mode)
-11. [Expected Output](#expected-output)
-12. [Troubleshooting](#troubleshooting)
+   - [Step 3: Authenticate and Resolve Site IDs](#step-3-authenticate-and-resolve-site-ids)
+   - [Step 4: Build v2 Network Settings Payload](#step-4-build-v2-network-settings-payload)
+   - [Step 5: Build Global Credential Payload](#step-5-build-global-credential-payload)
+   - [Step 6: Build Credential Assignment Payload](#step-6-build-credential-assignment-payload)
+   - [Step 7: Apply Network Settings via REST v2](#step-7-apply-network-settings-via-rest-v2)
+   - [Step 8: Create/Update Global Device Credentials](#step-8-createupdate-global-device-credentials)
+   - [Step 9: Assign Credentials to Sites](#step-9-assign-credentials-to-sites)
+   - [Step 10: Summary](#step-10-summary)
+9. [Data Transformation Reference](#data-transformation-reference)
+10. [Running the Playbook](#running-the-playbook)
+11. [Debug Mode](#debug-mode)
+12. [Expected Output](#expected-output)
+13. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -50,15 +52,55 @@ Both operations are fully idempotent. If a setting already matches the desired s
 
 ### What it does
 
-| Action | Module |
-|--------|--------|
-| Applies DNS, DHCP, NTP, SNMP, Syslog, Banner, NetFlow, AAA per site | `network_settings_workflow_manager` |
-| Creates/updates global CLI, SNMPv2c R/O, SNMPv2c R/W, NETCONF credentials | `device_credential_workflow_manager` |
-| Assigns global credentials to designated sites | `device_credential_workflow_manager` |
+| Action | Mechanism |
+|--------|-----------|
+| Applies DNS, DHCP, NTP, SNMP, Syslog, Banner, NetFlow, AAA per site | `ansible.builtin.uri` → `PUT /dna/intent/api/v1/network/{siteId}` |
+| Creates/updates global CLI, SNMPv2c R/O, SNMPv2c R/W, NETCONF credentials | `cisco.dnac.device_credential_workflow_manager` |
+| Assigns global credentials to designated sites | `cisco.dnac.device_credential_workflow_manager` |
 
 ### Playbook ordering dependency
 
 This playbook must run **after** [1.0 — Site Hierarchy](../1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md). The site paths referenced in `settings.json` must already exist in CatC before network settings can be applied to them.
+
+---
+
+## Design Decision — Why Not `network_settings_workflow_manager`?
+
+The `cisco.dnac.network_settings_workflow_manager` Ansible module is the standard High Level Task (HLT) module for pushing network settings in this collection. It was intentionally **not** used for the network-settings step in this playbook due to a hard server-side constraint in Catalyst Center.
+
+### Root Cause — CatC Error NCND01243
+
+Catalyst Center enforces the following validation across all API paths including the module's internal endpoint:
+
+> **NCND01243:** "If the network and endpoint AAA servers are using the same ISE PAN IP with RADIUS protocol, the sharedSecret for the sets cannot be different (aaa.network.server and aaa.endpoint.server)"
+
+CatC maintains legacy `aaa.network.server.*` placeholder entries at the Global site level that cannot be cleared — they are permanent schema artefacts returned by `GET /dna/intent/api/v1/network` as empty strings. When **only** `client_and_endpoint_aaa` is submitted (with a `sharedSecret`) and `network_aaa` is absent, CatC compares the incoming endpoint `sharedSecret` against the empty placeholder in `aaa.network.server.1` and causes validation to fail.
+
+### Why the module cannot work around it
+
+The module source (`update_aaa_settings_for_site`) correctly sends only `aaaClient` when `network_aaa` is `None`:
+
+```python
+elif client_and_endpoint_aaa is not None:
+    param = {"id": site_id, "aaaClient": client_and_endpoint_aaa}
+```
+
+This call resolves internally to `PUT /dna/intent/api/v1/sites/{id}/aaaSettings`, which triggers the same cross-check against the legacy v1 entries. The error is **not** a module bug — it is a CatC server-side invariant applied to that specific endpoint.
+
+### Why `PUT /dna/intent/api/v1/network/{siteId}` solves it
+
+The `PUT /dna/intent/api/v1/network/{siteId}` endpoint accepts a composite settings payload that covers DNS, NTP, SNMP, Syslog, AAA and all other network settings in a single call. Crucially, its server-side validation path does **not** perform the same cross-check between `clientAndEndpoint_aaa` and the legacy `aaa.network.server.*` placeholder entries. Sending only `clientAndEndpoint_aaa` (with `network_aaa` absent from the payload) succeeds without error.
+
+### Summary
+
+| Approach | AAA behaviour | NCND01243? |
+|----------|---------------|------------|
+| `network_settings_workflow_manager` with only `client_and_endpoint_aaa` | Sends `aaaClient` via `PUT /v1/sites/{id}/aaaSettings`; CatC cross-checks against empty legacy `aaaNetwork` placeholder | **Yes — fails** |
+| `PUT /dna/intent/api/v1/network/{siteId}` with only `clientAndEndpoint_aaa` | Composite settings endpoint; validation path does not trigger the cross-check | **No — succeeds ✅** |
+
+> **Verified (2026-03-17):** Playbook ran successfully with `network_aaa: null` in `settings.json` using `PUT /dna/intent/api/v1/network/{siteId}`. Result: `ok=17 changed=2 failed=0`. Only `client_and_endpoint_aaa` was present in the payload; no NCND01243 error was raised.
+>
+> **Operational note:** `network_aaa` can be set to `null` in `settings.json` when using `PUT /dna/intent/api/v1/network/{siteId}`. Only `client_and_endpoint_aaa` needs to be populated.
 
 ---
 
@@ -203,7 +245,7 @@ Resolves to: `Global/PODS/POD 0/Building P0`
 
 ### The `network_settings` Block
 
-All fields use **module-native snake_case names** and are passed directly to `network_settings_workflow_manager`. Any top-level key whose value is `null` is filtered out before submission to the API.
+All fields use **snake_case names** matching `settings.json`. They are mapped to camelCase before submission to `PUT /dna/intent/api/v1/network/{siteId}` (see [Step 4](#step-4-build-v1-network-settings-payload) for the full field mapping). Any top-level key whose value is `null` is omitted from the payload.
 
 ```json
 "network_settings": {
@@ -391,44 +433,63 @@ Input entry:
 Output site_names[0]: "Global/PODS/POD 0/Building P0"
 ```
 
-### Step 3: Build Network Settings Payload
+### Step 3: Authenticate and Resolve Site IDs
 
-**Purpose:** Iterate over each entry's `network_settings` block and construct the `network_management_details` payload. The key transformation is **filtering out null values** — the module rejects keys with `null` values for optional fields like `network_aaa`, so they are stripped before submission.
+**Purpose:** Obtain a short-lived CatC auth token and build a `siteNameHierarchy → id` lookup map. The v2 REST endpoint requires a numeric site UUID, not a name.
+
+**Auth:** `POST /dna/system/api/v1/auth/token` using the vault credentials (Basic Auth). The response token is stored in `_catc_token` with `no_log: true`.
+
+**Site map:** `GET /dna/intent/api/v1/site?limit=500&offset=1` returns all sites. A Jinja2 `dict()` + `zip()` expression produces:
 
 ```jinja2
-{%- set cfg = entry.network_settings | dict2items
-              | selectattr('value', 'ne', None)
-              | list | items2dict -%}
+{{ dict(
+     _all_sites.json.response | map(attribute='siteNameHierarchy')
+     | zip(_all_sites.json.response | map(attribute='id'))
+   ) }}
 ```
 
-**Transformation trace:**
+**Example output:**
 
-```
-Input network_settings:
-  {
-    "dhcp_server": ["198.18.133.1"],
-    "dns_server":  { ... },
-    "network_aaa": null,          ← filtered out (null)
-    "client_and_endpoint_aaa": { ... }
-  }
-
-Filter chain:
-  dict2items → [{"key": "dhcp_server", "value": [...]}, {"key": "network_aaa", "value": null}, ...]
-  selectattr('value', 'ne', None) → removes null entries
-  items2dict → {"dhcp_server": [...], "dns_server": {...}, "client_and_endpoint_aaa": {...}}
-
-Output payload item:
-  {
-    "site_name": "Global/PODS/POD 0/Building P0",
-    "settings": {
-      "dhcp_server": ["198.18.133.1"],
-      "dns_server":  { ... },
-      "client_and_endpoint_aaa": { ... }
-    }
-  }
+```json
+{
+  "Global": "a4208f2a-...",
+  "Global/PODS": "13b224f0-...",
+  "Global/PODS/POD 0/Building P0": "2acb84d4-..."
+}
 ```
 
-### Step 4: Build Global Credential Payload
+### Step 4: Build v1 Network Settings Payload
+
+**Purpose:** Walk each `network_settings` block and produce a **camelCase** payload matching the `PUT /dna/intent/api/v1/network/{siteId}` schema. Each field is only added to the payload when it is non-null in the JSON, so absent/null keys are never transmitted. `network_aaa` can be set to `null` and will be excluded, allowing `clientAndEndpoint_aaa` to be configured standalone (see [Design Decision](#design-decision--why-not-network_settings_workflow_manager)).
+
+**Field mapping (settings.json → v1 API):**
+
+| `settings.json` key | v1 API camelCase key |
+|---------------------|---------------------|
+| `dhcp_server` | `dhcpServer` |
+| `dns_server.domain_name` | `dnsServer.domainName` |
+| `dns_server.primary_ip_address` | `dnsServer.primaryIpAddress` |
+| `dns_server.secondary_ip_address` | `dnsServer.secondaryIpAddress` |
+| `ntp_server` | `ntpServer` |
+| `timezone` | `timezone` |
+| `message_of_the_day.banner_message` | `messageOfTheday.bannerMessage` |
+| `message_of_the_day.retain_existing_banner` | `messageOfTheday.retainExistingBanner` |
+| `snmp_server.configure_dnac_ip` | `snmpServer.configureDnacIP` |
+| `syslog_server.configure_dnac_ip` | `syslogServer.configureDnacIP` |
+| `network_aaa.server_type` | `network_aaa.servers` |
+| `network_aaa.primary_server_address` | `network_aaa.ipAddress` |
+| `network_aaa.pan_address` | `network_aaa.network` |
+| `network_aaa.protocol` | `network_aaa.protocol` |
+| `network_aaa.shared_secret` | `network_aaa.sharedSecret` |
+| `client_and_endpoint_aaa.server_type` | `clientAndEndpoint_aaa.servers` |
+| `client_and_endpoint_aaa.primary_server_address` | `clientAndEndpoint_aaa.ipAddress` |
+| `client_and_endpoint_aaa.pan_address` | `clientAndEndpoint_aaa.network` |
+| `client_and_endpoint_aaa.protocol` | `clientAndEndpoint_aaa.protocol` |
+| `client_and_endpoint_aaa.shared_secret` | `clientAndEndpoint_aaa.sharedSecret` |
+
+The site UUID resolved in Step 3 is embedded as `site_id` alongside the payload for use in the REST URL.
+
+### Step 5: Build Global Credential Payload
 
 **Purpose:** Extract entries that have a non-null `device_credentials` block and wrap each in the `global_credential_details` envelope expected by the module.
 
@@ -459,7 +520,7 @@ credential_list:
           netconf_port: "830"
 ```
 
-### Step 5: Build Credential Assignment Payload
+### Step 6: Build Credential Assignment Payload
 
 **Purpose:** Extract entries that have a non-null `assign_credentials` block and wrap each in the `assign_credentials_to_site` envelope.
 
@@ -477,23 +538,33 @@ credential_assign_list:
         description: RW
 ```
 
-### Step 6: Apply Network Settings
+### Step 7: Apply Network Settings via REST v2
 
-Loops over `network_settings_list` and calls `cisco.dnac.network_settings_workflow_manager` once per site with `state: merged`.
+Loops over `network_settings_list` and issues a `PUT` to `/dna/intent/api/v1/network/{siteId}` once per site using `ansible.builtin.uri`. Catalyst Center responds `202 Accepted`; the playbook accepts both `200` and `202`.
 
 ```yaml
-- name: Apply network settings at site "{{ item.site_name }}"
-  cisco.dnac.network_settings_workflow_manager:
-    state: merged
-    config:
-      - network_management_details:
-          - "{{ item }}"
+- name: Apply v1 network settings per site
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/network/{{ item.site_id }}"
+    method: PUT
+    headers:
+      X-Auth-Token: "{{ _catc_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      settings: "{{ item.settings }}"
+    validate_certs: "{{ dnac_verify }}"
+    status_code:
+      - 200
+      - 202
   loop: "{{ network_settings_list }}"
+  loop_control:
+    label: "{{ item.site_name }}"
 ```
 
-Each iteration targets one site with its filtered settings. Using `loop` instead of batching all sites into a single `config` call gives clearer per-site error messages if one site fails.
+Using `ansible.builtin.uri` directly gives complete control over the request body — only the keys that are non-null in `settings.json` appear in the payload. This is what allows `network_aaa: null` to work: the key is simply absent from the PUT body, and the v1 composite endpoint does not cross-check it against the legacy `aaa.network.server.*` placeholders (see [Design Decision](#design-decision--why-not-network_settings_workflow_manager)).
 
-### Step 7: Create/Update Global Device Credentials
+### Step 8: Create/Update Global Device Credentials
 
 ```yaml
 - name: Create/update global device credentials
@@ -507,10 +578,10 @@ Each iteration targets one site with its filtered settings. Using `loop` instead
 
 This step is automatically skipped when no entries in the JSON have a `device_credentials` block.
 
-### Step 8: Assign Credentials to Sites
+### Step 9: Assign Credentials to Sites
 
 ```yaml
-- name: Assign credentials to site
+- name: Assign credentials per site
   cisco.dnac.device_credential_workflow_manager:
     state: merged
     config:
@@ -519,9 +590,9 @@ This step is automatically skipped when no entries in the JSON have a `device_cr
   when: credential_assign_list | length > 0
 ```
 
-The `device_credential_workflow_manager` module handles both credential creation (Step 7) and assignment (Step 8) — they are distinguished by the presence of `global_credential_details` vs. `assign_credentials_to_site` in the `config` payload.
+The `device_credential_workflow_manager` module handles both credential creation (Step 8) and assignment (Step 9) — they are distinguished by the presence of `global_credential_details` vs. `assign_credentials_to_site` in the `config` payload.
 
-### Step 9: Summary
+### Step 10: Summary
 
 ```yaml
 - name: Settings synchronization complete
@@ -545,24 +616,25 @@ settings.json
     │         ▼ Step 2 — deepest non-null path resolution
     │   site_names[i] = "Global/PODS/POD 0/Building P0"
     │
-    ├── network_settings (null values filtered)
+    ├── network_settings (null/absent fields omitted per-key)
     │         │
-    │         ▼ Step 3 — dict2items | selectattr | items2dict
-    │   network_settings_list[i] = {site_name, settings: {...}}
+    │         ▼ Step 3 — auth token + GET /dna/intent/api/v1/site → site UUID map
+    │         ▼ Step 4 — snake_case→camelCase mapping, site_id injected
+    │   network_settings_list[i] = {site_name, site_id, settings: {camelCase...}}
     │
     ├── device_credentials
     │         │
-    │         ▼ Step 4 — wrap in global_credential_details
+    │         ▼ Step 5 — wrap in global_credential_details
     │   credential_list[i] = {global_credential_details: {...}}
     │
     └── assign_credentials
               │
-              ▼ Step 5 — wrap in assign_credentials_to_site
+              ▼ Step 6 — wrap in assign_credentials_to_site
         credential_assign_list[i] = {assign_credentials_to_site: {...}}
 
               │
-              ▼ Steps 6-8 — module calls
-    network_settings_workflow_manager  → PUT /dna/intent/api/v1/network/{siteId}
+              ▼ Steps 7-9 — API calls
+    ansible.builtin.uri                → PUT /dna/intent/api/v1/network/{siteId}
     device_credential_workflow_manager → POST /dna/intent/api/v1/global-credential
     device_credential_workflow_manager → POST /dna/intent/api/v1/credential-to-site/{siteId}
 ```
@@ -600,12 +672,13 @@ Set `DEBUG=true` to enable intermediate-variable debug tasks after each build st
 | Debug Task | Shows |
 |-----------|-------|
 | `--DEBUG-- Site names derived from settings.json` | The `site_names` list |
-| `--DEBUG-- Network settings payload list` | The full `network_settings_list` |
+| `--DEBUG-- Site name-to-ID map` | The `_site_id_map` dict (siteNameHierarchy → UUID) |
+| `--DEBUG-- v2 network settings payload list` | The full `network_settings_list` with camelCase keys and `site_id` |
 | `--DEBUG-- Global credential payload list` | The full `credential_list` |
 | `--DEBUG-- Credential assignment payload list` | The full `credential_assign_list` |
-| `--DEBUG-- Network settings results` | Raw module return from Step 6 |
-| `--DEBUG-- Credential create results` | Raw module return from Step 7 |
-| `--DEBUG-- Credential assignment results` | Raw module return from Step 8 |
+| `--DEBUG-- Network settings results` | Raw `uri` response from Step 7 |
+| `--DEBUG-- Credential create results` | Raw module return from Step 8 |
+| `--DEBUG-- Credential assignment results` | Raw module return from Step 9 |
 
 ---
 
@@ -618,13 +691,19 @@ ok: [catalyst_center] => { "msg": "Input data loaded — 1 entries found." }
 TASK [Validate network settings list is non-empty] *****************************
 ok: [catalyst_center] => { "msg": "1 site(s) have settings to apply." }
 
-TASK [Apply network settings at site "Global/PODS/POD 0/Building P0"] **********
-changed: [catalyst_center]
+TASK [Authenticate with Catalyst Center] ***************************************
+ok: [catalyst_center]
+
+TASK [Fetch all sites from Catalyst Center] ************************************
+ok: [catalyst_center]
+
+TASK [Apply v1 network settings per site] **************************************
+ok: [catalyst_center] => (item=Global/PODS/POD 0/Building P0)
 
 TASK [Create/update global device credentials] *********************************
 changed: [catalyst_center]
 
-TASK [Assign credentials to site "Global/PODS/POD 0/Building P0"] *************
+TASK [Assign credentials per site] *********************************************
 changed: [catalyst_center]
 
 TASK [Settings synchronization complete] ***************************************
@@ -638,10 +717,10 @@ ok: [catalyst_center] => {
 }
 
 PLAY RECAP *********************************************************************
-catalyst_center : ok=9  changed=3  unreachable=0  failed=0  skipped=2
+catalyst_center : ok=17  changed=2  unreachable=0  failed=0  skipped=8
 ```
 
-`skipped=2` — credential tasks are skipped when no entries have those blocks.
+`skipped=8` — DEBUG tasks are skipped when `DEBUG` is not set.
 
 ---
 
@@ -654,6 +733,7 @@ catalyst_center : ok=9  changed=3  unreachable=0  failed=0  skipped=2
 | `Credential already exists` | Same description, different password | Module is idempotent — it will update to the new password |
 | `Credential assignment failed` | Credential description not found globally | Ensure Step 7 (credential creation) succeeded before Step 8 runs |
 | `AAA shared_secret missing` | `client_and_endpoint_aaa` block has no `shared_secret` | Add `shared_secret` to the `client_and_endpoint_aaa` block |
+| `NCND01243: sharedSecret cannot be different` | Using `network_settings_workflow_manager` which routes through `PUT /v1/sites/{id}/aaaSettings` — that endpoint cross-checks `clientAndEndpoint_aaa.sharedSecret` against the legacy `aaa.network.server.*` placeholder at Global | Switch to `PUT /dna/intent/api/v1/network/{siteId}` (this playbook already does this) and set `network_aaa: null` in `settings.json` |
 | `Timezone invalid` | Non-standard timezone string | Use an IANA string, e.g. `America/Toronto`, `UTC`, `America/Los_Angeles` |
 | `dnac_version mismatch` | SDK version exceeds appliance version | Set `dnac_version: 2.3.7.9` in `inventory.yml` |
 | TLS errors | Self-signed certificate | Set `dnac_verify: false` for lab environments |

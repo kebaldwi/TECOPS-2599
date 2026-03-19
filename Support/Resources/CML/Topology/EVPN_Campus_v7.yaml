@@ -790,8 +790,13 @@ nodes:
           \ prefix-list FABRIC-LOOPBACKS\n!\nsnmp-server community RO RO\nsnmp-server\
           \ community RW RW\n!\n!\n!\n!\ncontrol-plane\n service-policy input system-cpp-policy\n\
           !\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout\
-          \ 0 0\n transport input ssh\nline vty 5 15\n transport input ssh\n!\n!\n\
-          !\n!\n!\n!\n!\nend"
+          \ 0 0\n transport input ssh\nline vty 5 15\n transport input ssh\nexit\n\
+          !\nevent manager applet POST_STARTUP authorization bypass\nevent timer countdown\
+          \ time 60\naction 1.0 cli command \"enable\"\naction 1.1 cli command \"\
+          crypto key generate rsa usage-keys modulus 2048\"\naction 2.0 cli command\
+          \ \"config t\"\naction 2.1 cli command \"no event manager applet POST_STARTUP\"\
+          \naction 2.2 cli command \"end\"\naction 2.3 cli command \"wr\"\naction\
+          \ 2.4 cli command \"exit\"\nexit\n!\nnetconf-yang\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -994,17 +999,16 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 9053 bytes\n\
-          !\n! Last configuration change at 19:59:19 UTC Wed Mar 11 2026 by cisco\n\
-          !\nversion 17.15\nservice timestamps debug datetime msec\nservice timestamps\
-          \ log datetime msec\n!\nhostname Leaf-02\n!\n!\nvrf definition Mgmt-vrf\n\
-          \ !\n address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
-          \ exit-address-family\n!\nno logging console\naaa new-model\n!\n!\naaa authentication\
-          \ login default local\naaa authorization exec default local\n!\n!\naaa session-id\
-          \ common\nswitch 1 provision c9kv-uadp-8p\n!\n!\n!\n!\nip routing\n!\n!\n\
-          !\n!\n!\nip domain name dcloud.cisco.com\n!\n!\n!\nlogin on-success log\n\
-          !\n!\n!\n!\n!\n!\n!\n!\ncrypto pki trustpoint TP-self-signed-1790765102\n\
-          \ enrollment selfsigned\n subject-name cn=IOS-Self-Signed-Certificate-1790765102\n\
+        content: "!\n! Last configuration change at 19:59:19 UTC Wed Mar 11 2026 by\
+          \ cisco\n!\nversion 17.15\nservice timestamps debug datetime msec\nservice\
+          \ timestamps log datetime msec\n!\nhostname Leaf-02\n!\n!\nvrf definition\
+          \ Mgmt-vrf\n !\n address-family ipv4\n exit-address-family\n !\n address-family\
+          \ ipv6\n exit-address-family\n!\nno logging console\naaa new-model\n!\n\
+          !\naaa authentication login default local\naaa authorization exec default\
+          \ local\n!\n!\naaa session-id common\nswitch 1 provision c9kv-uadp-8p\n\
+          !\n!\n!\n!\nip routing\n!\n!\n!\n!\n!\nip domain name dcloud.cisco.com\n\
+          !\n!\n!\nlogin on-success log\n!\n!\n!\n!\n!\n!\n!\n!\ncrypto pki trustpoint\
+          \ TP-self-signed-1790765102\n enrollment selfsigned\n subject-name cn=IOS-Self-Signed-Certificate-1790765102\n\
           \ revocation-check none\n rsakeypair TP-self-signed-1790765102\n hash sha512\n\
           !\ncrypto pki trustpoint SLA-TrustPoint\n enrollment pkcs12\n revocation-check\
           \ crl\n hash sha512\n!\n!\ncrypto pki certificate chain TP-self-signed-1790765102\n\
@@ -1114,8 +1118,13 @@ nodes:
           !\nsnmp-server community RO RO\nsnmp-server community RW RW\n!\n!\n!\n!\n\
           control-plane\n service-policy input system-cpp-policy\n!\n!\n!\nline con\
           \ 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout 0 0\n transport\
-          \ input ssh\nline vty 5 15\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\n\
-          end"
+          \ input ssh\nline vty 5 15\n transport input ssh\nexit\n!\nevent manager\
+          \ applet POST_STARTUP authorization bypass\nevent timer countdown time 60\n\
+          action 1.0 cli command \"enable\"\naction 1.1 cli command \"crypto key generate\
+          \ rsa usage-keys modulus 2048\"\naction 2.0 cli command \"config t\"\naction\
+          \ 2.1 cli command \"no event manager applet POST_STARTUP\"\naction 2.2 cli\
+          \ command \"end\"\naction 2.3 cli command \"wr\"\naction 2.4 cli command\
+          \ \"exit\"\nexit\nnetconf-yang\n!\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -1318,11 +1327,10 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 9044 bytes\n\
-          !\n! Last configuration change at 19:59:17 UTC Wed Mar 11 2026\n!\nversion\
-          \ 17.15\nservice timestamps debug datetime msec\nservice timestamps log\
-          \ datetime msec\n!\nhostname Leaf-01\n!\n!\nvrf definition Mgmt-vrf\n !\n\
-          \ address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
+        content: "!\n! Last configuration change at 19:59:17 UTC Wed Mar 11 2026\n\
+          !\nversion 17.15\nservice timestamps debug datetime msec\nservice timestamps\
+          \ log datetime msec\n!\nhostname Leaf-01\n!\n!\nvrf definition Mgmt-vrf\n\
+          \ !\n address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
           \ exit-address-family\n!\nno logging console\naaa new-model\n!\n!\naaa authentication\
           \ login default local\naaa authorization exec default local\n!\n!\naaa session-id\
           \ common\nswitch 1 provision c9kv-uadp-8p\n!\n!\n!\n!\nip routing\n!\n!\n\
@@ -1438,8 +1446,13 @@ nodes:
           !\nsnmp-server community RO RO\nsnmp-server community RW RW\n!\n!\n!\n!\n\
           control-plane\n service-policy input system-cpp-policy\n!\n!\n!\nline con\
           \ 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout 0 0\n transport\
-          \ input ssh\nline vty 5 15\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\n\
-          end"
+          \ input ssh\nline vty 5 15\n transport input ssh\nexit\n!\nevent manager\
+          \ applet POST_STARTUP authorization bypass\nevent timer countdown time 60\n\
+          action 1.0 cli command \"enable\"\naction 1.1 cli command \"crypto key generate\
+          \ rsa usage-keys modulus 2048\"\naction 2.0 cli command \"config t\"\naction\
+          \ 2.1 cli command \"no event manager applet POST_STARTUP\"\naction 2.2 cli\
+          \ command \"end\"\naction 2.3 cli command \"wr\"\naction 2.4 cli command\
+          \ \"exit\"\nexit\n!\nnetconf-yang\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -1997,7 +2010,13 @@ nodes:
           \ prefix-list FABRIC-LOOPBACKS\n!\n!\n!\n!\n!\ncontrol-plane\n service-policy\
           \ input system-cpp-policy\n!\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits\
           \ 1\nline vty 0 4\n exec-timeout 0 0\n transport input ssh\nline vty 5 15\n\
-          \ transport input ssh\n!\n!\n!\n!\n!\n!\n!\nend"
+          \ transport input ssh\nexit\n!\nevent manager applet POST_STARTUP authorization\
+          \ bypass\nevent timer countdown time 60\naction 1.0 cli command \"enable\"\
+          \naction 1.1 cli command \"crypto key generate rsa usage-keys modulus 2048\"\
+          \naction 2.0 cli command \"config t\"\naction 2.1 cli command \"no event\
+          \ manager applet POST_STARTUP\"\naction 2.2 cli command \"end\"\naction\
+          \ 2.3 cli command \"wr\"\naction 2.4 cli command \"exit\"\nexit\n!\nnetconf-yang\n\
+          end"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -2200,17 +2219,16 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 9056 bytes\n\
-          !\n! Last configuration change at 19:59:20 UTC Wed Mar 11 2026 by cisco\n\
-          !\nversion 17.15\nservice timestamps debug datetime msec\nservice timestamps\
-          \ log datetime msec\n!\nhostname Border-01\n!\n!\nvrf definition Mgmt-vrf\n\
-          \ !\n address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
-          \ exit-address-family\n!\nno logging console\naaa new-model\n!\n!\naaa authentication\
-          \ login default local\naaa authorization exec default local\n!\n!\naaa session-id\
-          \ common\nswitch 1 provision c9kv-uadp-8p\n!\n!\n!\n!\nip routing\n!\n!\n\
-          !\n!\n!\nip domain name dcloud.cisco.com\n!\n!\n!\nlogin on-success log\n\
-          !\n!\n!\n!\n!\n!\n!\n!\ncrypto pki trustpoint TP-self-signed-4134100226\n\
-          \ enrollment selfsigned\n subject-name cn=IOS-Self-Signed-Certificate-4134100226\n\
+        content: "!\n! Last configuration change at 19:59:20 UTC Wed Mar 11 2026 by\
+          \ cisco\n!\nversion 17.15\nservice timestamps debug datetime msec\nservice\
+          \ timestamps log datetime msec\n!\nhostname Border-01\n!\n!\nvrf definition\
+          \ Mgmt-vrf\n !\n address-family ipv4\n exit-address-family\n !\n address-family\
+          \ ipv6\n exit-address-family\n!\nno logging console\naaa new-model\n!\n\
+          !\naaa authentication login default local\naaa authorization exec default\
+          \ local\n!\n!\naaa session-id common\nswitch 1 provision c9kv-uadp-8p\n\
+          !\n!\n!\n!\nip routing\n!\n!\n!\n!\n!\nip domain name dcloud.cisco.com\n\
+          !\n!\n!\nlogin on-success log\n!\n!\n!\n!\n!\n!\n!\n!\ncrypto pki trustpoint\
+          \ TP-self-signed-4134100226\n enrollment selfsigned\n subject-name cn=IOS-Self-Signed-Certificate-4134100226\n\
           \ revocation-check none\n rsakeypair TP-self-signed-4134100226\n hash sha512\n\
           !\ncrypto pki trustpoint SLA-TrustPoint\n enrollment pkcs12\n revocation-check\
           \ crl\n hash sha512\n!\n!\ncrypto pki certificate chain TP-self-signed-4134100226\n\
@@ -2319,8 +2337,13 @@ nodes:
           !\nsnmp-server community RO RO\nsnmp-server community RW RW\n!\n!\n!\n!\n\
           control-plane\n service-policy input system-cpp-policy\n!\n!\n!\nline con\
           \ 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout 0 0\n transport\
-          \ input ssh\nline vty 5 15\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\n\
-          end"
+          \ input ssh\nline vty 5 15\n transport input ssh\nexit\n!\nevent manager\
+          \ applet POST_STARTUP authorization bypass\nevent timer countdown time 60\n\
+          action 1.0 cli command \"enable\"\naction 1.1 cli command \"crypto key generate\
+          \ rsa usage-keys modulus 2048\"\naction 2.0 cli command \"config t\"\naction\
+          \ 2.1 cli command \"no event manager applet POST_STARTUP\"\naction 2.2 cli\
+          \ command \"end\"\naction 2.3 cli command \"wr\"\naction 2.4 cli command\
+          \ \"exit\"\nexit\n!\nnetconf-yang\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -2523,10 +2546,9 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 9047 bytes\n\
-          !\n! Last configuration change at 19:59:22 UTC Wed Mar 11 2026\n!\nversion\
-          \ 17.15\nservice timestamps debug datetime msec\nservice timestamps log\
-          \ datetime msec\n!\nhostname Border-02\n!\n!\nvrf definition Mgmt-vrf\n\
+        content: "!\n! Last configuration change at 19:59:22 UTC Wed Mar 11 2026\n\
+          !\nversion 17.15\nservice timestamps debug datetime msec\nservice timestamps\
+          \ log datetime msec\n!\nhostname Border-02\n!\n!\nvrf definition Mgmt-vrf\n\
           \ !\n address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
           \ exit-address-family\n!\nno logging console\naaa new-model\n!\n!\naaa authentication\
           \ login default local\naaa authorization exec default local\n!\n!\naaa session-id\
@@ -2643,8 +2665,13 @@ nodes:
           !\nsnmp-server community RO RO\nsnmp-server community RW RW\n!\n!\n!\n!\n\
           control-plane\n service-policy input system-cpp-policy\n!\n!\n!\nline con\
           \ 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout 0 0\n transport\
-          \ input ssh\nline vty 5 15\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\n\
-          end"
+          \ input ssh\nline vty 5 15\n transport input ssh\nexit\n!\nevent manager\
+          \ applet POST_STARTUP authorization bypass\nevent timer countdown time 60\n\
+          action 1.0 cli command \"enable\"\naction 1.1 cli command \"crypto key generate\
+          \ rsa usage-keys modulus 2048\"\naction 2.0 cli command \"config t\"\naction\
+          \ 2.1 cli command \"no event manager applet POST_STARTUP\"\naction 2.2 cli\
+          \ command \"end\"\naction 2.3 cli command \"wr\"\naction 2.4 cli command\
+          \ \"exit\"\nexit\n!\nnetconf-yang\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -3637,11 +3664,10 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 15135 bytes\n\
-          !\n! Last configuration change at 16:19:21 UTC Sun Mar 15 2026 by cisco\n\
-          !\nversion 17.15\nservice timestamps debug datetime msec\nservice timestamps\
-          \ log datetime msec\n!\nhostname dmz1\n!\n!\nvrf definition Mgmt-vrf\n !\n\
-          \ address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
+        content: "!\n! Last configuration change at 16:19:21 UTC Sun Mar 15 2026 by\
+          \ cisco\n!\nversion 17.15\nservice timestamps debug datetime msec\nservice\
+          \ timestamps log datetime msec\n!\nhostname dmz1\n!\n!\nvrf definition Mgmt-vrf\n\
+          \ !\n address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
           \ exit-address-family\n!\nvrf definition blue\n description VRF blue definition\n\
           \ rd 172.18.200.1:902\n !\n address-family ipv4\n  mdt auto-discovery vxlan\n\
           \  mdt default vxlan 239.190.0.2\n  mdt data vxlan 239.190.2.0 0.0.0.255\n\
@@ -3840,8 +3866,13 @@ nodes:
           !\nsnmp-server community RO RO\nsnmp-server community RW RW\n!\n!\n!\n!\n\
           control-plane\n service-policy input system-cpp-policy\n!\n!\n!\nline con\
           \ 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout 0 0\n transport\
-          \ input ssh\nline vty 5 15\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\n\
-          netconf-yang\nend"
+          \ input ssh\nline vty 5 15\n transport input ssh\nexit\n!\nevent manager\
+          \ applet POST_STARTUP authorization bypass\nevent timer countdown time 60\n\
+          action 1.0 cli command \"enable\"\naction 1.1 cli command \"crypto key generate\
+          \ rsa usage-keys modulus 2048\"\naction 2.0 cli command \"config t\"\naction\
+          \ 2.1 cli command \"no event manager applet POST_STARTUP\"\naction 2.2 cli\
+          \ command \"end\"\naction 2.3 cli command \"wr\"\naction 2.4 cli command\
+          \ \"exit\"\nexit\n!\nnetconf-yang\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -4078,33 +4109,33 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 7613 bytes\n\
-          !\n! Last configuration change at 17:03:17 UTC Fri Mar 13 2026 by net-admin\n\
-          !\nversion 17.16\nservice timestamps debug datetime msec\nservice timestamps\
-          \ log datetime msec\nplatform qfp utilization monitor load 80\nplatform\
-          \ sslvpn use-pd\nplatform console serial\n!\nhostname dhcp-server\n!\nboot-start-marker\n\
-          boot-end-marker\n!\n!\nvrf definition Mgmt-vrf\n !\n address-family ipv4\n\
-          \ exit-address-family\n!\nvrf definition blue\n !\n address-family ipv4\n\
-          \ exit-address-family\n!\nvrf definition green\n !\n address-family ipv4\n\
-          \ exit-address-family\n!\nvrf definition iot\n !\n address-family ipv4\n\
-          \ exit-address-family\n!\nvrf definition red\n !\n address-family ipv4\n\
-          \ exit-address-family\n!\nno logging console\naaa new-model\n!\n!\naaa authentication\
-          \ login default local\naaa authorization exec default local\n!\n!\naaa session-id\
-          \ common\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\nno ip domain lookup\nip domain\
-          \ name dcloud.cisco.com\nip dhcp relay information option vpn\nip dhcp relay\
-          \ information trust-all\nip dhcp excluded-address vrf blue 10.1.201.1 10.1.201.200\n\
-          ip dhcp excluded-address vrf green 10.1.221.1 10.1.221.200\nip dhcp excluded-address\
-          \ vrf red 10.1.101.1 10.1.101.200\nip dhcp excluded-address vrf red 10.1.102.1\
-          \ 10.1.102.200\n!\nip dhcp pool red-101\n vrf red\n network 10.1.101.0 255.255.255.0\n\
-          \ default-router 10.1.101.1\n dns-server 8.8.8.8\n!\nip dhcp pool red-102\n\
-          \ vrf red\n network 10.1.102.0 255.255.255.0\n default-router 10.1.102.1\n\
-          \ dns-server 8.8.8.8\n!\nip dhcp pool blue-201\n vrf blue\n network 10.1.201.0\
-          \ 255.255.255.0\n default-router 10.1.201.1\n dns-server 8.8.8.8\n!\nip\
-          \ dhcp pool green-221\n vrf green\n network 10.1.221.0 255.255.255.0\n default-router\
-          \ 10.1.221.1\n dns-server 8.8.8.8\n!\n!\n!\nlogin on-success log\n!\n!\n\
-          subscriber templating\n!\n!\n!\ncrypto pki trustpoint SLA-TrustPoint\n enrollment\
-          \ pkcs12\n revocation-check crl\n hash sha256\n!\ncrypto pki trustpoint\
-          \ TP-self-signed-1701145057\n enrollment selfsigned\n subject-name cn=IOS-Self-Signed-Certificate-1701145057\n\
+        content: "!\n! Last configuration change at 17:03:17 UTC Fri Mar 13 2026 by\
+          \ net-admin\n!\nversion 17.16\nservice timestamps debug datetime msec\n\
+          service timestamps log datetime msec\nplatform qfp utilization monitor load\
+          \ 80\nplatform sslvpn use-pd\nplatform console serial\n!\nhostname dhcp-server\n\
+          !\nboot-start-marker\nboot-end-marker\n!\n!\nvrf definition Mgmt-vrf\n !\n\
+          \ address-family ipv4\n exit-address-family\n!\nvrf definition blue\n !\n\
+          \ address-family ipv4\n exit-address-family\n!\nvrf definition green\n !\n\
+          \ address-family ipv4\n exit-address-family\n!\nvrf definition iot\n !\n\
+          \ address-family ipv4\n exit-address-family\n!\nvrf definition red\n !\n\
+          \ address-family ipv4\n exit-address-family\n!\nno logging console\naaa\
+          \ new-model\n!\n!\naaa authentication login default local\naaa authorization\
+          \ exec default local\n!\n!\naaa session-id common\n!\n!\n!\n!\n!\n!\n!\n\
+          !\n!\n!\n!\n!\nno ip domain lookup\nip domain name dcloud.cisco.com\nip\
+          \ dhcp relay information option vpn\nip dhcp relay information trust-all\n\
+          ip dhcp excluded-address vrf blue 10.1.201.1 10.1.201.200\nip dhcp excluded-address\
+          \ vrf green 10.1.221.1 10.1.221.200\nip dhcp excluded-address vrf red 10.1.101.1\
+          \ 10.1.101.200\nip dhcp excluded-address vrf red 10.1.102.1 10.1.102.200\n\
+          !\nip dhcp pool red-101\n vrf red\n network 10.1.101.0 255.255.255.0\n default-router\
+          \ 10.1.101.1\n dns-server 8.8.8.8\n!\nip dhcp pool red-102\n vrf red\n network\
+          \ 10.1.102.0 255.255.255.0\n default-router 10.1.102.1\n dns-server 8.8.8.8\n\
+          !\nip dhcp pool blue-201\n vrf blue\n network 10.1.201.0 255.255.255.0\n\
+          \ default-router 10.1.201.1\n dns-server 8.8.8.8\n!\nip dhcp pool green-221\n\
+          \ vrf green\n network 10.1.221.0 255.255.255.0\n default-router 10.1.221.1\n\
+          \ dns-server 8.8.8.8\n!\n!\n!\nlogin on-success log\n!\n!\nsubscriber templating\n\
+          !\n!\n!\ncrypto pki trustpoint SLA-TrustPoint\n enrollment pkcs12\n revocation-check\
+          \ crl\n hash sha256\n!\ncrypto pki trustpoint TP-self-signed-1701145057\n\
+          \ enrollment selfsigned\n subject-name cn=IOS-Self-Signed-Certificate-1701145057\n\
           \ revocation-check none\n rsakeypair TP-self-signed-1701145057\n hash sha256\n\
           !\n!\ncrypto pki certificate chain SLA-TrustPoint\n certificate ca 01\n\
           \  30820321 30820209 A0030201 02020101 300D0609 2A864886 F70D0101 0B050030\n\
@@ -4181,7 +4212,13 @@ nodes:
           !\n!\n!\ncontrol-plane\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits 1\n\
           line aux 0\nline vty 0\n exec-timeout 0 0\n transport input ssh\nline vty\
           \ 1\n exec-timeout 0 0\n length 0\n transport input ssh\nline vty 2 4\n\
-          \ exec-timeout 0 0\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\nend"
+          \ exec-timeout 0 0\n transport input ssh\nexit\n!\nevent manager applet\
+          \ POST_STARTUP authorization bypass\nevent timer countdown time 60\naction\
+          \ 1.0 cli command \"enable\"\naction 1.1 cli command \"crypto key generate\
+          \ rsa usage-keys modulus 2048\"\naction 2.0 cli command \"config t\"\naction\
+          \ 2.1 cli command \"no event manager applet POST_STARTUP\"\naction 2.2 cli\
+          \ command \"end\"\naction 2.3 cli command \"wr\"\naction 2.4 cli command\
+          \ \"exit\"\nexit\n!\nnetconf-yang\nend"
     cpu_limit: null
     cpus: null
     data_volume: null
@@ -4288,11 +4325,10 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 6132 bytes\n\
-          !\n! Last configuration change at 16:19:31 UTC Sun Mar 15 2026\n!\nversion\
-          \ 17.16\nservice timestamps debug datetime msec\nservice timestamps log\
-          \ datetime msec\nplatform qfp utilization monitor load 80\nplatform sslvpn\
-          \ use-pd\nplatform console serial\n!\nhostname FW\n!\nboot-start-marker\n\
+        content: "!\n! Last configuration change at 16:19:31 UTC Sun Mar 15 2026\n\
+          !\nversion 17.16\nservice timestamps debug datetime msec\nservice timestamps\
+          \ log datetime msec\nplatform qfp utilization monitor load 80\nplatform\
+          \ sslvpn use-pd\nplatform console serial\n!\nhostname FW\n!\nboot-start-marker\n\
           boot-end-marker\n!\n!\nno logging console\nno aaa new-model\n!\n!\n!\n!\n\
           !\n!\n!\n!\n!\n!\n!\n!\nip domain name dcloud.cisco.com\n!\n!\n!\nlogin\
           \ on-success log\n!\n!\nsubscriber templating\n!\n!\n!\ncrypto pki trustpoint\
@@ -4372,7 +4408,13 @@ nodes:
           \ extended NAT-INSIDE\n 10 permit ip 10.1.0.0 0.0.255.255 any\n 20 permit\
           \ ip 1.1.1.0 0.0.0.3 any\n!\n!\ncontrol-plane\n!\n!\nline con 0\n exec-timeout\
           \ 0 0\n stopbits 1\nline aux 0\nline vty 0 4\n exec-timeout 0 0\n login\
-          \ local\n transport input ssh\n!\n!\n!\n!\n!\n!\n!\nend"
+          \ local\n transport input ssh\nexit\n!\nevent manager applet POST_STARTUP\
+          \ authorization bypass\nevent timer countdown time 60\naction 1.0 cli command\
+          \ \"enable\"\naction 1.1 cli command \"crypto key generate rsa usage-keys\
+          \ modulus 2048\"\naction 2.0 cli command \"config t\"\naction 2.1 cli command\
+          \ \"no event manager applet POST_STARTUP\"\naction 2.2 cli command \"end\"\
+          \naction 2.3 cli command \"wr\"\naction 2.4 cli command \"exit\"\nexit\n\
+          !\nnetconf-yang\nend"
     cpu_limit: null
     cpus: null
     data_volume: null
@@ -4418,7 +4460,7 @@ links:
     i1: i1
     i2: i0
     conditioning: {}
-    label: iol-l2-0-Ethernet0/0<->ext-conn-0-port
+    label: iol-l2-0-Ethernet0/0<->ext-to-dcloud-port
   - id: l1
     n1: n3
     n2: n4
@@ -4467,14 +4509,14 @@ links:
     i1: i0
     i2: i4
     conditioning: {}
-    label: client1-eth0<->leaf1-GigabitEthernet1/0/3
+    label: red01-eth0<->leaf1-GigabitEthernet1/0/3
   - id: l8
     n1: n5
     n2: n2
     i1: i0
     i2: i4
     conditioning: {}
-    label: client2-eth0<->leaf2-GigabitEthernet1/0/3
+    label: red02-eth0<->leaf2-GigabitEthernet1/0/3
   - id: l9
     n1: n8
     n2: n4
@@ -4579,21 +4621,21 @@ links:
     i1: i0
     i2: i5
     conditioning: {}
-    label: client4-eth0<->leaf2-GigabitEthernet1/0/4
+    label: red04-eth0<->leaf2-GigabitEthernet1/0/4
   - id: l24
     n1: n13
     n2: n2
     i1: i0
     i2: i6
     conditioning: {}
-    label: iot1-eth0<->leaf2-GigabitEthernet1/0/5
+    label: blue01-eth0<->leaf2-GigabitEthernet1/0/5
   - id: l25
     n1: n14
     n2: n3
     i1: i0
     i2: i6
     conditioning: {}
-    label: iot2-eth0<->leaf1-GigabitEthernet1/0/5
+    label: green01-eth0<->leaf1-GigabitEthernet1/0/5
   - id: l26
     n1: n15
     n2: n4
@@ -4621,7 +4663,7 @@ links:
     i1: i0
     i2: i7
     conditioning: {}
-    label: iot-3-eth0<->leaf1-GigabitEthernet1/0/6
+    label: blue02-eth0<->leaf1-GigabitEthernet1/0/6
   - id: l30
     n1: n17
     n2: n4
@@ -4642,14 +4684,14 @@ links:
     i1: i0
     i2: i7
     conditioning: {}
-    label: green-dhcp-client-eth0<->leaf2-GigabitEthernet1/0/6
+    label: red03(dhcp)-eth0<->leaf2-GigabitEthernet1/0/6
   - id: l33
     n1: n18
     n2: n2
     i1: i0
     i2: i8
     conditioning: {}
-    label: iot-dhcp-client-eth0<->leaf2-GigabitEthernet1/0/7
+    label: green02(dhcp)-eth0<->leaf2-GigabitEthernet1/0/7
   - id: l34
     n1: n15
     n2: n20

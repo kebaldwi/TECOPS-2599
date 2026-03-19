@@ -92,7 +92,7 @@
         success_msg: "{{ site_device_map | length }} site(s) to assign devices to."
 
     # ── Step 3: Look up site UUID for each target site ────────────────────────
-    - name: Look up site UUID — "{{ item.key }}"
+    - name: "Look up site UUIDs"
       cisco.dnac.site_info:
         name: "{{ item.key }}"
       loop: "{{ site_device_map | dict2items }}"

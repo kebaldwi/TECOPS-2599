@@ -17,16 +17,6 @@
     DEBUG: "{{ lookup('env', 'DEBUG') | default(false) | bool }}"
 
   module_defaults:
-    cisco.dnac.network_settings_workflow_manager:
-      dnac_host: "{{ dnac_host }}"
-      dnac_username: "{{ dnac_username }}"
-      dnac_password: "{{ dnac_password }}"
-      dnac_verify: "{{ dnac_verify }}"
-      dnac_port: "{{ dnac_port }}"
-      dnac_version: "{{ dnac_version }}"
-      dnac_debug: "{{ dnac_debug }}"
-      dnac_log_level: "{{ dnac_log_level }}"
-      dnac_log: "{{ dnac_log }}"
     cisco.dnac.device_credential_workflow_manager:
       dnac_host: "{{ dnac_host }}"
       dnac_username: "{{ dnac_username }}"
@@ -105,30 +95,201 @@
       debug:
         msg: "{{ site_names }}"
 
-    # ── Step 3: Build network settings payload list ──────────────────────────────
+    # ── Step 3: Authenticate and resolve site IDs ─────────────────────────────
     #
-    # settings.json uses module-native field names under the network_settings
-    # key, so this step is a direct pass-through.  Top-level null values
-    # (network_aaa: null, client_and_endpoint_aaa: null) are filtered out so
-    # the module does not attempt to configure AAA at sites that have none.
+    # Obtain a short-lived auth token from Catalyst Center, then fetch the full
+    # site hierarchy and build a site-name → site-ID lookup map for use in the
+    # v1 /dna/intent/api/v1/network/{siteId} REST endpoint.
     #
-    - name: Build network management settings payload list
+    - name: Authenticate with Catalyst Center
+      ansible.builtin.uri:
+        url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/system/api/v1/auth/token"
+        method: POST
+        user: "{{ dnac_username }}"
+        password: "{{ dnac_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ dnac_verify }}"
+        status_code: 200
+      register: _auth_response
+      no_log: true
+
+    - name: Store auth token
+      set_fact:
+        _catc_token: "{{ _auth_response.json.Token }}"
+      no_log: true
+
+    - name: Fetch all sites from Catalyst Center
+      ansible.builtin.uri:
+        url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/site?limit=500&offset=1"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ _catc_token }}"
+        validate_certs: "{{ dnac_verify }}"
+        status_code: 200
+      register: _all_sites
+
+    - name: Build site name-to-ID map
+      set_fact:
+        _site_id_map: >-
+          {{ dict(
+               _all_sites.json.response | map(attribute='siteNameHierarchy')
+               | zip(_all_sites.json.response | map(attribute='id'))
+             ) }}
+
+    - name: --DEBUG-- Site name-to-ID map
+      when: DEBUG
+      debug:
+        msg: "{{ _site_id_map }}"
+
+    # ── Step 4: Build v1 network settings payload list ────────────────────────
+    #
+    # Maps settings.json snake_case fields to the camelCase field names required
+    # by PUT /dna/intent/api/v1/network/{siteId}.  Null/absent fields are omitted
+    # so Catalyst Center leaves those settings untouched at the target site.
+    # Because fields are built selectively, only clientAndEndpoint_aaa can be
+    # sent without network_aaa, avoiding the NCND01243 shared-secret conflict.
+    #
+    # Field mapping (settings.json → v1 API):
+    #   dhcp_server                         → dhcpServer (array)
+    #   dns_server.domain_name              → dnsServer.domainName
+    #   dns_server.primary_ip_address       → dnsServer.primaryIpAddress
+    #   dns_server.secondary_ip_address     → dnsServer.secondaryIpAddress
+    #   ntp_server                          → ntpServer (array)
+    #   timezone                            → timezone
+    #   message_of_the_day.banner_message   → messageOfTheday.bannerMessage
+    #   message_of_the_day.retain_…banner   → messageOfTheday.retainExistingBanner
+    #   snmp_server.configure_dnac_ip       → snmpServer.configureDnacIP
+    #   syslog_server.configure_dnac_ip     → syslogServer.configureDnacIP
+    #   network_aaa.server_type             → network_aaa.servers
+    #   network_aaa.primary_server_address  → network_aaa.ipAddress
+    #   network_aaa.pan_address             → network_aaa.network
+    #   network_aaa.protocol                → network_aaa.protocol
+    #   network_aaa.shared_secret           → network_aaa.sharedSecret
+    #   client_and_endpoint_aaa.server_type → clientAndEndpoint_aaa.servers
+    #   client_and_endpoint_aaa.primary_…   → clientAndEndpoint_aaa.ipAddress
+    #   client_and_endpoint_aaa.pan_address → clientAndEndpoint_aaa.network
+    #   client_and_endpoint_aaa.protocol    → clientAndEndpoint_aaa.protocol
+    #   client_and_endpoint_aaa.shared_…   → clientAndEndpoint_aaa.sharedSecret
+    #
+    - name: Build v1 network settings payload list
       set_fact:
         network_settings_list: >-
           {%- set ns = namespace(result=[]) -%}
           {%- for i in range(settings_data.project | length) -%}
-            {%- set entry    = settings_data.project[i] -%}
-            {%- set sitename = site_names[i] -%}
-            {%- set cfg = entry.network_settings | dict2items
-                          | selectattr('value', 'ne', None)
-                          | list | items2dict -%}
-            {%- if cfg | length > 0 -%}
-              {%- set ns.result = ns.result + [{'site_name': sitename, 'settings': cfg}] -%}
+            {%- set entry   = settings_data.project[i] -%}
+            {%- set sname   = site_names[i] -%}
+            {%- set raw     = entry.network_settings -%}
+            {%- set payload = {} -%}
+            {%- if raw.dhcp_server -%}
+              {%- set payload = payload | combine({'dhcpServer': raw.dhcp_server}) -%}
+            {%- endif -%}
+            {%- if raw.dns_server -%}
+              {%- set dns = {} -%}
+              {%- if raw.dns_server.domain_name -%}
+                {%- set dns = dns | combine({'domainName': raw.dns_server.domain_name}) -%}
+              {%- endif -%}
+              {%- if raw.dns_server.primary_ip_address -%}
+                {%- set dns = dns | combine({'primaryIpAddress': raw.dns_server.primary_ip_address}) -%}
+              {%- endif -%}
+              {%- if raw.dns_server.secondary_ip_address -%}
+                {%- set dns = dns | combine({'secondaryIpAddress': raw.dns_server.secondary_ip_address}) -%}
+              {%- endif -%}
+              {%- if dns | length > 0 -%}
+                {%- set payload = payload | combine({'dnsServer': dns}) -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- if raw.ntp_server -%}
+              {%- set payload = payload | combine({'ntpServer': raw.ntp_server}) -%}
+            {%- endif -%}
+            {%- if raw.timezone -%}
+              {%- set payload = payload | combine({'timezone': raw.timezone}) -%}
+            {%- endif -%}
+            {%- if raw.message_of_the_day -%}
+              {%- set motd = {} -%}
+              {%- if raw.message_of_the_day.banner_message -%}
+                {%- set motd = motd | combine({'bannerMessage': raw.message_of_the_day.banner_message}) -%}
+              {%- endif -%}
+              {%- if raw.message_of_the_day.retain_existing_banner is defined and raw.message_of_the_day.retain_existing_banner is not none -%}
+                {%- set motd = motd | combine({'retainExistingBanner': raw.message_of_the_day.retain_existing_banner | string | lower}) -%}
+              {%- endif -%}
+              {%- if motd | length > 0 -%}
+                {%- set payload = payload | combine({'messageOfTheday': motd}) -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- if raw.syslog_server -%}
+              {%- set syslog = {} -%}
+              {%- if raw.syslog_server.ip_addresses is defined and raw.syslog_server.ip_addresses -%}
+                {%- set syslog = syslog | combine({'ipAddresses': raw.syslog_server.ip_addresses}) -%}
+              {%- endif -%}
+              {%- if raw.syslog_server.configure_dnac_ip is defined and raw.syslog_server.configure_dnac_ip is not none -%}
+                {%- set syslog = syslog | combine({'configureDnacIP': raw.syslog_server.configure_dnac_ip}) -%}
+              {%- endif -%}
+              {%- if syslog | length > 0 -%}
+                {%- set payload = payload | combine({'syslogServer': syslog}) -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- if raw.snmp_server -%}
+              {%- set snmp = {} -%}
+              {%- if raw.snmp_server.ip_addresses is defined and raw.snmp_server.ip_addresses -%}
+                {%- set snmp = snmp | combine({'ipAddresses': raw.snmp_server.ip_addresses}) -%}
+              {%- endif -%}
+              {%- if raw.snmp_server.configure_dnac_ip is defined and raw.snmp_server.configure_dnac_ip is not none -%}
+                {%- set snmp = snmp | combine({'configureDnacIP': raw.snmp_server.configure_dnac_ip}) -%}
+              {%- endif -%}
+              {%- if snmp | length > 0 -%}
+                {%- set payload = payload | combine({'snmpServer': snmp}) -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- if raw.network_aaa -%}
+              {%- set naaa = {} -%}
+              {%- if raw.network_aaa.server_type -%}
+                {%- set naaa = naaa | combine({'servers': raw.network_aaa.server_type}) -%}
+              {%- endif -%}
+              {%- if raw.network_aaa.primary_server_address -%}
+                {%- set naaa = naaa | combine({'ipAddress': raw.network_aaa.primary_server_address}) -%}
+              {%- endif -%}
+              {%- if raw.network_aaa.pan_address -%}
+                {%- set naaa = naaa | combine({'network': raw.network_aaa.pan_address}) -%}
+              {%- endif -%}
+              {%- if raw.network_aaa.protocol -%}
+                {%- set naaa = naaa | combine({'protocol': raw.network_aaa.protocol}) -%}
+              {%- endif -%}
+              {%- if raw.network_aaa.shared_secret -%}
+                {%- set naaa = naaa | combine({'sharedSecret': raw.network_aaa.shared_secret}) -%}
+              {%- endif -%}
+              {%- if naaa | length > 0 -%}
+                {%- set payload = payload | combine({'network_aaa': naaa}) -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- if raw.client_and_endpoint_aaa -%}
+              {%- set caaa = {} -%}
+              {%- if raw.client_and_endpoint_aaa.server_type -%}
+                {%- set caaa = caaa | combine({'servers': raw.client_and_endpoint_aaa.server_type}) -%}
+              {%- endif -%}
+              {%- if raw.client_and_endpoint_aaa.primary_server_address -%}
+                {%- set caaa = caaa | combine({'ipAddress': raw.client_and_endpoint_aaa.primary_server_address}) -%}
+              {%- endif -%}
+              {%- if raw.client_and_endpoint_aaa.pan_address -%}
+                {%- set caaa = caaa | combine({'network': raw.client_and_endpoint_aaa.pan_address}) -%}
+              {%- endif -%}
+              {%- if raw.client_and_endpoint_aaa.protocol -%}
+                {%- set caaa = caaa | combine({'protocol': raw.client_and_endpoint_aaa.protocol}) -%}
+              {%- endif -%}
+              {%- if raw.client_and_endpoint_aaa.shared_secret -%}
+                {%- set caaa = caaa | combine({'sharedSecret': raw.client_and_endpoint_aaa.shared_secret}) -%}
+              {%- endif -%}
+              {%- if caaa | length > 0 -%}
+                {%- set payload = payload | combine({'clientAndEndpoint_aaa': caaa}) -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- if payload | length > 0 -%}
+              {%- set sid = _site_id_map.get(sname, '') -%}
+              {%- set ns.result = ns.result + [{'site_name': sname, 'site_id': sid, 'settings': payload}] -%}
             {%- endif -%}
           {%- endfor -%}
           {{ ns.result }}
 
-    - name: --DEBUG-- Network settings payload list
+    - name: --DEBUG-- v1 network settings payload list
       when: DEBUG
       debug:
         msg: "{{ network_settings_list }}"
@@ -139,7 +300,7 @@
         fail_msg: "No network settings found in input JSON — check that fields are non-null."
         success_msg: "{{ network_settings_list | length }} site(s) have settings to apply."
 
-    # ── Step 4: Build global device credential list ──────────────────────────────
+    # ── Step 5: Build global device credential list ──────────────────────────────
     #
     # settings.json entries with a non-null device_credentials block supply the
     # exact global_credential_details structure expected by the module.
@@ -160,7 +321,7 @@
       debug:
         msg: "{{ credential_list }}"
 
-    # ── Step 5: Build credential-to-site assignment list ───────────────────────
+    # ── Step 6: Build credential-to-site assignment list ───────────────────────
     #
     # settings.json entries with a non-null assign_credentials block supply the
     # exact assign_credentials_to_site structure expected by the module.
@@ -181,19 +342,32 @@
       debug:
         msg: "{{ credential_assign_list }}"
 
-    # ── Step 6: Apply network settings ────────────────────────────────────────
+    # ── Step 7: Apply network settings via REST v1 ────────────────────────────
     #
-    # Applies DNS, DHCP, NTP, SNMP, Syslog, NetFlow, Banner, and AAA settings
-    # at each site defined in the JSON.  The module is idempotent — existing
-    # settings that already match are not re-pushed.
+    # PUTs the camelCase payload to /dna/intent/api/v1/network/{siteId}.
+    # Catalyst Center responds 202 Accepted; the response body contains an async
+    # task URL that can be polled for final status if needed.
+    # Only keys present in the payload are sent — absent/null fields in
+    # settings.json are never transmitted, so clientAndEndpoint_aaa can be
+    # set independently of network_aaa.
     #
-    - name: Apply network settings at site "{{ item.site_name }}"
-      cisco.dnac.network_settings_workflow_manager:
-        state: merged
-        config:
-          - network_management_details:
-              - "{{ item }}"
+    - name: Apply v1 network settings per site
+      ansible.builtin.uri:
+        url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/network/{{ item.site_id }}"
+        method: PUT
+        headers:
+          X-Auth-Token: "{{ _catc_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          settings: "{{ item.settings }}"
+        validate_certs: "{{ dnac_verify }}"
+        status_code:
+          - 200
+          - 202
       loop: "{{ network_settings_list }}"
+      loop_control:
+        label: "{{ item.site_name }}"
       register: settings_results
 
     - name: --DEBUG-- Network settings results
@@ -201,7 +375,7 @@
       debug:
         msg: "{{ settings_results }}"
 
-    # ── Step 7: Create / update global device credentials ─────────────────────
+    # ── Step 8: Create / update global device credentials ─────────────────────
     #
     # Creates CLI, SNMPv2c R/O, SNMPv2c R/W and NETCONF credentials globally.
     # Skipped automatically if credential_list is empty.
@@ -220,13 +394,13 @@
       debug:
         msg: "{{ credential_results }}"
 
-    # ── Step 8: Assign credentials to sites ───────────────────────────────────
+    # ── Step 9: Assign credentials to sites ───────────────────────────────────
     #
     # Associates the created credentials with each non-Global site that has
     # device credential data in the JSON.
     # Skipped automatically if no site-level assignments are defined.
     #
-    - name: Assign credentials to site "{{ item.assign_credentials_to_site.site_name | join(', ') }}"
+    - name: Assign credentials per site
       cisco.dnac.device_credential_workflow_manager:
         state: merged
         config:
@@ -240,7 +414,7 @@
       debug:
         msg: "{{ assign_results }}"
 
-    # ── Step 9: Summary ────────────────────────────────────────────────────────
+    # ── Step 10: Summary ───────────────────────────────────────────────────────
     - name: Settings synchronization complete
       debug:
         msg:
