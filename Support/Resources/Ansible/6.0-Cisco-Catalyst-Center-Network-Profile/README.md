@@ -46,7 +46,7 @@ The playbook is data-driven: it reads a `settings.json` file (shared with other 
 
 | Action | Mechanism |
 |--------|-----------|
-| Loads and validates input JSON | `ansible.builtin.slurp` + Jinja2 filters |
+| Loads and validates input JSON | `lookup('file', path) | from_json` + Jinja2 filters |
 | Filters entries with a `network_profile` block | Jinja2 `for` loop with conditional |
 | Builds the module `config` payload | `set_fact` with `namespace` and `combine` |
 | Creates or updates the profile in Catalyst Center | `state: merged` |
@@ -319,7 +319,7 @@ To create a second profile that spans multiple sites and uses both template type
 
 ### Step 1: Load and Validate Input Data
 
-**Purpose:** Read `settings.json` from disk, decode it from Base64 (as returned by `slurp`), parse it into an Ansible variable, and assert it is well-formed.
+**Purpose:** Read `settings.json` from disk, parse it into an Ansible variable, and assert it is well-formed.
 
 #### Task 1.1 — Resolve the input file path
 
@@ -346,40 +346,17 @@ ansible-playbook network_profile.yml \
   -e settings_json_path=/absolute/path/to/my_settings.json
 ```
 
-#### Task 1.2 — Load the file content
+#### Task 1.2 — Load and parse
 
 ```yaml
 - name: Load settings input JSON
-  ansible.builtin.slurp:
-    src: "{{ _resolved_json_path }}"
-  register: _json_raw
-```
-
-`ansible.builtin.slurp` reads the file and stores its content as a **Base64-encoded string** in `_json_raw.content`.
-
-```
-_json_raw.content = "eyJwcm9qZWN0IjogW3suLi59XX0="
-                     └─────────── Base64 ──────────┘
-```
-
-#### Task 1.3 — Decode and parse
-
-```yaml
-- name: Parse settings input JSON
   set_fact:
-    settings_data: "{{ _json_raw.content | b64decode | from_json }}"
+    settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 ```
 
-Two Jinja2 filters are chained:
+The `lookup('file', ...)` plugin reads the file from the controller filesystem and returns its raw text content. The `from_json` filter parses that text into a native Ansible dictionary. After this task, `settings_data` is a Python dictionary equivalent to the full parsed JSON file.
 
-| Filter | Action |
-|--------|--------|
-| `b64decode` | Decodes the Base64 string back to raw text |
-| `from_json` | Parses the raw text into an Ansible dictionary/list structure |
-
-After this task, `settings_data` is a Python dictionary equivalent to the full parsed JSON file.
-
-#### Task 1.4 — Assert validity
+#### Task 1.3 — Assert validity
 
 ```yaml
 - name: Validate that project key exists in input data

@@ -38,13 +38,8 @@
              else (playbook_dir + '/' + devices_json_path) }}
 
     - name: Load devices input JSON
-      ansible.builtin.slurp:
-        src: "{{ _resolved_json_path }}"
-      register: _json_raw
-
-    - name: Parse devices input JSON
       set_fact:
-        devices_data: "{{ _json_raw.content | b64decode | from_json }}"
+        devices_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 
     - name: Validate that project key exists in input data
       assert:

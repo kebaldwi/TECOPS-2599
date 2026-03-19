@@ -38,13 +38,8 @@
              else (playbook_dir + '/' + settings_json_path) }}
 
     - name: Load settings input JSON
-      ansible.builtin.slurp:
-        src: "{{ _resolved_json_path }}"
-      register: _json_raw
-
-    - name: Parse settings input JSON
       set_fact:
-        settings_data: "{{ _json_raw.content | b64decode | from_json }}"
+        settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 
     - name: Validate that project key exists in input data
       assert:

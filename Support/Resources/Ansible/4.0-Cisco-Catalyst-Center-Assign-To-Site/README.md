@@ -47,7 +47,7 @@ Site assignment is a prerequisite for template deployment, SWIM software managem
 
 | Action | Module |
 |--------|--------|
-| Loads and validates input JSON | `ansible.builtin.slurp` + Jinja2 filters |
+| Loads and validates input JSON | `lookup('file', path) | from_json` + Jinja2 filters |
 | Groups IPs by target site path | `set_fact` with dict accumulation |
 | Resolves site name → UUID | `cisco.dnac.site_info` |
 | Assigns IP list to site UUID | `cisco.dnac.assign_device_to_site` |
@@ -258,7 +258,7 @@ Only the Floor 1 entry has devices — they will be assigned to `Global/PODS/POD
 
 ### Step 1: Load and Validate Input Data
 
-Standard `slurp` → `b64decode` → `from_json` → `assert` pipeline. See [6.0 README — Step 1](../6.0-Cisco-Catalyst-Center-Network-Profile/README.md#step-1-load-and-validate-input-data) for a full explanation.
+The path is resolved to absolute, then `lookup('file', _resolved_json_path) | from_json` reads and parses the JSON in one step. An `assert` task validates the shape before any processing begins.
 
 ### Step 2: Build Per-Site Assignment Map
 

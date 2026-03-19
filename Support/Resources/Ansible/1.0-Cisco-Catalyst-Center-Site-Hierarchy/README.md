@@ -47,7 +47,7 @@ The playbook is data-driven and fully **idempotent**: it reads a `devices.json` 
 
 | Action | Mechanism |
 |--------|-----------|
-| Loads and validates input JSON | `ansible.builtin.slurp` + Jinja2 filters |
+| Loads and validates input JSON | `lookup('file', path) | from_json` + Jinja2 filters |
 | Builds type/metadata lookup maps | `set_fact` with dict comprehension |
 | Expands all intermediate paths | Jinja2 path-splitting loop |
 | Sorts paths shallow-first | Depth-bucketing sort |
@@ -295,7 +295,7 @@ If you omit an intermediate node its type cannot be determined and site creation
 
 ### Step 1: Load and Validate Input Data
 
-Identical to the pattern used across all playbooks in this suite. `ansible.builtin.slurp` reads the file, `b64decode` decodes it, and `from_json` parses it into an Ansible variable. An `assert` task validates the shape before any processing begins. See [6.0 README — Step 1](../6.0-Cisco-Catalyst-Center-Network-Profile/README.md#step-1-load-and-validate-input-data) for a full explanation of this pipeline.
+The path is resolved to absolute (relative paths are expanded from `playbook_dir`), then `lookup('file', _resolved_json_path) | from_json` reads and parses the JSON in one step. An `assert` task validates the shape before any processing begins.
 
 ### Step 2: Build Lookup Maps
 

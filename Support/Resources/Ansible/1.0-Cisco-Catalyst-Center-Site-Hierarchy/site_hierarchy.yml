@@ -32,28 +32,14 @@
     # Resolve path: absolute paths used as-is; relative paths resolved from
     # the playbook directory so callers can pass paths relative to the repo root.
     - name: Resolve devices_json_path to absolute
-      # If the caller supplied a relative path (e.g. ../../../../Projects/...),
-      # prepend playbook_dir so slurp gets a fully-qualified filesystem path.
-      # Absolute paths (starting with /) pass through unchanged.
       set_fact:
         _resolved_json_path: >-
           {{ devices_json_path if devices_json_path.startswith('/')
              else (playbook_dir + '/' + devices_json_path) }}
 
     - name: Load site input JSON
-      # slurp reads the file as base64-encoded content into _json_raw.content.
-      # Using slurp instead of the file lookup plugin ensures the path is
-      # evaluated on the target (localhost) rather than the Ansible controller's
-      # search-path, which avoids lookup resolution issues.
-      ansible.builtin.slurp:
-        src: "{{ _resolved_json_path }}"
-      register: _json_raw
-
-    - name: Parse site input JSON
-      # b64decode reverses the slurp encoding; from_json converts the string
-      # to a native Ansible dict/list so subsequent Jinja2 can index into it.
       set_fact:
-        site_data: "{{ _json_raw.content | b64decode | from_json }}"
+        site_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 
     - name: Validate that project key exists in input data
       # Fail fast with a helpful message if the JSON has the wrong shape,

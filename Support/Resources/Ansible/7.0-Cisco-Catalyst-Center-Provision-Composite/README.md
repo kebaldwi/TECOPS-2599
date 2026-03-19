@@ -63,7 +63,7 @@ The playbook is data-driven: it reads the same `devices.json` file used across t
 
 | Action | Mechanism |
 |--------|-----------|
-| Loads and validates input JSON | `ansible.builtin.slurp` + Jinja2 filters |
+| Loads and validates input JSON | `lookup('file', path) | from_json` + Jinja2 filters |
 | Extracts deploy entries from `DayNTemplateNames` | `set_fact` with Jinja2 loop |
 | Authenticates once for REST calls | `ansible.builtin.uri` — `POST /v1/auth/token` |
 | Resolves template version UUIDs and member lists | `GET /v1/template-programmer/template?projectNames=<p>` + `GET /v1/template-programmer/template/<id>` |
@@ -314,7 +314,7 @@ In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │ Step 1 — Load Input                                                  │   │
-│  │   slurp → b64decode → from_json → assert                            │   │
+│  │   lookup('file') → from_json → assert                               │   │
 │  │   devices.json → devices_data                                        │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                  │                                          │
@@ -373,20 +373,15 @@ In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD
 
 #### Step 1: Load and Validate Input Data
 
-Uses the same `slurp` → `b64decode` → `from_json` → `assert` pipeline present in every playbook in this suite.
+The path is resolved to absolute, then a single `set_fact` reads and parses the file:
 
 ```yaml
 - name: Load devices input JSON
-  ansible.builtin.slurp:
-    src: "{{ _resolved_json_path }}"
-  register: _json_raw
-
-- name: Parse devices input JSON
   set_fact:
-    devices_data: "{{ _json_raw.content | b64decode | from_json }}"
+    devices_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 ```
 
-`ansible.builtin.slurp` reads the file as a Base64-encoded string; `b64decode` + `from_json` produce a native Ansible dict. An `assert` task validates that `devices_data.project` is non-empty before any network calls are made.
+`lookup('file', ...)` reads the file from the controller filesystem and returns raw text; `from_json` parses it into a native Ansible dict. An `assert` task validates that `devices_data.project` is non-empty before any network calls are made.
 
 #### Step 2: Build Deploy Entries
 

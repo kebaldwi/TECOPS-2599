@@ -47,7 +47,7 @@ Catalyst Center's discovery engine then attempts to reach each IP using SSH (pre
 
 | Action | Mechanism |
 |--------|-----------|
-| Loads and validates input JSON | `ansible.builtin.slurp` + Jinja2 filters |
+| Loads and validates input JSON | `lookup('file', path) | from_json` + Jinja2 filters |
 | Splits comma-separated IP strings into lists | Jinja2 `split(',')` + `map('trim')` |
 | Builds one discovery job config per site entry | `set_fact` with `namespace` |
 | Submits all discovery jobs | `cisco.dnac.discovery_workflow_manager` — `state: merged` |
@@ -254,7 +254,7 @@ Only the last entry (Floor 1) has a `DeviceList` — one discovery job will be s
 
 ### Step 1: Load and Validate Input Data
 
-Same `slurp` → `b64decode` → `from_json` → `assert` pipeline as all playbooks in this suite. See [6.0 README — Step 1](../6.0-Cisco-Catalyst-Center-Network-Profile/README.md#step-1-load-and-validate-input-data) for a full explanation.
+The path is resolved to absolute, then `lookup('file', _resolved_json_path) | from_json` reads and parses the JSON in one step. An `assert` task validates the shape before any processing begins.
 
 ### Step 2: Build Discovery Config List
 

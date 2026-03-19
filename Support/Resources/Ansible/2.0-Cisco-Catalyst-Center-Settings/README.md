@@ -412,7 +412,7 @@ Associates the global credentials created above with a specific site. Maps direc
 
 ### Step 1: Load and Validate Input Data
 
-Same pipeline as all playbooks in this suite: `slurp` → `b64decode` → `from_json` → `assert`. See [6.0 README — Step 1](../6.0-Cisco-Catalyst-Center-Network-Profile/README.md#step-1-load-and-validate-input-data) for a detailed explanation.
+The path is resolved to absolute, then `lookup('file', _resolved_json_path) | from_json` reads and parses the JSON in one step. An `assert` task validates the shape before any processing begins.
 
 ### Step 2: Derive Site Names
 
