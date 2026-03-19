@@ -1,0 +1,1141 @@
+# 7.0 — Cisco Catalyst Center: Composite Template Deployment
+
+> **Playbook:** `deploy_composite_template.yml`  
+> **Included tasks:** `tasks/deploy_entry.yml`  
+> **Module:** `cisco.dnac.configuration_template_deploy_v2`  
+> **API endpoint:** `POST /dna/intent/api/v2/template-programmer/template/deploy`  
+> **Minimum Catalyst Center version:** 2.3.7.6  
+> **Minimum Ansible version:** 2.15  
+> **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  
+> **Copyright © 2024–2026 Cisco Systems, Inc. All rights reserved.**
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+   - [What it does](#what-it-does)
+   - [What makes composite deployment different](#what-makes-composite-deployment-different)
+   - [Logical Flow](#logical-flow)
+2. [Prerequisites](#prerequisites)
+3. [Directory Structure](#directory-structure)
+4. [Installation](#installation)
+5. [Configuration](#configuration)
+   - [Inventory](#inventory)
+   - [Vault (Credentials)](#vault-credentials)
+6. [Input Data Structure — `devices.json`](#input-data-structure--devicesjson)
+   - [Top-Level Schema](#top-level-schema)
+   - [The `DayNTemplateNames` Block](#the-dayntemplatesnames-block)
+   - [Full Example](#full-example)
+7. [How It Works](#how-it-works)
+   - [Architecture Overview](#architecture-overview)
+   - [Main Playbook Walkthrough](#main-playbook-walkthrough)
+     - [Step 1: Load and Validate Input Data](#step-1-load-and-validate-input-data)
+     - [Step 2: Build Deploy Entries](#step-2-build-deploy-entries)
+     - [Step 3: Authenticate to Catalyst Center](#step-3-authenticate-to-catalyst-center)
+     - [Step 4: Process Each Deployment](#step-4-process-each-deployment)
+   - [Per-Template Task Walkthrough — `tasks/deploy_entry.yml`](#per-template-task-walkthrough--tasksdeployentryyml)
+     - [Step A: Fetch All Project Templates with Version IDs](#step-a-fetch-all-project-templates-with-version-ids)
+     - [Step B: Template Detail Fetch (containingTemplates)](#step-b-template-detail-fetch-containingtemplates)
+     - [Step C: Device UUID Resolution](#step-c-device-uuid-resolution)
+     - [Step D: Build `memberTemplateDeploymentInfo`](#step-d-build-membertemplatedeploymentinfo)
+     - [Step E: Deploy via `configuration_template_deploy_v2`](#step-e-deploy-via-configuration_template_deploy_v2)
+     - [Step F: Poll Async Task Status](#step-f-poll-async-task-status)
+     - [Step G: Summary and Error Propagation](#step-g-summary-and-error-propagation)
+8. [Composite Deploy Payload Reference](#composite-deploy-payload-reference)
+9. [How CatC Template Version IDs Work](#how-catc-template-version-ids-work)
+10. [Per-Member Template Parameters](#per-member-template-parameters)
+11. [Running the Playbook](#running-the-playbook)
+12. [Debug Mode](#debug-mode)
+13. [Expected Output](#expected-output)
+14. [Playbook Ordering Dependency](#playbook-ordering-dependency)
+15. [Troubleshooting](#troubleshooting)
+
+---
+
+## Overview
+
+This playbook deploys **composite Day-N templates** to managed devices in Cisco Catalyst Center. A composite template is a single deployable unit that bundles multiple child (member) templates, allowing a full device configuration stack — VRF definitions, loopbacks, overlay, NVE, multicast, and more — to be pushed atomically in one operation.
+
+The playbook is data-driven: it reads the same `devices.json` file used across the entire automation suite, extracts every `DayNTemplateNames` entry marked `DeployTemplate: true`, resolves all required UUIDs from Catalyst Center via REST, and deploys using the v2 template deploy API.
+
+### What it does
+
+| Action | Mechanism |
+|--------|-----------|
+| Loads and validates input JSON | `ansible.builtin.slurp` + Jinja2 filters |
+| Extracts deploy entries from `DayNTemplateNames` | `set_fact` with Jinja2 loop |
+| Authenticates once for REST calls | `ansible.builtin.uri` — `POST /v1/auth/token` |
+| Resolves template version UUIDs and member lists | `GET /v1/template-programmer/template?projectNames=<p>` + `GET /v1/template-programmer/template/<id>` |
+| Resolves device UUIDs from management IPs | `GET /v1/network-device?managementIpAddress=<ip>` |
+| Builds composite deploy payload | `set_fact` — constructs `memberTemplateDeploymentInfo` |
+| Deploys composite template | `cisco.dnac.configuration_template_deploy_v2` |
+| Polls async task to completion | `ansible.builtin.uri` with `until` + `retries` |
+
+### What makes composite deployment different
+
+Unlike a regular (non-composite) template deployment — where a single template and a flat set of parameters are pushed — a composite deployment requires that each **member template** inside the composite carry its own `targetInfo` and parameter set. This is reflected in the `memberTemplateDeploymentInfo` structure of the v2 API payload.
+
+Catalyst Center resolves the composite template's member list at deploy time, so the caller must:
+1. Know the composite template's committed `templateId` and its origin `mainTemplateId`.
+2. Know each member template's committed `templateId` and origin `mainTemplateId`.
+3. Provide per-member `targetInfo` entries with device UUIDs (not IPs).
+
+This playbook automates all three lookups so the operator only needs to specify human-readable names and IP addresses in `devices.json`.
+
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+```mermaid
+flowchart TD
+    START([Start]) --> A
+
+    A["Load devices.json<br/>slurp → from_json → assert"]
+    A --> B{Deploy entries<br/>found?}
+    B -->|No| FAIL_A([Fail: no deploy<br/>entries found])
+    B -->|Yes| C
+
+    C["Authenticate to CatC<br/>POST /auth/token → JWT"]
+    C --> D
+
+    D(["For each template entry"])
+    D --> E
+
+    E["Step A — Template list<br/>GET .../template<br/>?projectNames=project<br/>→ _template_version_map"]
+    E --> F{Template<br/>found in map?}
+    F -->|No| FAIL_B([Fail: template<br/>not found in project])
+    F -->|Yes| G
+
+    G["Step B — Template detail<br/>GET .../template/rootId<br/>→ containingTemplates"]
+    G --> H{Member templates<br/>attached?}
+    H -->|No| FAIL_C([Fail: no member<br/>templates attached])
+    H -->|Yes| I
+
+    I["Step C — Device UUIDs<br/>GET .../network-device<br/>?managementIpAddress=ip<br/>→ _device_uuid_map"]
+    I --> J{All target IPs<br/>resolved?}
+    J -->|No| FAIL_D([Fail: device<br/>not found in CatC])
+    J -->|Yes| K
+
+    K["Step D — Build payload<br/>memberTemplateDeployInfo<br/>version UUIDs + params<br/>copyingConfig: true"]
+    K --> L
+
+    L(["Per-device loop"])
+    L --> M
+
+    M["Step E — Deploy<br/>config_template_deploy_v2<br/>POST .../deploy<br/>→ taskId per device"]
+    M --> N{More<br/>devices?}
+    N -->|Yes| L
+    N -->|No| O
+
+    O["Step F — Poll tasks<br/>GET /task/taskId<br/>until endTime OR isError"]
+    O --> P{Any task<br/>isError = true?}
+    P -->|Yes| FAIL_E([Fail: isError=true<br/>+ failureReason])
+    P -->|No| Q
+
+    Q["Step G — Summary<br/>template · site · tasks"]
+    Q --> R{More template<br/>entries?}
+    R -->|Yes| D
+    R -->|No| DONE
+
+    DONE([Done ✓])
+
+    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    style FAIL_B fill:#c0392b,color:#fff,stroke:#922b21
+    style FAIL_C fill:#c0392b,color:#fff,stroke:#922b21
+    style FAIL_D fill:#c0392b,color:#fff,stroke:#922b21
+    style FAIL_E fill:#c0392b,color:#fff,stroke:#922b21
+    style DONE fill:#27ae60,color:#fff,stroke:#1e8449
+    style START fill:#2980b9,color:#fff,stroke:#1a5276
+```
+
+---
+
+## Prerequisites
+
+| Requirement | Version / Notes |
+|-------------|----------------|
+| Ansible | >= 2.15 |
+| Python | >= 3.9 |
+| `dnacentersdk` | >= 2.11.0 |
+| `cisco.dnac` collection | 6.46.0 |
+| Cisco Catalyst Center | >= 2.3.7.6 |
+| Composite template | Must already exist in CatC with member templates attached (run 5.0 first) |
+| Target devices | Must be discovered and managed in CatC (run 3.0 and 4.0 first) |
+
+---
+
+## Directory Structure
+
+```
+7.0-Cisco-Catalyst-Center-Provision-Composite/
+├── ansible.cfg                         # Ansible defaults (inventory path)
+├── inventory.yml                       # CatC connection + deploy variables
+├── deploy_composite_template.yml       # Main playbook
+├── tasks/
+│   └── deploy_entry.yml                # Per-template included task file
+├── vault.yml                           # Ansible Vault encrypted credentials (git-ignored)
+├── vault.yml.example                   # Plain-text credential template
+├── .vault_pass                         # Vault password file (git-ignored, chmod 600)
+├── requirements.txt                    # Python pip dependencies
+├── requirements.yml                    # Ansible Galaxy collection dependencies
+└── README.md                           # This document
+```
+
+Input data comes from the shared `devices.json` in the project tree:
+
+```
+Projects/
+└── BGP_EVPN/
+    └── Settings/
+        └── devices.json        # Site hierarchy + device list + template deploy data
+```
+
+---
+
+## Installation
+
+### 1. Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Install Ansible collections
+
+```bash
+ansible-galaxy collection install -r requirements.yml
+```
+
+### 3. Set up the vault password file
+
+```bash
+echo 'your_vault_password' > .vault_pass
+chmod 600 .vault_pass
+```
+
+---
+
+## Configuration
+
+### Inventory
+
+**File:** `inventory.yml`
+
+```yaml
+all:
+  hosts:
+    catalyst_center:
+      ansible_host: localhost
+      ansible_connection: local
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+      # Catalyst Center connection
+      dnac_host: 198.18.129.100
+      dnac_port: 443
+      dnac_version: 2.3.7.9
+      dnac_verify: false
+      dnac_debug: false
+      dnac_log: true
+      dnac_log_level: INFO
+
+      # Input file
+      devices_json_path: "../../../../Projects/BGP_EVPN/Settings/devices.json"
+
+      # Deploy behaviour
+      force_push_template: false
+
+      # Per-member template parameter overrides (keyed by template name)
+      member_template_params: {}
+
+      # Async task polling
+      task_poll_retries: 36
+      task_poll_delay: 5
+```
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `devices_json_path` | Relative or absolute path to the `devices.json` input file | `../../../../Projects/BGP_EVPN/Settings/devices.json` |
+| `force_push_template` | When `true`, push to devices even if they appear in-sync with the template | `false` |
+| `member_template_params` | Dict of per-member template parameter overrides keyed by template name | `{}` |
+| `task_poll_retries` | Maximum number of task status polls after submitting a deploy request | `36` |
+| `task_poll_delay` | Seconds to wait between each status poll | `5` |
+
+> **Tip:** With the defaults, the playbook will poll for up to `36 × 5 = 180 seconds` (3 minutes) before timing out a deployment task.
+
+### Vault (Credentials)
+
+```bash
+cp vault.yml.example vault.yml
+ansible-vault encrypt vault.yml --vault-password-file .vault_pass
+```
+
+`vault.yml.example` contains:
+
+```yaml
+dnac_username: "admin"
+dnac_password: "your_catc_password_here"
+```
+
+---
+
+## Input Data Structure — `devices.json`
+
+### Top-Level Schema
+
+```json
+{
+  "project": [
+    {
+      "HierarchyName":     "<full site path>",
+      "SiteType":          "<area|building|floor|null>",
+      "DeviceList":        "<ip1,ip2,...> or null",
+      "DayNTemplateNames": [ ... ]
+    }
+  ]
+}
+```
+
+This playbook processes only entries where `DayNTemplateNames` contains at least one element with `DeployTemplate: true` and a non-null `TemplateName`. All other keys are safely ignored.
+
+### The `DayNTemplateNames` Block
+
+Each element in the `DayNTemplateNames` array describes one composite template deployment target:
+
+```json
+"DayNTemplateNames": [
+  {
+    "TemplateName":   "<template name in CatC>",
+    "TemplateTag":    "<tag — informational only>",
+    "Project":        "<CatC project name that owns the template>",
+    "TemplateTarget": ["<ip1>", "<ip2>", "..."],
+    "DeployTemplate": true
+  }
+]
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `TemplateName` | string | **Yes** | Exact name of the composite template in Catalyst Center Template Editor. Must be non-null when `DeployTemplate: true`. |
+| `Project` | string | **Yes** | Exact name of the CatC project that contains the template. Used to look up the template UUID via the project API. |
+| `TemplateTarget` | list of strings | **Yes** | Management IP addresses of the target devices. Each IP is resolved to a device UUID for use in `targetInfo`. |
+| `DeployTemplate` | boolean | **Yes** | Set `true` to include this entry in the deployment run. Set `false` or `null` to skip. |
+| `TemplateTag` | string | No | Informational label. Recorded in the deploy summary output but not sent to CatC. |
+
+> **Note:** Only entries where both `DeployTemplate` is `true` **and** `TemplateName` is non-null are processed. Entries with `DeployTemplate: false`, `DeployTemplate: null`, or a null `TemplateName` are silently skipped.
+
+### Full Example
+
+```json
+{
+  "project": [
+    {
+      "HierarchyName": "Global",
+      "SiteType": null,
+      "DeviceList": null,
+      "DayNTemplateNames": [
+        { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+      ]
+    },
+    {
+      "HierarchyName": "Global/PODS/POD 0/Building P0/Floor 1",
+      "SiteType": "floor",
+      "DeviceList": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6",
+      "DayNTemplateNames": [
+        {
+          "TemplateName":   "BGP-EVPN-BUILD.j2",
+          "TemplateTag":    "DEMO",
+          "Project":        "Building P0",
+          "TemplateTarget": ["198.19.1.1","198.19.1.2","198.19.1.3","198.19.1.4","198.19.1.5","198.19.1.6"],
+          "DeployTemplate": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD.j2` from project `Building P0` is deployed to all six devices on Floor 1.
+
+---
+
+## How It Works
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  deploy_composite_template.yml (Main Playbook)                              │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 1 — Load Input                                                  │   │
+│  │   slurp → b64decode → from_json → assert                            │   │
+│  │   devices.json → devices_data                                        │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                  │                                          │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 2 — Build Deploy Entries                                        │   │
+│  │   Iterate devices_data.project                                       │   │
+│  │   Filter: DayNTemplateNames[].DeployTemplate == true                 │   │
+│  │           DayNTemplateNames[].TemplateName is not null               │   │
+│  │   Output: _deploy_entries[]                                          │   │
+│  │     { site, template_name, project_name,                            │   │
+│  │       template_target[], template_tag }                              │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                  │                                          │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 3 — Authenticate                                                │   │
+│  │   POST /dna/system/api/v1/auth/token → _catc_token (JWT)            │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                  │                                          │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Step 4 — Loop: include_tasks tasks/deploy_entry.yml                 │   │
+│  │   One iteration per _deploy_entries[] item                           │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                   │
+                    ┌──────────────┘
+                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  tasks/deploy_entry.yml (included once per composite template entry)        │
+│                                                                             │
+│  Step A ─ GET /v1/template-programmer/template?projectNames=<project>      │
+│           └─ Build _template_version_map: name → { rootId, versionId }    │
+│                                                                             │
+│  Step B ─ GET /v1/template-programmer/template/<rootId>                    │
+│           └─ Extract containingTemplates[] (IDs from Step A map)           │
+│                                                                             │
+│  Step C ─ GET /v1/network-device?managementIpAddress=<ip>  (per target IP) │
+│           └─ Build _device_uuid_map: { ip → { uuid, hostname } }           │
+│                                                                             │
+│  Step D ─ Build memberTemplateDeploymentInfo[]                             │
+│           └─ One entry per member template × all device UUIDs             │
+│                                                                             │
+│  Step E ─ cisco.dnac.configuration_template_deploy_v2 (loop per device)   │
+│           └─ POST /v2/template-programmer/template/deploy                  │
+│              → _deploy_task_ids[] (one taskId per device)                  │
+│                                                                             │
+│  Step F ─ Poll GET /v1/task/<taskId>  (loop per device taskId)             │
+│           └─ until endTime is defined OR isError == true                   │
+│                                                                             │
+│  Step G ─ Summary debug + fail on error                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Main Playbook Walkthrough
+
+#### Step 1: Load and Validate Input Data
+
+Uses the same `slurp` → `b64decode` → `from_json` → `assert` pipeline present in every playbook in this suite.
+
+```yaml
+- name: Load devices input JSON
+  ansible.builtin.slurp:
+    src: "{{ _resolved_json_path }}"
+  register: _json_raw
+
+- name: Parse devices input JSON
+  set_fact:
+    devices_data: "{{ _json_raw.content | b64decode | from_json }}"
+```
+
+`ansible.builtin.slurp` reads the file as a Base64-encoded string; `b64decode` + `from_json` produce a native Ansible dict. An `assert` task validates that `devices_data.project` is non-empty before any network calls are made.
+
+#### Step 2: Build Deploy Entries
+
+Iterates every site entry and every `DayNTemplateNames` element. Only entries satisfying both conditions are collected:
+
+- `tpl.DeployTemplate` is truthy
+- `tpl.TemplateName` is not `none`
+
+```yaml
+_deploy_entries:
+  - site:            "Global/PODS/POD 0/Building P0/Floor 1"
+    template_name:   "BGP-EVPN-BUILD.j2"
+    project_name:    "Building P0"
+    template_target: ["198.19.1.1", "198.19.1.2", "198.19.1.3",
+                      "198.19.1.4", "198.19.1.5", "198.19.1.6"]
+    template_tag:    "DEMO"
+```
+
+An `assert` task validates that at least one entry was collected; the playbook fails fast with an informative message if `devices.json` contains no qualifying entries.
+
+#### Step 3: Authenticate to Catalyst Center
+
+A single `POST /dna/system/api/v1/auth/token` call exchanges the vault credentials for a short-lived JWT. The token is stored as `_catc_token` and passed as the `X-Auth-Token` header in all subsequent REST calls made inside `deploy_entry.yml`.
+
+```yaml
+- name: Authenticate to Catalyst Center
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/system/api/v1/auth/token"
+    method: POST
+    user: "{{ dnac_username }}"
+    password: "{{ dnac_password }}"
+    force_basic_auth: true
+    validate_certs: "{{ dnac_verify }}"
+  register: _auth_result
+  no_log: true
+```
+
+> `no_log: true` is set on the authentication task and the token-storage task to prevent credentials from appearing in Ansible output or log files.
+
+#### Step 4: Process Each Deployment
+
+```yaml
+- name: Process composite template deployment for each entry
+  include_tasks: tasks/deploy_entry.yml
+  loop: "{{ _deploy_entries }}"
+  loop_control:
+    loop_var: deploy_entry
+    label: "{{ deploy_entry.template_name }} → {{ deploy_entry.site }}"
+```
+
+`include_tasks` is used (not `import_tasks`) so that each iteration runs in the loop scope and has full access to the `deploy_entry` loop variable. The custom `loop_var` name prevents collision with Ansible's default `item` in nested loops.
+
+---
+
+### Per-Template Task Walkthrough — `tasks/deploy_entry.yml`
+
+Each iteration of the main loop executes all steps in this file for one composite template deploy entry.
+
+#### Step A: Fetch All Project Templates with Version IDs
+
+**Purpose:** Retrieve the complete flat template list for the project using the template-programmer template endpoint, which — unlike the project endpoint — includes `versionsInfo` per template. `versionsInfo[0].id` is the **latest committed version UUID**, which is required by the CatC v2 deploy API.
+
+> **Why not the project endpoint?** `GET /template-programmer/project?name=` returns a `templates[]` array with only root `templateId` values and no `versionsInfo`. The v2 deploy API requires version-level UUIDs (`templateId` = version UUID, `mainTemplateId` = root UUID). Using root UUIDs as `templateId` causes the deploy to be accepted silently but may push stale configurations.
+
+```
+GET /dna/intent/api/v1/template-programmer/template?projectNames=<project_name>
+```
+
+**Response shape (simplified):**
+
+```json
+[
+  {
+    "name":         "BGP-EVPN-BUILD.j2",
+    "templateId":   "2cbdc2f3-3a44-44bc-a8df-b3d76a410c60",
+    "versionsInfo": [
+      { "id": "5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665", "version": "2" },
+      { "id": "a1b2c3d4-...",                          "version": "1" }
+    ]
+  },
+  {
+    "name":         "FABRIC-VRF.j2",
+    "templateId":   "faa53970-0521-44c1-ab49-9a2d92609c61",
+    "versionsInfo": [
+      { "id": "38d90128-e9dc-4c10-aee0-fb00c0c3e60b", "version": "3" }
+    ]
+  }
+]
+```
+
+The first element of `versionsInfo` is always the **most recently committed** version. The playbook builds a lookup map from every template name to its two key UUIDs:
+
+```yaml
+_template_version_map:
+  "BGP-EVPN-BUILD.j2":
+    rootId:    "2cbdc2f3-3a44-44bc-a8df-b3d76a410c60"   # tpl.templateId
+    versionId: "5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665"   # versionsInfo[0].id
+  "FABRIC-VRF.j2":
+    rootId:    "faa53970-0521-44c1-ab49-9a2d92609c61"
+    versionId: "38d90128-e9dc-4c10-aee0-fb00c0c3e60b"
+  ...
+```
+
+If a template has no `versionsInfo` (i.e., has never been committed to CatC), `versionId` falls back gracefully to the root `templateId`. An `assert` task fails immediately with a list of available template names if the requested composite template is not found in the map.
+
+**CatC template ID concepts — for beginners:**
+
+| ID type | Source field | Description |
+|---------|-------------|-------------|
+| Root UUID | `templateId` | Permanent identifier assigned when the template is first created. Never changes across commits. |
+| Version UUID | `versionsInfo[0].id` | UUID of the latest committed snapshot of the template. Changes each time you commit a new version. **This is what the v2 deploy API requires as `templateId`.** |
+| Main template ID | Root UUID | The `mainTemplateId` field in the deploy payload. CatC uses it for internal version tracking. |
+
+#### Step B: Template Detail Fetch (containingTemplates)
+
+**Purpose:** Retrieve the full composite template object to extract its `containingTemplates` array — the list of every member template attached to the composite. The composite's version and root UUIDs were already resolved in Step A and are sourced from `_template_version_map`; this call only provides the member template list.
+
+```
+GET /dna/intent/api/v1/template-programmer/template/<rootId>
+```
+
+**Key fields in the detail response:**
+
+```json
+{
+  "id":        "2cbdc2f3-3a44-44bc-a8df-b3d76a410c60",
+  "name":      "BGP-EVPN-BUILD.j2",
+  "composite": true,
+  "containingTemplates": [
+    { "id": "c78c41ee-...", "templateId": "faa53970-...", "name": "FABRIC-VRF.j2" },
+    { "id": "e5f25f18-...", "templateId": "3acc1310-...", "name": "FABRIC-LOOPBACKS.j2" },
+    { "id": "...",          "templateId": "...",          "name": "FABRIC-NVE.j2" }
+  ]
+}
+```
+
+> **Note:** `containingTemplates` entries carry only root UUIDs (`templateId`). The version UUID for each member is resolved in Step D using the `_template_version_map` built in Step A.
+
+**Variable extraction:**
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `_composite_template_id` | `_template_version_map[name].versionId` (Step A) | Latest committed composite version UUID — used as `templateId` in the deploy payload |
+| `_composite_main_id` | `_template_version_map[name].rootId` (Step A) | Composite root UUID — used as `mainTemplateId` in the deploy payload |
+| `_member_templates` | `containingTemplates` (this step) | List of member template objects; `name` field used to look up version IDs in Step D |
+
+> **Important:** An `assert` validates that `containingTemplates` is non-empty. If the composite template in CatC has no members attached, the deploy payload would be malformed — the assert fails fast with a clear message before any deploy attempt is made.
+
+#### Step C: Device UUID Resolution
+
+**Purpose:** Resolve each management IP address in `deploy_entry.template_target` to its CatC device UUID and hostname. The deploy API requires UUIDs — not IPs — in the `targetInfo` entries.
+
+```
+GET /dna/intent/api/v1/network-device?managementIpAddress=<ip>
+```
+
+The task loops over every IP in `template_target` in parallel (via Ansible loop), then assembles the results into a lookup map:
+
+```yaml
+_device_uuid_map:
+  "198.19.1.1": { uuid: "28c35a52-db7d-409c-81e2-ecb3849dc310", hostname: "Leaf01" }
+  "198.19.1.2": { uuid: "9f4e2a18-1b3c-47d5-8e6f-cd2345678901", hostname: "Leaf02" }
+  ...
+```
+
+An `assert` validates that every IP in `template_target` resolved successfully. The playbook fails with the unresolved IP address in the error message if any device is not found.
+
+#### Step D: Build `memberTemplateDeploymentInfo`
+
+**Purpose:** Construct the `memberTemplateDeploymentInfo` array — the core of the v2 composite deploy payload. Each element describes one member template and its target devices, along with the parameters to inject. Member template version UUIDs are sourced from the `_template_version_map` built in Step A.
+
+**Structure produced:**
+
+```yaml
+_member_deployment_info:
+  - templateId:        "<member_version_uuid>"         # from _template_version_map[name].versionId
+    mainTemplateId:    "<member_root_uuid>"             # from _template_version_map[name].rootId
+    forcePushTemplate: false
+    isComposite:       false
+    copyingConfig:     true                             # required by CatC v2 deploy API
+    targetInfo:
+      - id:             "28c35a52-db7d-409c-81e2-ecb3849dc310"   # device UUID
+        hostName:       "Leaf01"
+        type:           "MANAGED_DEVICE_UUID"
+        params:         {}                              # from member_template_params
+        resourceParams:
+          - { type: "MANAGED_DEVICE_UUID",     value: "28c35a52-db7d-409c-81e2-ecb3849dc310" }
+          - { type: "MANAGED_DEVICE_IP",       value: null }
+          - { type: "MANAGED_DEVICE_HOSTNAME", value: "Leaf01" }
+
+  - templateId:        "<member2_version_uuid>"
+    mainTemplateId:    "<member2_root_uuid>"
+    forcePushTemplate: false
+    isComposite:       false
+    copyingConfig:     true
+    targetInfo:
+      - id:             "9f4e2a18-1b3c-47d5-8e6f-cd2345678901"
+        hostName:       "Leaf02"
+        type:           "MANAGED_DEVICE_UUID"
+        params:         {}
+        resourceParams:
+          - { type: "MANAGED_DEVICE_UUID",     value: "9f4e2a18-1b3c-47d5-8e6f-cd2345678901" }
+          - { type: "MANAGED_DEVICE_IP",       value: null }
+          - { type: "MANAGED_DEVICE_HOSTNAME", value: "Leaf02" }
+```
+
+> **`copyingConfig: true`** is a raw dict field that must appear inside each `memberTemplateDeploymentInfo` entry. The `cisco.dnac.configuration_template_deploy_v2` module passes raw dict fields through to the SDK unchanged. Setting `copyingConfig` at the module parameter level (outside the dict) is not supported and is rejected.
+
+> **`resourceParams` structure** must match the three-entry format observed in working CatC UX payloads: `MANAGED_DEVICE_UUID` (with value), `MANAGED_DEVICE_IP` (value `null`), `MANAGED_DEVICE_HOSTNAME` (with value). An empty `resourceParams: []` is rejected by the API with a `NCTP10028` error.
+
+**Param injection from `member_template_params`:**
+
+Each member template's `params` dict is sourced from the `member_template_params` inventory variable (a dict keyed by template name). If no entry exists for a given member template name, an empty dict `{}` is used:
+
+```yaml
+# inventory.yml example — pass vrf_name only to FABRIC-VRF.j2
+member_template_params:
+  "FABRIC-VRF.j2":
+    vrf_name: "PROD"
+```
+
+> All other member templates in the same composite will receive `params: {}` unless explicitly listed in `member_template_params`.
+
+**Member version UUID resolution:**
+
+Because `containingTemplates` from Step B holds only root UUIDs, the member's version UUID must come from `_template_version_map[member.name].versionId`. If a member template name is not found in the map (unlikely — all templates in the project should be in it), the root UUID is used as a safe fallback.
+
+#### Step E: Deploy via `configuration_template_deploy_v2` (per-device loop)
+
+**Purpose:** Submit the fully-assembled composite deploy payload to Catalyst Center using the `cisco.dnac.configuration_template_deploy_v2` module. The playbook sends **one API call per target device**, mirroring the behavior of the CatC UI. Each call carries a single-device `targetInfo` entry.
+
+> **Why one call per device?** Analysis of a working payload captured from the CatC UX reveals that the UI sends one `POST /v2/.../deploy` request per device, with `targetInfo` containing exactly one entry. Sending all devices in a single call is accepted by the API but results in `NCTP10028` errors when top-level `targetInfo` is misused. The per-device loop is the correct pattern.
+
+```yaml
+- name: Deploy composite template to <hostname> (<ip>)
+  vars:
+    _single_target:
+      - id:       "{{ item.value.uuid }}"
+        hostName: "{{ item.value.hostname }}"
+        type:     "MANAGED_DEVICE_UUID"
+        params:   {}
+        resourceParams:
+          - { type: "MANAGED_DEVICE_UUID",     value: "{{ item.value.uuid }}" }
+          - { type: "MANAGED_DEVICE_IP",       value: null }
+          - { type: "MANAGED_DEVICE_HOSTNAME", value: "{{ item.value.hostname }}" }
+  cisco.dnac.configuration_template_deploy_v2:
+    templateId:                   "{{ _composite_template_id }}"   # version UUID
+    mainTemplateId:               "{{ _composite_main_id }}"       # root UUID
+    isComposite:                  true
+    forcePushTemplate:            "{{ force_push_template | bool }}"
+    targetInfo:                   "{{ _single_target }}"           # one device per call
+    memberTemplateDeploymentInfo: "{{ _single_member_info }}"      # filtered to this device
+  loop: "{{ _device_uuid_map | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: _deploy_results
+  ignore_errors: true
+```
+
+**Key payload fields:**
+
+| Field | Value | Purpose |
+|-------|-------|---------|
+| `templateId` | Latest composite version UUID from `_template_version_map` | Identifies the committed template snapshot to deploy. Must be the version UUID, not the root UUID. |
+| `mainTemplateId` | Composite root UUID from `_template_version_map` | CatC internal parent reference. Always the root UUID. |
+| `isComposite` | `true` | Signals to CatC that this is a composite deployment |
+| `forcePushTemplate` | From `force_push_template` inventory var | When `true`, bypasses CatC's in-sync check and always pushes config to device |
+| `targetInfo` | List with exactly one device entry per API call | Non-empty top-level `targetInfo` is required by CatC v2 composite deploy (empty list causes NCTP10028) |
+| `memberTemplateDeploymentInfo` | Built in Step D, sliced per device | Per-member deployment spec; each member carries `targetInfo`, params, `copyingConfig: true` |
+
+The module call uses `ignore_errors: true` because transient SDK exceptions are checked precisely in Steps F and G rather than relying on Ansible's default failure handling.
+
+#### Step F: Poll Async Task Status (per device)
+
+**Purpose:** The v2 deploy API is asynchronous — it returns immediately with a `taskId`. Because Step E submits one deploy call per device, Step F collects one `taskId` per device and polls each independently until its task reaches a terminal state (completed or errored).
+
+```
+GET /dna/intent/api/v1/task/<taskId>
+```
+
+> **Why not the deploy-status endpoint?**  
+> The Template Programmer deploy status endpoint (`/template-programmer/template/deploy/status/<id>`) expects a **deployment ID**, not a task ID. In CatC 2.3.7.x, the `taskId` returned by the v2 deploy API is not a valid deployment ID — calling the status endpoint with it returns `404 NOT_FOUND`. The generic `/v1/task/<taskId>` endpoint is the correct polling target.
+
+```yaml
+- name: Poll task {{ item.taskId }} for {{ item.ip }}
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/task/{{ item.taskId }}"
+    method: GET
+    headers:
+      X-Auth-Token: "{{ _catc_token }}"
+  register: _task_poll_results
+  loop: "{{ _deploy_task_ids }}"
+  loop_control:
+    label: "{{ item.ip }} → {{ item.taskId }}"
+  until: >-
+    (_task_poll_results.json.response | default({})).endTime is defined
+    or (_task_poll_results.json.response | default({})).isError | default(false) | bool
+  retries: "{{ task_poll_retries | int }}"
+  delay:   "{{ task_poll_delay   | int }}"
+```
+
+`_deploy_task_ids` is a list of `{ip, taskId}` dicts built from the per-device deploy results:
+
+```yaml
+_deploy_task_ids:
+  - { ip: "198.19.1.1", taskId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }
+  - { ip: "198.19.1.2", taskId: "b2c3d4e5-f6a7-8901-bcde-f12345678901" }
+  ...
+```
+
+The `until` condition monitors two terminal signals:
+- **`endTime` is defined** — task completed (successfully or with an error recorded in `failureReason`)
+- **`isError == true`** — task reported a failure (may appear before `endTime` is set)
+
+#### Step G: Summary and Error Propagation
+
+A debug task prints a structured summary for every deployment:
+
+```
+Template       : BGP-EVPN-BUILD.j2
+Project        : Building P0
+Site           : Global/PODS/POD 0/Building P0/Floor 1
+Target devices : 198.19.1.1, 198.19.1.2, 198.19.1.3, 198.19.1.4, 198.19.1.5, 198.19.1.6
+Tasks submitted: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'b2c3d4e5-...']
+Any module error: False
+```
+
+Two failure conditions are checked by looping over per-device results:
+1. **Module-level error** — `item.failed` is true for any device's deploy call (e.g., SDK exception, authentication failure)
+2. **Task-level error** — `item.json.response.isError` is true for any polled task (e.g., device unreachable, template Jinja2 render error)
+
+Either condition raises an Ansible `fail` task with the device IP, task ID, progress text, and failure reason included in the error message.
+
+---
+
+## Composite Deploy Payload Reference
+
+The structure submitted to `POST /dna/intent/api/v2/template-programmer/template/deploy`.
+
+> **One API call per device.** The CatC v2 composite deploy API expects a single device in `targetInfo` per request. The playbook loops over `_device_uuid_map` and submits one call per managed device, with `targetInfo` containing exactly that device's entry and `memberTemplateDeploymentInfo` filtered to that device's entries only.
+
+```json
+{
+  "templateId":        "<composite_version_uuid>",
+  "mainTemplateId":    "<composite_root_uuid>",
+  "isComposite":       true,
+  "forcePushTemplate": false,
+  "targetInfo": [
+    {
+      "id":       "<device_uuid>",
+      "hostName": "<device_hostname>",
+      "type":     "MANAGED_DEVICE_UUID",
+      "params":   {},
+      "resourceParams": [
+        { "type": "MANAGED_DEVICE_UUID",     "value": "<device_uuid>" },
+        { "type": "MANAGED_DEVICE_IP",       "value": null },
+        { "type": "MANAGED_DEVICE_HOSTNAME", "value": "<device_hostname>" }
+      ]
+    }
+  ],
+  "memberTemplateDeploymentInfo": [
+    {
+      "templateId":        "<member1_version_uuid>",
+      "mainTemplateId":    "<member1_root_uuid>",
+      "forcePushTemplate": false,
+      "isComposite":       false,
+      "copyingConfig":     true,
+      "targetInfo": [
+        {
+          "id":       "<device_uuid>",
+          "hostName": "<device_hostname>",
+          "type":     "MANAGED_DEVICE_UUID",
+          "params":   { "<param_name>": "<param_value>" },
+          "resourceParams": [
+            { "type": "MANAGED_DEVICE_UUID",     "value": "<device_uuid>" },
+            { "type": "MANAGED_DEVICE_IP",       "value": null },
+            { "type": "MANAGED_DEVICE_HOSTNAME", "value": "<device_hostname>" }
+          ]
+        }
+      ]
+    },
+    {
+      "templateId":        "<member2_version_uuid>",
+      "mainTemplateId":    "<member2_root_uuid>",
+      "forcePushTemplate": false,
+      "isComposite":       false,
+      "copyingConfig":     true,
+      "targetInfo": [
+        {
+          "id":       "<device_uuid>",
+          "hostName": "<device_hostname>",
+          "type":     "MANAGED_DEVICE_UUID",
+          "params":   {},
+          "resourceParams": [
+            { "type": "MANAGED_DEVICE_UUID",     "value": "<device_uuid>" },
+            { "type": "MANAGED_DEVICE_IP",       "value": null },
+            { "type": "MANAGED_DEVICE_HOSTNAME", "value": "<device_hostname>" }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Field summary:**
+
+| Field | Type | Value | Notes |
+|-------|------|-------|-------|
+| `templateId` | string | Composite version UUID | From `versionsInfo[0].id` via `_template_version_map`. NOT the root UUID. |
+| `mainTemplateId` | string | Composite root UUID | Permanent template ID. From `templateId` field in the template list response. |
+| `isComposite` | bool | `true` | Required for composite deploys |
+| `targetInfo[].id` | string | Device UUID | From `GET /network-device?managementIpAddress=`. NOT the management IP. |
+| `targetInfo[].type` | string | `"MANAGED_DEVICE_UUID"` | Must be exactly this string |
+| `targetInfo[].resourceParams` | array | 3-entry list | `MANAGED_DEVICE_UUID` (value), `MANAGED_DEVICE_IP` (null), `MANAGED_DEVICE_HOSTNAME` (value) |
+| `memberTemplateDeploymentInfo[].templateId` | string | Member version UUID | From `_template_version_map[member.name].versionId` |
+| `memberTemplateDeploymentInfo[].mainTemplateId` | string | Member root UUID | From `_template_version_map[member.name].rootId` |
+| `memberTemplateDeploymentInfo[].copyingConfig` | bool | `true` | Required per-member field; NOT a module-level parameter |
+
+---
+
+## How CatC Template Version IDs Work
+
+This section explains a key concept that confused even experienced users: the difference between a template's **root UUID** and its **version UUID**, and why the v2 deploy API requires both.
+
+### Root UUID vs Version UUID
+
+Every template in Catalyst Center is assigned a permanent **root UUID** when it is first created. This ID is visible in the Template Editor URL and in the project/template list API response as `templateId`. It never changes, even as the template is edited and committed multiple times.
+
+Every time you commit a new version of the template in CatC, a new **version UUID** is created and attached to that snapshot. The template list endpoint (`/template-programmer/template?projectNames=`) exposes these as the `versionsInfo` array. `versionsInfo[0].id` is always the **most recently committed version**.
+
+```
+BGP-EVPN-BUILD.j2
+│
+├── rootId (permanent):     2cbdc2f3-3a44-44bc-a8df-b3d76a410c60   ← mainTemplateId
+│
+└── Versions:
+    ├── version 1 UUID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    └── version 2 UUID:  5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665   ← templateId (latest)
+                                                                    (versionsInfo[0].id)
+```
+
+### Why Both Are Required
+
+The v2 composite deploy API requires:
+
+| Payload field | UUID type | Source |
+|---------------|-----------|--------|
+| `templateId` | **Version UUID** (latest committed) | `versionsInfo[0].id` from `GET /template-programmer/template?projectNames=` |
+| `mainTemplateId` | **Root UUID** (permanent) | `templateId` field from same response |
+
+Sending the root UUID as `templateId` is accepted without error but may result in CatC deploying an older or unexpected version of the template configuration.
+
+### The Two-Endpoint Strategy
+
+This playbook uses two endpoints to gather all required information:
+
+1. **List endpoint** (`?projectNames=`) — provides `versionsInfo` → version UUID for each template. Called once per deployment entry.
+2. **Detail endpoint** (`/<rootId>`) — provides `containingTemplates` → list of member names. Called once per composite template.
+
+Member template version UUIDs are also resolved from the list endpoint response (all templates in the project are returned in one call), so no additional per-member API calls are needed.
+
+---
+
+## Per-Member Template Parameters
+
+Template Jinja2 variables for each member template are supplied through the `member_template_params` inventory variable.
+
+**Format:** A dict keyed by the exact template name as it appears in Catalyst Center, with each value being a flat dict of parameter name → value pairs.
+
+**Inventory example:**
+
+```yaml
+member_template_params:
+  "FABRIC-VRF.j2":
+    vrf_name: "PROD"
+    rd_value:  "65001:100"
+  "FABRIC-LOOPBACKS.j2":
+    loopback_ip: "192.168.100.1"
+```
+
+**Runtime override** (useful for CI pipelines or per-run overrides):
+
+```bash
+ansible-playbook deploy_composite_template.yml \
+  --vault-password-file .vault_pass \
+  -e '{"member_template_params": {"FABRIC-VRF.j2": {"vrf_name": "STAGING"}}}'
+```
+
+Member templates not listed in `member_template_params` receive `params: {}`. If none of your member templates require explicit parameter injection (for example they all resolve variables from `__device.*` system bindings), leave `member_template_params: {}` in inventory.
+
+---
+
+## Running the Playbook
+
+**Basic run (all defaults from inventory):**
+
+```bash
+ansible-playbook deploy_composite_template.yml --vault-password-file .vault_pass
+```
+
+**Override the input file:**
+
+```bash
+ansible-playbook deploy_composite_template.yml \
+  --vault-password-file .vault_pass \
+  -e devices_json_path=/absolute/path/to/custom_devices.json
+```
+
+**Force-push templates regardless of sync state:**
+
+```bash
+ansible-playbook deploy_composite_template.yml \
+  --vault-password-file .vault_pass \
+  -e force_push_template=true
+```
+
+**Override member template parameters at runtime:**
+
+```bash
+ansible-playbook deploy_composite_template.yml \
+  --vault-password-file .vault_pass \
+  -e '{"member_template_params": {"FABRIC-VRF.j2": {"vrf_name": "PROD"}}}'
+```
+
+**Increase poll timeout for slow deployments:**
+
+```bash
+ansible-playbook deploy_composite_template.yml \
+  --vault-password-file .vault_pass \
+  -e task_poll_retries=60 \
+  -e task_poll_delay=10
+```
+
+---
+
+## Debug Mode
+
+Set the `DEBUG` environment variable to `true` to enable verbose intermediate output:
+
+```bash
+DEBUG=true ansible-playbook deploy_composite_template.yml --vault-password-file .vault_pass
+```
+
+Debug tasks emit:
+
+| Variable | Content |
+|----------|---------|
+| `_deploy_entries` | Full list of extracted deploy entries from `devices.json` |
+| `_template_version_map` | Complete name → `{rootId, versionId}` map for all templates in the project |
+| `_composite_raw_id` | Composite root UUID (used to call the detail endpoint in Step B) |
+| `_composite_template_id` | Composite version UUID (sent as `templateId` in the deploy payload) |
+| `_composite_main_id` | Composite root UUID (sent as `mainTemplateId` in the deploy payload) |
+| `_member_templates` | `containingTemplates` list from the detail endpoint (Step B) |
+| `_device_uuid_map` | IP → `{uuid, hostname}` mapping for all target devices |
+| `_target_info` | Top-level `targetInfo` list (all devices — before per-device split) |
+| `_member_deployment_info` | Final `memberTemplateDeploymentInfo` payload before split and submission |
+| `_deploy_results` | Raw `cisco.dnac.configuration_template_deploy_v2` module responses (one per device) |
+| `_deploy_task_ids` | List of `{ip, taskId}` dicts collected after per-device deploy calls |
+
+---
+
+## Expected Output
+
+A successful run for one composite template across six devices looks like:
+
+```
+PLAY [Deploy Composite Templates to Managed Devices from devices.json] *********
+
+TASK [Resolve devices_json_path to absolute] ***********************************
+ok: [catalyst_center]
+
+TASK [Load devices input JSON] *************************************************
+ok: [catalyst_center]
+
+TASK [Parse devices input JSON] ************************************************
+ok: [catalyst_center]
+
+TASK [Validate that project key exists in input data] **************************
+ok: [catalyst_center] => Input data loaded — 5 entries found.
+
+TASK [Build DayN composite template deploy entries] ****************************
+ok: [catalyst_center]
+
+TASK [Validate deploy entries exist] *******************************************
+ok: [catalyst_center] => 1 composite deployment(s) to process.
+
+TASK [Authenticate to Catalyst Center] *****************************************
+ok: [catalyst_center]
+
+TASK [Process composite template deployment for each entry] ********************
+included: tasks/deploy_entry.yml for catalyst_center
+
+TASK [[BGP-EVPN-BUILD.j2] Fetch all project templates with versionsInfo] ******
+ok: [catalyst_center]
+
+TASK [[BGP-EVPN-BUILD.j2] Build template name → version/root ID map] **********
+ok: [catalyst_center]
+
+TASK [[BGP-EVPN-BUILD.j2] Assert composite template found] ********************
+ok: [catalyst_center]
+
+TASK [[BGP-EVPN-BUILD.j2] Extract composite template root and version IDs] ****
+ok: [catalyst_center]
+
+TASK [[BGP-EVPN-BUILD.j2] Fetch composite template detail] ********************
+ok: [catalyst_center]
+
+TASK [[BGP-EVPN-BUILD.j2] Resolve device UUIDs for target IPs] ****************
+ok: [catalyst_center] => (item=198.19.1.1) ...
+ok: [catalyst_center] => (item=198.19.1.2) ...
+...
+
+TASK [[BGP-EVPN-BUILD.j2] Build memberTemplateDeploymentInfo] *****************
+ok: [catalyst_center]
+
+TASK [[BGP-EVPN-BUILD.j2] Deploy composite template to Spine-01 (198.19.1.1)] *
+changed: [catalyst_center]
+
+TASK [[BGP-EVPN-BUILD.j2] Deploy composite template to Spine-02 (198.19.1.2)] *
+changed: [catalyst_center]
+
+...
+
+TASK [[BGP-EVPN-BUILD.j2] Poll task <id> for 198.19.1.1] *********************
+ok: [catalyst_center]
+
+...
+
+TASK [[BGP-EVPN-BUILD.j2] Deployment summary] *********************************
+ok: [catalyst_center] =>
+  msg:
+    - "Template       : BGP-EVPN-BUILD.j2"
+    - "Project        : Building P0"
+    - "Site           : Global/PODS/POD 0/Building P0/Floor 1"
+    - "Target devices : 198.19.1.1, 198.19.1.2, 198.19.1.3, 198.19.1.4, 198.19.1.5, 198.19.1.6"
+    - "Tasks submitted: ['a1b2c3d4-...', 'b2c3d4e5-...', ...]"
+    - "Any module error: False"
+
+PLAY RECAP *********************************************************************
+catalyst_center  : ok=28  changed=6  unreachable=0  failed=0
+```
+
+> The `changed=6` count reflects one deploy call per device (six devices). Each deploy call that successfully submits to CatC is counted as `changed`.
+
+---
+
+## Playbook Ordering Dependency
+
+This playbook sits at the end of the automation chain. All upstream steps must complete successfully before composite templates can be deployed:
+
+```
+1.0 Site Hierarchy
+        │
+        ▼
+2.0 Network Settings & Credentials
+        │
+        ▼
+3.0 Device Discovery
+        │
+        ▼
+4.0 Assign Devices to Site
+        │
+        ▼
+5.0 Template GitOps Sync ──→ Templates must exist in CatC as composite
+        │                     with member templates attached
+        ▼
+6.0 Network Profile (optional — for profile-based template binding)
+        │
+        ▼
+7.0 Composite Template Deployment (this playbook)
+```
+
+| Dependency | Reason |
+|------------|--------|
+| 3.0 Discovery | Devices must be in CatC inventory before UUIDs can be resolved |
+| 4.0 Assign to Site | Devices must be at a known site for template scoping |
+| 5.0 Template Sync | The composite template and all its member templates must exist in CatC before the project lookup in Step A can succeed |
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely Cause | Resolution |
+|---------|-------------|------------|
+| `Template '<name>' not found in project '<project>'` | Template name or project name mismatch | Verify the exact names in CatC → Template Editor. Names are case-sensitive. |
+| `Composite template has no containingTemplates` | Member templates not attached to composite in CatC | In Template Editor, open the composite and add member templates, then commit. |
+| `Device with management IP '<ip>' was not found` | Device not in CatC inventory or wrong IP | Confirm the device is discovered and managed in CatC. Check the IP matches the management IP displayed in Device Inventory. |
+| `isError: True` / `NCTP10028` in task status | `targetInfo` is empty or not populated at the composite level | Ensure top-level `targetInfo` has at least one device entry. An empty `[]` at the composite level causes this error regardless of member-level `targetInfo`. |
+| `isError: True` with template push error on device | Template apply error on device | Check CatC → Provision → Templates history for the specific device error. Common causes: unreachable device, Jinja2 render error, missing parameter. |
+| Task status poll times out | CatC is slow to process the deploy | Increase `task_poll_retries` and/or `task_poll_delay` to extend the polling window. |
+| `assert` fails: no deploy entries found | No `DayNTemplateNames` entries with `DeployTemplate: true` in `devices.json` | Verify at least one entry in `devices.json` has `DeployTemplate: true` and a non-null `TemplateName` and `Project`. |
+| `401 Unauthorized` from REST calls | Vault credentials incorrect or expired | Verify `dnac_username` / `dnac_password` in `vault.yml`. Re-encrypt if recently changed. |
+| `SSL: CERTIFICATE_VERIFY_FAILED` | TLS verification enabled against self-signed cert | Set `dnac_verify: false` in inventory for lab environments, or add the CatC CA cert to the system trust store for production. |
+| Deploy succeeds but stale config is pushed to device | `templateId` is the root UUID instead of the version UUID | The template list endpoint (`?projectNames=`) must be used — not the project endpoint — to obtain `versionsInfo[0].id`. The playbook already uses this endpoint; this symptom appears if the endpoint was reverted. |
+| `copyingConfig` parameter rejected by module | `copyingConfig` was placed as a top-level module parameter | `copyingConfig` is not a recognized module parameter. It must be placed as a field inside each entry of `memberTemplateDeploymentInfo` (a raw dict field passed through by the module to the SDK). |
+| `resourceParams` error / NCTP payload validation failure | `resourceParams: []` (empty list) in `targetInfo` or member `targetInfo` | Populate `resourceParams` with the three required entries: `MANAGED_DEVICE_UUID` (with UUID value), `MANAGED_DEVICE_IP` (value `null`), `MANAGED_DEVICE_HOSTNAME` (with hostname value). |
