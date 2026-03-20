@@ -12,6 +12,7 @@
 ## Table of Contents
 
 1. [Overview](#overview)
+   - [Logical Flow](#logical-flow)
 2. [Prerequisites](#prerequisites)
 3. [Directory Structure](#directory-structure)
 4. [Installation](#installation)
@@ -46,10 +47,18 @@ Site assignment is a prerequisite for template deployment, SWIM software managem
 
 | Action | Module |
 |--------|--------|
-| Loads and validates input JSON | `ansible.builtin.slurp` + Jinja2 filters |
+| Loads and validates input JSON | `lookup('file', path) | from_json` + Jinja2 filters |
 | Groups IPs by target site path | `set_fact` with dict accumulation |
 | Resolves site name → UUID | `cisco.dnac.site_info` |
 | Assigns IP list to site UUID | `cisco.dnac.assign_device_to_site` |
+
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+![Logical Flow](DIAGRAMS/logical-flow.png)
+
+> Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
 
 ### Playbook ordering dependency
 
@@ -90,7 +99,10 @@ Devices must exist in the CatC inventory (discovered by 3.0) before they can be 
 ├── vault.yml.example           # Plain-text credential template
 ├── .vault_pass                 # Vault password file (git-ignored, chmod 600)
 ├── requirements.txt            # Python pip dependencies
-└── requirements.yml            # Ansible Galaxy collection dependencies
+├── requirements.yml            # Ansible Galaxy collection dependencies
+└── DIAGRAMS/
+    ├── logical-flow.mmd        # Mermaid source — re-render with mmdc
+    └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
 Input data comes from the shared `devices.json`:
@@ -246,7 +258,7 @@ Only the Floor 1 entry has devices — they will be assigned to `Global/PODS/POD
 
 ### Step 1: Load and Validate Input Data
 
-Standard `slurp` → `b64decode` → `from_json` → `assert` pipeline. See [6.0 README — Step 1](../6.0-Cisco-Catalyst-Center-Network-Profile/README.md#step-1-load-and-validate-input-data) for a full explanation.
+The path is resolved to absolute, then `lookup('file', _resolved_json_path) | from_json` reads and parses the JSON in one step. An `assert` task validates the shape before any processing begins.
 
 ### Step 2: Build Per-Site Assignment Map
 

@@ -13,6 +13,7 @@
 ## Table of Contents
 
 1. [Overview](#overview)
+   - [Logical Flow](#logical-flow)
 2. [Prerequisites](#prerequisites)
 3. [Directory Structure](#directory-structure)
 4. [Installation](#installation)
@@ -65,6 +66,14 @@ This playbook runs **independently** of the discovery/assignment chain but produ
 5.0 Templates (this playbook) ─────→ 6.0 Network Profile
                                              (binds templates to sites)
 ```
+
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+![Logical Flow](DIAGRAMS/logical-flow.png)
+
+> Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
 
 ---
 
@@ -160,7 +169,10 @@ This playbook runs **independently** of the discovery/assignment chain but produ
 ├── process-composite.yml      # Included task: builds one composite template config object
 ├── inventory.yml              # CatC connection parameters + Git repo configuration
 ├── vault.yml                  # Encrypted credentials — gitignored, never commit
-└── vault.yml.example          # Vault template — safe to commit
+├── vault.yml.example          # Vault template — safe to commit
+└── DIAGRAMS/
+    ├── logical-flow.mmd        # Mermaid source — re-render with mmdc
+    └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
 ---

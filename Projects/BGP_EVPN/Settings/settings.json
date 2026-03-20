@@ -3,8 +3,9 @@
         {
             "HierarchyArea": "POD 0",
             "HierarchyBldg": "Building P0",
-            "HierarchyFloor": null,
+            "HierarchyFloor": "Floor 1",
             "HierarchyParent": "Global/PODS",
+            "HierarchyBldgAddress": "300 E Tasman Dr, Bldg 10, San Jose, CA 95134",
             "network_settings": {
                 "dhcp_server": null,
                 "dns_server": {

@@ -16,13 +16,15 @@ all:
       ansible_python_interpreter: "{{ ansible_playbook_python }}"
 
       # ── Catalyst Center Connection ─────────────────────────────────────────
-      dnac_host: 198.18.129.100
-      dnac_port: 443
-      dnac_version: 2.3.7.9   # CatC appliance is 2.3.7.10; SDK max known is 2.3.7.9
-      dnac_verify: false
-      dnac_debug: false
-      dnac_log: true
-      dnac_log_level: INFO
+      # catc_* variables are passed through module_defaults to every
+      # cisco.catalystcenter module call (sites_info / device_credential_workflow_manager).
+      # Note: cisco.catalystcenter has no log/log_level parameters;
+      #       set catc_debug: true for verbose catalystcentersdk tracing.
+      catc_host:    198.18.129.100
+      catc_port:    443
+      catc_version: "2.3.7.9"   # CatC appliance is 2.3.7.10; SDK max is 2.3.7.9
+      catc_verify:  false
+      catc_debug:   false
 
       # ── Input file ────────────────────────────────────────────────────────
       # Path to the settings.json-formatted input file.

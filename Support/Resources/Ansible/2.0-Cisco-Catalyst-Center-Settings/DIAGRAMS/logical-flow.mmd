@@ -1,0 +1,51 @@
+flowchart TD
+    START([Start]) --> A
+
+    A["Load settings.json<br/>lookup('file') -&gt; from_json"]
+    A --> B{project key<br/>exists &amp; non-empty?}
+    B -->|No| FAIL_A([Fail: invalid<br/>input JSON shape])
+    B -->|Yes| C
+
+    C["Step 2 - Derive site names<br/>Walk each entry's hierarchy fields<br/>deepest non-null level → full site path<br/>builds site_names list"]
+    C --> D
+
+    D["Step 3 - Authenticate to CatC<br/>POST /api/v1/auth/token → JWT<br/>store _catc_token"]
+    D --> E
+
+    E["Fetch all sites<br/>GET /v1/site?limit=500<br/>build site_name → site_id map"]
+    E --> F
+
+    F["Step 4 - Build v1 network settings payloads<br/>Map snake_case JSON fields → camelCase API fields<br/>dhcpServer, dnsServer, ntpServer,<br/>timezone, MOTD, syslogServer, snmpServer,<br/>network_aaa, clientAndEndpoint_aaa"]
+    F --> G
+
+    G["Step 5 - Build global credential payload<br/>CLI (username, password, enable)<br/>SNMPv2c Read-Only<br/>SNMPv2c Read-Write<br/>NETCONF (port 830)"]
+    G --> H
+
+    H["Step 6 - Build credential assignment payload<br/>Map site paths → credential descriptions<br/>for later assignment step"]
+    H --> I
+
+    I(["For each site in site_names"])
+    I --> J{site ID<br/>resolved?}
+    J -->|No| FAIL_B([Fail: site path not<br/>found in CatC hierarchy])
+    J -->|Yes| K
+
+    K["Step 7 - Apply network settings<br/>PUT /v1/network/{siteId}<br/>push DNS, DHCP, NTP, SNMP,<br/>Syslog, Banner, NetFlow, AAA"]
+    K --> L{More<br/>sites?}
+    L -->|Yes| I
+    L -->|No| M
+
+    M["Step 8 - Create/update global credentials<br/>device_credential_workflow_manager<br/>state: merged<br/>CLI + SNMPv2c R/O + R/W + NETCONF"]
+    M --> N{credentials<br/>changed?}
+    N -->|No change| O
+    N -->|Created/updated| O
+
+    O["Step 9 - Assign credentials to sites<br/>device_credential_workflow_manager<br/>state: merged<br/>site_name → credential_type mapping"]
+    O --> P
+
+    P["Step 10 - Summary<br/>sites configured, credentials applied"]
+    P --> DONE([Done])
+
+    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    style FAIL_B fill:#c0392b,color:#fff,stroke:#922b21
+    style DONE fill:#27ae60,color:#fff,stroke:#1e8449
+    style START fill:#2980b9,color:#fff,stroke:#1a5276

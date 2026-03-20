@@ -1,54 +1,54 @@
 flowchart TD
     START([Start]) --> A
 
-    A["Load devices.json<br/>slurp → from_json → assert"]
+    A["Load devices.json<br/>lookup('file') -&gt; from_json -&gt; assert"]
     A --> B{Deploy entries<br/>found?}
     B -->|No| FAIL_A([Fail: no deploy<br/>entries found])
     B -->|Yes| C
 
-    C["Authenticate to CatC<br/>POST /auth/token → JWT"]
+    C["Authenticate to CatC<br/>POST /auth/token -&gt; JWT"]
     C --> D
 
     D(["For each template entry"])
     D --> E
 
-    E["Step A — Template list<br/>GET .../template<br/>?projectNames=project<br/>→ _template_version_map"]
+    E["Step A - Template list<br/>GET .../template<br/>?projectNames=project<br/>builds _template_version_map"]
     E --> F{Template<br/>found in map?}
     F -->|No| FAIL_B([Fail: template<br/>not found in project])
     F -->|Yes| G
 
-    G["Step B — Template detail<br/>GET .../template/rootId<br/>→ containingTemplates"]
+    G["Step B - Template detail<br/>GET .../template/rootId<br/>extracts containingTemplates"]
     G --> H{Member templates<br/>attached?}
     H -->|No| FAIL_C([Fail: no member<br/>templates attached])
     H -->|Yes| I
 
-    I["Step C — Device UUIDs<br/>GET .../network-device<br/>?managementIpAddress=ip<br/>→ _device_uuid_map"]
+    I["Step C - Device UUIDs<br/>GET .../network-device<br/>?managementIpAddress=ip<br/>builds _device_uuid_map"]
     I --> J{All target IPs<br/>resolved?}
     J -->|No| FAIL_D([Fail: device<br/>not found in CatC])
     J -->|Yes| K
 
-    K["Step D — Build payload<br/>memberTemplateDeployInfo<br/>version UUIDs + params<br/>copyingConfig: true"]
+    K["Step D - Build payload<br/>memberTemplateDeployInfo<br/>version UUIDs + params<br/>copyingConfig: true"]
     K --> L
 
     L(["Per-device loop"])
     L --> M
 
-    M["Step E — Deploy<br/>config_template_deploy_v2<br/>POST .../deploy<br/>→ taskId per device"]
+    M["Step E - Deploy<br/>config_template_deploy_v2<br/>POST .../deploy<br/>returns taskId per device"]
     M --> N{More<br/>devices?}
     N -->|Yes| L
     N -->|No| O
 
-    O["Step F — Poll tasks<br/>GET /task/taskId<br/>until endTime OR isError"]
+    O["Step F - Poll tasks<br/>GET /task/taskId<br/>until endTime OR isError"]
     O --> P{Any task<br/>isError = true?}
     P -->|Yes| FAIL_E([Fail: isError=true<br/>+ failureReason])
     P -->|No| Q
 
-    Q["Step G — Summary<br/>template · site · tasks"]
+    Q["Step G - Summary<br/>template, site, tasks"]
     Q --> R{More template<br/>entries?}
     R -->|Yes| D
     R -->|No| DONE
 
-    DONE([Done ✓])
+    DONE([Done])
 
     style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
     style FAIL_B fill:#c0392b,color:#fff,stroke:#922b21
