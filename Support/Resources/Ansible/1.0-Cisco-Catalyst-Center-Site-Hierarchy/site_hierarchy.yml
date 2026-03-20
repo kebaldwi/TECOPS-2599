@@ -232,11 +232,12 @@
           {%- for entry in site_data.project -%}
             {%- if entry.SiteType is defined and entry.SiteType | lower == 'floor' -%}
               {%- set info = {
-                'rf_model'    : entry.rfModel       | default(entry.rf_model | default(default_floor_rf_model)),
-                'width'       : entry.width         | default(default_floor_width)        | int,
-                'length'      : entry.length        | default(default_floor_length)       | int,
-                'height'      : entry.height        | default(default_floor_height)       | int,
-                'floor_number': entry.floor_number  | default(default_floor_number)       | int
+                'rf_model'       : entry.rfModel       | default(entry.rf_model | default(default_floor_rf_model)),
+                'units_of_measure': entry.units_of_measure | default(default_floor_units_of_measure),
+                'width'          : entry.width         | default(default_floor_width)        | int,
+                'length'         : entry.length        | default(default_floor_length)       | int,
+                'height'         : entry.height        | default(default_floor_height)       | int,
+                'floor_number'   : entry.floor_number  | default(default_floor_number)       | int
               } -%}
               {%- set _ = m.update({entry.HierarchyName: info}) -%}
             {%- endif -%}
@@ -391,9 +392,9 @@
               {%- if path in floor_info_map -%}
                 {%- set flr = floor_info_map[path] -%}
               {%- else -%}
-                {%- set flr = {'rf_model': default_floor_rf_model, 'width': default_floor_width | int, 'length': default_floor_length | int, 'height': default_floor_height | int, 'floor_number': default_floor_number | int} -%}
+                {%- set flr = {'rf_model': default_floor_rf_model, 'units_of_measure': default_floor_units_of_measure, 'width': default_floor_width | int, 'length': default_floor_length | int, 'height': default_floor_height | int, 'floor_number': default_floor_number | int} -%}
               {%- endif -%}
-              {%- set payload = {'site_type': 'floor', 'site': {'floor': {'name': site_name, 'parent_name': site_parent, 'rf_model': flr.rf_model, 'width': flr.width, 'length': flr.length, 'height': flr.height, 'floor_number': flr.floor_number}}} -%}
+              {%- set payload = {'site_type': 'floor', 'site': {'floor': {'name': site_name, 'parent_name': site_parent, 'rf_model': flr.rf_model, 'units_of_measure': flr.units_of_measure, 'width': flr.width, 'length': flr.length, 'height': flr.height, 'floor_number': flr.floor_number}}} -%}
             {%- else -%}
               {%- set payload = {'site_type': 'area', 'site': {'area': {'name': site_name, 'parent_name': site_parent}}} -%}
             {%- endif -%}

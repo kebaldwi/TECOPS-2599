@@ -23,7 +23,7 @@
 #   Update area    → PUT  /dna/intent/api/v1/areas/{id}
 #   Create building→ POST /dna/intent/api/v2/buildings
 #   Update building→ PUT  /dna/intent/api/v2/buildings/{id}
-#   Create floor   → POST /dna/intent/api/v1/site     (cisco.dnac.site; v2 POST returns 500 on CatC 2.3.x)
+#   Create floor   → POST /dna/intent/api/v2/floors    (cisco.catalystcenter.floors, no id: → POST)
 #   Update floor   → PUT  /dna/intent/api/v2/floors/{id}
 #   ID resolution  → GET  /dna/intent/api/v1/sites?nameHierarchy=<path>
 # =============================================================================
@@ -172,28 +172,25 @@
 # =============================================================================
 
 # ── CREATE new floor ──────────────────────────────────────────────────────────
-# POST /dna/intent/api/v1/site  (v1 endpoint — v2 POST unsupported on this CatC)
-# Uses cisco.dnac.site which wraps the legacy v1 site-create API.
-# parentName (full hierarchy path) is used here instead of parentId.
+# POST /dna/intent/api/v2/floors  (cisco.catalystcenter.floors, no id: → POST)
+# parentId (UUID of the parent building) is looked up from site_id_map.
+# Uses the same module as UPDATE for consistency; no id: causes the action
+# plugin to POST rather than PUT.
+# Note: numeric fields (floorNumber/width/length/height) are passed as
+# Jinja2 expressions so the module's own argspec coerces them to the
+# correct type — avoiding the MalformedRequest raised by cisco.dnac.site
+# when nested dict values are rendered as strings by Ansible's templating.
 - name: "Floor    | CREATE | {{ _path }}"
-  cisco.dnac.site:
-    state: present
-    dnac_host:     "{{ catc_host }}"
-    dnac_username: "{{ catc_username }}"
-    dnac_password: "{{ catc_password }}"
-    dnac_verify:   "{{ catc_verify }}"
-    dnac_port:     "{{ catc_port }}"
-    dnac_version:  "{{ catc_version }}"
-    type: floor
-    site:
-      floor:
-        name:        "{{ _name }}"
-        parentName:  "{{ _parent }}"
-        rfModel:     "{{ site_config.site.floor.rf_model }}"
-        floorNumber: "{{ site_config.site.floor.floor_number }}"
-        width:       "{{ site_config.site.floor.width }}"
-        length:      "{{ site_config.site.floor.length }}"
-        height:      "{{ site_config.site.floor.height }}"
+  cisco.catalystcenter.floors:
+    state:          present
+    name:           "{{ _name }}"
+    parentId:       "{{ _parent_id }}"
+    rfModel:        "{{ site_config.site.floor.rf_model }}"
+    unitsOfMeasure: "{{ site_config.site.floor.units_of_measure }}"
+    floorNumber:    "{{ site_config.site.floor.floor_number | int }}"
+    width:          "{{ site_config.site.floor.width | float }}"
+    length:         "{{ site_config.site.floor.length | float }}"
+    height:         "{{ site_config.site.floor.height | float }}"
   register: _floor_create
   when:
     - _type == 'floor'
@@ -212,15 +209,16 @@
 # Both id: (floor UUID) and parentId: (building UUID) are required for updates.
 - name: "Floor    | UPDATE | {{ _path }}"
   cisco.catalystcenter.floors:
-    state:       present
-    id:          "{{ _site_id }}"
-    name:        "{{ _name }}"
-    parentId:    "{{ _parent_id }}"
-    rfModel:     "{{ site_config.site.floor.rf_model }}"
-    floorNumber: "{{ site_config.site.floor.floor_number }}"
-    width:       "{{ site_config.site.floor.width }}"
-    length:      "{{ site_config.site.floor.length }}"
-    height:      "{{ site_config.site.floor.height }}"
+    state:          present
+    id:             "{{ _site_id }}"
+    name:           "{{ _name }}"
+    parentId:       "{{ _parent_id }}"
+    rfModel:        "{{ site_config.site.floor.rf_model }}"
+    unitsOfMeasure: "{{ site_config.site.floor.units_of_measure }}"
+    floorNumber:    "{{ site_config.site.floor.floor_number }}"
+    width:          "{{ site_config.site.floor.width }}"
+    length:         "{{ site_config.site.floor.length }}"
+    height:         "{{ site_config.site.floor.height }}"
   register: _floor_update
   when:
     - _type == 'floor'

@@ -42,6 +42,7 @@ all:
 
       # ── Floor defaults (used when rf_model/dimensions not in JSON) ──────────
       default_floor_rf_model: "Cubes And Walled Offices"
+      default_floor_units_of_measure: "feet"
       default_floor_width: 100
       default_floor_length: 100
       default_floor_height: 10
