@@ -27,9 +27,12 @@ all:
       catc_debug:   false
 
       # ── Input file ────────────────────────────────────────────────────────
-      # Path to the devices.json-formatted input file.
-      # Can be overridden at runtime: -e devices_json_path=myfile.json
-      devices_json_path: "../../../../Projects/BGP_EVPN/Settings/devices.json"
+      # Single source of truth for site hierarchy structure and building
+      # address.  HierarchyParent / HierarchyArea / HierarchyBldg /
+      # HierarchyFloor / HierarchyBldgAddress fields are synthesised into a
+      # normalised site_data structure at runtime.
+      # Override at runtime: -e settings_json_path=path/to/settings.json
+      settings_json_path: "../../../../Projects/BGP_EVPN/Settings/settings.json"
 
       # ── Building defaults (used when address/lat/lon not in JSON) ─────────
       default_building_address: "1 Cisco Way, San Jose, CA 95134"

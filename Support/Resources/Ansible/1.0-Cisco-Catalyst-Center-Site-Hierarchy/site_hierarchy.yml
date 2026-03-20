@@ -36,36 +36,102 @@
 
   tasks:
 
-    # ── Step 1: Load input data ───────────────────────────────────────────────
-    # Resolve path: absolute paths used as-is; relative paths resolved from
-    # the playbook directory so callers can pass paths relative to the repo root.
-    - name: Resolve devices_json_path to absolute
+    # ── Step 1: Load and synthesise settings.json → site_data ────────────────
+    # settings.json is the single source of truth for site hierarchy.
+    # Each entry's HierarchyParent / HierarchyArea / HierarchyBldg /
+    # HierarchyFloor / HierarchyBldgAddress fields are synthesised into a
+    # normalised site_data structure (same schema as devices.json) so that
+    # Steps 2 – 4 are completely agnostic to the upstream format.
+    #
+    # One settings.json entry synthesises up to three site_data entries:
+    #   HierarchyParent/HierarchyArea              → SiteType: area
+    #   HierarchyParent/HierarchyArea/HierarchyBldg → SiteType: building
+    #                                                  (address = HierarchyBldgAddress)
+    #   HierarchyParent/HierarchyArea/HierarchyBldg/HierarchyFloor
+    #                                               → SiteType: floor
+    #
+    # Duplicate paths across multiple entries are de-duplicated (first-seen wins)
+    # so Steps 2 / 3 never encounter the same HierarchyName twice.
+    # Intermediate parent areas (e.g. Global/PODS from HierarchyParent) are
+    # expanded automatically in Step 3 — no explicit entry required here.
+    #
+    - name: Resolve settings_json_path to absolute
       set_fact:
         _resolved_json_path: >-
-          {{ devices_json_path if devices_json_path.startswith('/')
-             else (playbook_dir + '/' + devices_json_path) }}
+          {{ settings_json_path if settings_json_path.startswith('/')
+             else (playbook_dir + '/' + settings_json_path) }}
 
-    - name: "DEBUG | Resolved JSON path"
+    - name: "DEBUG | Resolved settings JSON path"
       debug:
         var: _resolved_json_path
       when: catc_debug | default(false) | bool
 
-    - name: Load site input JSON
+    - name: Load settings JSON
       set_fact:
-        site_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
+        settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 
-    - name: "DEBUG | site_data (raw JSON)"
+    - name: "DEBUG | settings_data (raw JSON)"
       debug:
-        var: site_data
+        var: settings_data
       when: catc_debug | default(false) | bool
 
-    - name: Validate that project key exists in input data
+    - name: Validate that project key exists in settings data
       # Fail fast with a helpful message if the JSON has the wrong shape,
       # rather than producing cryptic errors deeper in the playbook.
       assert:
-        that: site_data.project is defined and site_data.project | length > 0
-        fail_msg: "Input JSON must contain a non-empty 'project' list."
-        success_msg: "Input data loaded — {{ site_data.project | length }} entries found."
+        that: settings_data.project is defined and settings_data.project | length > 0
+        fail_msg: "settings.json must contain a non-empty 'project' list."
+        success_msg: "Settings data loaded — {{ settings_data.project | length }} entries found."
+
+    - name: Synthesise site_data from settings.json hierarchy fields
+      # Iterates every settings.json entry and emits up to three normalised
+      # project entries (area / building / floor) keyed by full HierarchyName.
+      # Duplicate paths are skipped on a first-seen basis.
+      # The resulting site_data dict uses the same schema expected by Steps 2–4.
+      set_fact:
+        site_data: >-
+          {%- set ns = namespace(entries=[], seen=[]) -%}
+          {%- for entry in settings_data.project -%}
+            {%- set parent = entry.HierarchyParent | default('Global') -%}
+            {%- set area   = entry.HierarchyArea   | default('') -%}
+            {%- set bldg   = entry.HierarchyBldg   | default('') -%}
+            {%- set floor  = entry.HierarchyFloor  | default('') -%}
+            {%- set addr   = entry.HierarchyBldgAddress | default('') -%}
+
+            {%- if area -%}
+              {%- set area_path = parent + '/' + area -%}
+              {%- if area_path not in ns.seen -%}
+                {%- set ns.seen    = ns.seen    + [area_path] -%}
+                {%- set ns.entries = ns.entries + [{'HierarchyName': area_path, 'SiteType': 'area'}] -%}
+              {%- endif -%}
+            {%- endif -%}
+
+            {%- if area and bldg -%}
+              {%- set bldg_path = parent + '/' + area + '/' + bldg -%}
+              {%- if bldg_path not in ns.seen -%}
+                {%- set ns.seen = ns.seen + [bldg_path] -%}
+                {%- if addr -%}
+                  {%- set ns.entries = ns.entries + [{'HierarchyName': bldg_path, 'SiteType': 'building', 'address': addr}] -%}
+                {%- else -%}
+                  {%- set ns.entries = ns.entries + [{'HierarchyName': bldg_path, 'SiteType': 'building'}] -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endif -%}
+
+            {%- if area and bldg and floor -%}
+              {%- set floor_path = parent + '/' + area + '/' + bldg + '/' + floor -%}
+              {%- if floor_path not in ns.seen -%}
+                {%- set ns.seen    = ns.seen    + [floor_path] -%}
+                {%- set ns.entries = ns.entries + [{'HierarchyName': floor_path, 'SiteType': 'floor'}] -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ {'project': ns.entries} }}
+
+    - name: "DEBUG | site_data (synthesised from settings.json)"
+      debug:
+        var: site_data
+      when: catc_debug | default(false) | bool
 
     # ── Step 2: Build lookup maps from the JSON entries ───────────────────────
     #
@@ -73,7 +139,7 @@
     # building_info_map: { "Global/X/Y": { address, country, latitude, longitude } }
     # floor_info_map   : { "Global/X/Y": { rf_model, width, length, height, floor_number } }
     #
-    # Sample (BGP_EVPN/Settings/devices.json):
+    # Sample (BGP_EVPN/Settings/settings.json synthesised):
     #
     # site_type_map:
     #   {
@@ -86,10 +152,10 @@
     # building_info_map:
     #   {
     #     "Global/PODS/POD 0/Building P0": {
-    #       "address":   "1 Cisco Way, San Jose, CA 95134",
+    #       "address":   "300 E Tasman Dr, Bldg 10, San Jose, CA 95134",
     #       "country":   "United States",
     #       "latitude":  37.3382,
-    #       "longitude": -121.8863
+    #       "longitude": -121.9694
     #     }
     #   }
     #
@@ -126,7 +192,7 @@
         # Sample (BGP_EVPN/Settings/devices.json):
         #   {
         #     "Global/PODS/POD 0/Building P0": {
-        #       "address":   "1 Cisco Way, San Jose, CA 95134",  ← entry.address or default_building_address
+        #       "address":   "1 Cisco Way, San Jose, CA 95134",  ← entry.address (HierarchyBldgAddress) or default_building_address
         #       "country":   "United States",                   ← entry.country or default_building_country
         #       "latitude":  37.3382,                           ← entry.latitude or default_building_latitude
         #       "longitude": -121.8863                          ← entry.longitude or default_building_longitude
@@ -191,7 +257,7 @@
     # then sort by path depth so parent sites are always created before children.
     # "Global" (depth 1) is skipped — it always pre-exists in CatC.
     #
-    # Sample (BGP_EVPN/Settings/devices.json):
+    # Sample (BGP_EVPN/Settings/settings.json synthesised):
     #
     # all_site_paths:
     #   [
@@ -256,7 +322,7 @@
     #   { site_type: "area"|"building"|"floor",
     #     site: { <type>: { name, parent_name, ...type-specific fields } } }
     #
-    # Sample (BGP_EVPN/Settings/devices.json, two entries shown):
+    # Sample (BGP_EVPN/Settings/settings.json synthesised, two entries shown):
     #
     # site_configs_list:
     #   [
@@ -272,7 +338,7 @@
     #       "site_type": "building",
     #       "site": { "building": { "name": "Building P0",
     #                               "parent_name": "Global/PODS/POD 0",
-    #                               "address":   "1 Cisco Way, San Jose, CA 95134",
+        #                               "address":   "300 E Tasman Dr, Bldg 10, San Jose, CA 95134",
     #                               "country":   "United States",
     #                               "latitude":  37.3382,
     #                               "longitude": -121.8863 } }
