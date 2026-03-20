@@ -1,7 +1,8 @@
 # 2.0 — Cisco Catalyst Center: Network Settings & Device Credentials Automation
 
 > **Playbook:** `network_settings.yml`  
-> **Modules:** `ansible.builtin.uri` (network settings), `cisco.dnac.device_credential_workflow_manager` (credentials)  
+> **Included tasks:** `tasks/apply_network_settings.yml`  
+> **Modules:** `cisco.catalystcenter.sites_info` (site ID resolution), `ansible.builtin.uri` (network settings — NCND01243 bypass), `cisco.catalystcenter.device_credential_workflow_manager` (credentials)  
 > **Minimum Catalyst Center version:** 2.3.7.6  
 > **Minimum Ansible version:** 2.15  
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  
@@ -55,9 +56,10 @@ Both operations are fully idempotent. If a setting already matches the desired s
 
 | Action | Mechanism |
 |--------|-----------|
-| Applies DNS, DHCP, NTP, SNMP, Syslog, Banner, NetFlow, AAA per site | `ansible.builtin.uri` → `PUT /dna/intent/api/v1/network/{siteId}` |
-| Creates/updates global CLI, SNMPv2c R/O, SNMPv2c R/W, NETCONF credentials | `cisco.dnac.device_credential_workflow_manager` |
-| Assigns global credentials to designated sites | `cisco.dnac.device_credential_workflow_manager` |
+| Resolves all site paths → UUID map | `cisco.catalystcenter.sites_info` (Phase A — same pattern as playbook 1.0) |
+| Applies DNS, DHCP, NTP, SNMP, Syslog, Banner, NetFlow, AAA per site | `ansible.builtin.uri` → `PUT /dna/intent/api/v1/network/{siteId}` (NCND01243 bypass) |
+| Creates/updates global CLI, SNMPv2c R/O, SNMPv2c R/W, NETCONF credentials | `cisco.catalystcenter.device_credential_workflow_manager` |
+| Assigns global credentials to designated sites | `cisco.catalystcenter.device_credential_workflow_manager` |
 
 ### Logical Flow
 
@@ -75,7 +77,7 @@ This playbook must run **after** [1.0 — Site Hierarchy](../1.0-Cisco-Catalyst-
 
 ## Design Decision — Why Not `network_settings_workflow_manager`?
 
-The `cisco.dnac.network_settings_workflow_manager` Ansible module is the standard High Level Task (HLT) module for pushing network settings in this collection. It was intentionally **not** used for the network-settings step in this playbook due to a hard server-side constraint in Catalyst Center.
+The `cisco.catalystcenter.network_settings_workflow_manager` Ansible module (and its legacy `cisco.dnac` counterpart) is the standard High Level Task (HLT) module for pushing network settings. It was intentionally **not** used for the network-settings step in this playbook due to a hard server-side constraint in Catalyst Center.
 
 ### Root Cause — CatC Error NCND01243
 
@@ -94,7 +96,7 @@ elif client_and_endpoint_aaa is not None:
     param = {"id": site_id, "aaaClient": client_and_endpoint_aaa}
 ```
 
-This call resolves internally to `PUT /dna/intent/api/v1/sites/{id}/aaaSettings`, which triggers the same cross-check against the legacy v1 entries. The error is **not** a module bug — it is a CatC server-side invariant applied to that specific endpoint.
+This call resolves internally to `PUT /dna/intent/api/v1/sites/{id}/aaaSettings`, which triggers the same cross-check against the legacy v1 entries. The error is **not** a module bug — it is a CatC server-side invariant applied to that specific endpoint. The same behaviour applies to both `cisco.dnac` and `cisco.catalystcenter` versions of the workflow manager.
 
 ### Why `PUT /dna/intent/api/v1/network/{siteId}` solves it
 
@@ -104,7 +106,7 @@ The `PUT /dna/intent/api/v1/network/{siteId}` endpoint accepts a composite setti
 
 | Approach | AAA behaviour | NCND01243? |
 |----------|---------------|------------|
-| `network_settings_workflow_manager` with only `client_and_endpoint_aaa` | Sends `aaaClient` via `PUT /v1/sites/{id}/aaaSettings`; CatC cross-checks against empty legacy `aaaNetwork` placeholder | **Yes — fails** |
+| `cisco.catalystcenter.network_settings_workflow_manager` (or legacy `cisco.dnac`) with only `client_and_endpoint_aaa` | Sends `aaaClient` via `PUT /v1/sites/{id}/aaaSettings`; CatC cross-checks against empty legacy `aaaNetwork` placeholder | **Yes — fails** |
 | `PUT /dna/intent/api/v1/network/{siteId}` with only `clientAndEndpoint_aaa` | Composite settings endpoint; validation path does not trigger the cross-check | **No — succeeds ✅** |
 
 > **Verified (2026-03-17):** Playbook ran successfully with `network_aaa: null` in `settings.json` using `PUT /dna/intent/api/v1/network/{siteId}`. Result: `ok=17 changed=2 failed=0`. Only `client_and_endpoint_aaa` was present in the payload; no NCND01243 error was raised.
@@ -119,8 +121,9 @@ The `PUT /dna/intent/api/v1/network/{siteId}` endpoint accepts a composite setti
 |-------------|----------------|
 | Ansible | >= 2.15 |
 | Python | >= 3.9 |
-| `dnacentersdk` | >= 2.11.0 |
-| `cisco.dnac` collection | 6.46.0 |
+| `catalystcentersdk` | >= 2.3.7.9 |
+| `cisco.catalystcenter` collection | 2.1.3 |
+| `ansible.utils` collection | >= 2.11.0 (required by action plugins) |
 | Cisco Catalyst Center | >= 2.3.7.6 |
 | Site hierarchy | Must exist (run 1.0 first) |
 
@@ -131,8 +134,10 @@ The `PUT /dna/intent/api/v1/network/{siteId}` endpoint accepts a composite setti
 ```
 2.0-Cisco-Catalyst-Center-Settings/
 ├── ansible.cfg                 # Ansible defaults (inventory path)
-├── inventory.yml               # CatC connection + input file path
+├── inventory.yml               # CatC connection (catc_*) + input file path
 ├── network_settings.yml        # Main playbook
+├── tasks/
+│   └── apply_network_settings.yml  # Per-site validate + PUT (NCND01243 bypass)
 ├── vault.yml                   # Ansible Vault encrypted credentials (git-ignored)
 ├── vault.yml.example           # Plain-text credential template
 ├── .vault_pass                 # Vault password file (git-ignored, chmod 600)
@@ -178,20 +183,25 @@ all:
       ansible_connection: local
       ansible_python_interpreter: "{{ ansible_playbook_python }}"
 
-      dnac_host: 198.18.129.100
-      dnac_port: 443
-      dnac_version: 2.3.7.9
-      dnac_verify: false
-      dnac_debug: false
-      dnac_log: true
-      dnac_log_level: INFO
+      catc_host:    198.18.129.100
+      catc_port:    443
+      catc_version: "2.3.7.9"
+      catc_verify:  false
+      catc_debug:   false
 
       settings_json_path: "../../../../Projects/BGP_EVPN/Settings/settings.json"
 ```
 
 | Variable | Purpose |
 |----------|---------|
+| `catc_host` | CatC hostname or IP |
+| `catc_port` | API port (default 443) |
+| `catc_version` | SDK version string — must be ≤ appliance version |
+| `catc_verify` | SSL certificate verification (`false` for self-signed certs) |
+| `catc_debug` | Enable verbose `catalystcentersdk` tracing |
 | `settings_json_path` | Path to the `settings.json` input file (relative or absolute) |
+
+> **Note:** `cisco.catalystcenter` does not support `dnac_log` / `dnac_log_level`. Set `catc_debug: true` for SDK-level tracing.
 
 ### Vault (Credentials)
 
@@ -203,8 +213,8 @@ ansible-vault encrypt vault.yml --vault-password-file .vault_pass
 `vault.yml.example`:
 
 ```yaml
-dnac_username: "admin"
-dnac_password: "your_catc_password_here"
+catc_username: "admin"
+catc_password: "your_catc_password_here"
 ```
 
 ---
@@ -447,18 +457,22 @@ Output site_names[0]: "Global/PODS/POD 0/Building P0"
 
 ### Step 3: Authenticate and Resolve Site IDs
 
-**Purpose:** Obtain a short-lived CatC auth token and build a `siteNameHierarchy → id` lookup map. The v2 REST endpoint requires a numeric site UUID, not a name.
+**Step 3a — Auth token (for raw URI PUT only):**
+`POST /dna/system/api/v1/auth/token` using the vault credentials (Basic Auth). The token is stored in `_catc_token` with `no_log: true`. It is used exclusively by the raw URI in `tasks/apply_network_settings.yml`. All `cisco.catalystcenter` module calls authenticate via the `module_defaults` block instead.
 
-**Auth:** `POST /dna/system/api/v1/auth/token` using the vault credentials (Basic Auth). The response token is stored in `_catc_token` with `no_log: true`.
-
-**Site map:** `GET /dna/intent/api/v1/site?limit=500&offset=1` returns all sites. A Jinja2 `dict()` + `zip()` expression produces:
+**Step 3b — Site ID map via `cisco.catalystcenter.sites_info` (Phase A):**
+`cisco.catalystcenter.sites_info` is called without a name filter to return all sites — identical to the Phase A pattern used by playbook 1.0. The response key is `catalystcenter_response.response[]`. A Jinja2 `dict()` + `zip()` expression builds the map:
 
 ```jinja2
 {{ dict(
-     _all_sites.json.response | map(attribute='siteNameHierarchy')
-     | zip(_all_sites.json.response | map(attribute='id'))
+     _all_sites_info.catalystcenter_response.response | default([])
+     | map(attribute='siteNameHierarchy')
+     | zip(_all_sites_info.catalystcenter_response.response | default([])
+     | map(attribute='id'))
    ) }}
 ```
+
+This replaces the legacy `GET /dna/intent/api/v1/site?limit=500` raw URI call with a properly paginating collection module call.
 
 **Example output:**
 
@@ -550,37 +564,30 @@ credential_assign_list:
         description: RW
 ```
 
-### Step 7: Apply Network Settings via REST v2
+### Step 7: Apply Network Settings via include_tasks
 
-Loops over `network_settings_list` and issues a `PUT` to `/dna/intent/api/v1/network/{siteId}` once per site using `ansible.builtin.uri`. Catalyst Center responds `202 Accepted`; the playbook accepts both `200` and `202`.
+`include_tasks: tasks/apply_network_settings.yml` is used with a loop over `network_settings_list` instead of a plain `loop:` on an inline task file. This mirrors the 1.0 pattern in `tasks/create_or_update_site.yml` — `set_fact` inside `include_tasks` takes effect between iterations, unlike `set_fact` inside a plain `loop:`.
+
+Each call to `apply_network_settings.yml`:
+1. Asserts the site UUID is non-empty (fast-fail if site path not found in Phase A)
+2. Issues `PUT /dna/intent/api/v1/network/{siteId}` via `ansible.builtin.uri` with the `_catc_token` from Step 3a
 
 ```yaml
-- name: Apply v1 network settings per site
-  ansible.builtin.uri:
-    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/network/{{ item.site_id }}"
-    method: PUT
-    headers:
-      X-Auth-Token: "{{ _catc_token }}"
-      Content-Type: "application/json"
-    body_format: json
-    body:
-      settings: "{{ item.settings }}"
-    validate_certs: "{{ dnac_verify }}"
-    status_code:
-      - 200
-      - 202
+- name: "Apply network settings  | {{ site_config.site_name }}"
+  include_tasks: tasks/apply_network_settings.yml
   loop: "{{ network_settings_list }}"
   loop_control:
-    label: "{{ item.site_name }}"
+    loop_var: site_config
+    label: "{{ site_config.site_name }}"
 ```
 
-Using `ansible.builtin.uri` directly gives complete control over the request body — only the keys that are non-null in `settings.json` appear in the payload. This is what allows `network_aaa: null` to work: the key is simply absent from the PUT body, and the v1 composite endpoint does not cross-check it against the legacy `aaa.network.server.*` placeholders (see [Design Decision](#design-decision--why-not-network_settings_workflow_manager)).
+Using `ansible.builtin.uri` gives complete control over the request body — only keys that are non-null in `settings.json` appear in the payload. This is what allows `network_aaa: null`: the key is simply absent from the PUT body, and the composite endpoint does not cross-check it against the legacy `aaa.network.server.*` placeholders (see [Design Decision](#design-decision--why-not-network_settings_workflow_manager)).
 
 ### Step 8: Create/Update Global Device Credentials
 
 ```yaml
 - name: Create/update global device credentials
-  cisco.dnac.device_credential_workflow_manager:
+  cisco.catalystcenter.device_credential_workflow_manager:
     state: merged
     config:
       - "{{ item }}"
@@ -588,13 +595,13 @@ Using `ansible.builtin.uri` directly gives complete control over the request bod
   when: credential_list | length > 0
 ```
 
-This step is automatically skipped when no entries in the JSON have a `device_credentials` block.
+This step is automatically skipped when no entries in the JSON have a `device_credentials` block. Authentication is injected by `module_defaults`.
 
 ### Step 9: Assign Credentials to Sites
 
 ```yaml
 - name: Assign credentials per site
-  cisco.dnac.device_credential_workflow_manager:
+  cisco.catalystcenter.device_credential_workflow_manager:
     state: merged
     config:
       - "{{ item }}"
@@ -646,9 +653,9 @@ settings.json
 
               │
               ▼ Steps 7-9 — API calls
-    ansible.builtin.uri                → PUT /dna/intent/api/v1/network/{siteId}
-    device_credential_workflow_manager → POST /dna/intent/api/v1/global-credential
-    device_credential_workflow_manager → POST /dna/intent/api/v1/credential-to-site/{siteId}
+    ansible.builtin.uri (tasks/apply_network_settings.yml) → PUT /dna/intent/api/v1/network/{siteId}
+    cisco.catalystcenter.device_credential_workflow_manager → POST /dna/intent/api/v1/global-credential
+    cisco.catalystcenter.device_credential_workflow_manager → POST /dna/intent/api/v1/credential-to-site/{siteId}
 ```
 
 ---
@@ -671,26 +678,32 @@ ansible-playbook network_settings.yml \
 
 ### Enable debug output
 
+Set `catc_debug: true` in `inventory.yml`, or override at runtime:
+
 ```bash
-DEBUG=true ansible-playbook network_settings.yml --vault-password-file .vault_pass
+ansible-playbook network_settings.yml --vault-password-file .vault_pass -e catc_debug=true
 ```
 
 ---
 
 ## Debug Mode
 
-Set `DEBUG=true` to enable intermediate-variable debug tasks after each build step:
+Set `catc_debug: true` in `inventory.yml` (or pass `-e catc_debug=true` at runtime) to enable debug tasks after each build step. This also enables verbose `catalystcentersdk` tracing in the collection modules.
 
 | Debug Task | Shows |
 |-----------|-------|
-| `--DEBUG-- Site names derived from settings.json` | The `site_names` list |
-| `--DEBUG-- Site name-to-ID map` | The `_site_id_map` dict (siteNameHierarchy → UUID) |
-| `--DEBUG-- v2 network settings payload list` | The full `network_settings_list` with camelCase keys and `site_id` |
-| `--DEBUG-- Global credential payload list` | The full `credential_list` |
-| `--DEBUG-- Credential assignment payload list` | The full `credential_assign_list` |
-| `--DEBUG-- Network settings results` | Raw `uri` response from Step 7 |
-| `--DEBUG-- Credential create results` | Raw module return from Step 8 |
-| `--DEBUG-- Credential assignment results` | Raw module return from Step 9 |
+| `DEBUG \| Resolved JSON path` | The absolute path resolved from `settings_json_path` |
+| `DEBUG \| settings_data (raw JSON)` | Full parsed JSON input |
+| `DEBUG \| Site names derived from settings.json` | The `site_names` list |
+| `DEBUG \| _all_sites_info (raw)` | Full `sites_info` module response |
+| `DEBUG \| Site name-to-ID map` | The `_site_id_map` dict (siteNameHierarchy → UUID) |
+| `DEBUG \| v1 network settings payload list` | The full `network_settings_list` with camelCase keys and `site_id` |
+| `DEBUG \| Global credential payload list` | The full `credential_list` |
+| `DEBUG \| Credential assignment payload list` | The full `credential_assign_list` |
+| `DEBUG \| site_config` (per-site) | Site name, UUID, and camelCase settings payload |
+| `DEBUG \| Apply result` (per-site) | Raw `uri` response from the PUT call |
+| `DEBUG \| Credential create results` | Raw module return from Step 8 |
+| `DEBUG \| Credential assignment results` | Raw module return from Step 9 |
 
 ---
 
@@ -706,11 +719,14 @@ ok: [catalyst_center] => { "msg": "1 site(s) have settings to apply." }
 TASK [Authenticate with Catalyst Center] ***************************************
 ok: [catalyst_center]
 
-TASK [Fetch all sites from Catalyst Center] ************************************
+TASK [Phase A — Fetch all sites from Catalyst Center] **************************
 ok: [catalyst_center]
 
-TASK [Apply v1 network settings per site] **************************************
-ok: [catalyst_center] => (item=Global/PODS/POD 0/Building P0)
+TASK [apply_network_settings.yml : Validate site ID resolved | Global/PODS/POD 0/Building P0] ***
+ok: [catalyst_center]
+
+TASK [apply_network_settings.yml : Apply network settings  | Global/PODS/POD 0/Building P0] ***
+ok: [catalyst_center]
 
 TASK [Create/update global device credentials] *********************************
 changed: [catalyst_center]
@@ -729,10 +745,10 @@ ok: [catalyst_center] => {
 }
 
 PLAY RECAP *********************************************************************
-catalyst_center : ok=17  changed=2  unreachable=0  failed=0  skipped=8
+catalyst_center : ok=17  changed=2  unreachable=0  failed=0  skipped=0
 ```
 
-`skipped=8` — DEBUG tasks are skipped when `DEBUG` is not set.
+`skipped=0` — debug tasks are now guarded by `catc_debug | default(false) | bool` (inventory variable), so there are no env-var-based conditionals to skip.
 
 ---
 
@@ -747,5 +763,5 @@ catalyst_center : ok=17  changed=2  unreachable=0  failed=0  skipped=8
 | `AAA shared_secret missing` | `client_and_endpoint_aaa` block has no `shared_secret` | Add `shared_secret` to the `client_and_endpoint_aaa` block |
 | `NCND01243: sharedSecret cannot be different` | Using `network_settings_workflow_manager` which routes through `PUT /v1/sites/{id}/aaaSettings` — that endpoint cross-checks `clientAndEndpoint_aaa.sharedSecret` against the legacy `aaa.network.server.*` placeholder at Global | Switch to `PUT /dna/intent/api/v1/network/{siteId}` (this playbook already does this) and set `network_aaa: null` in `settings.json` |
 | `Timezone invalid` | Non-standard timezone string | Use an IANA string, e.g. `America/Toronto`, `UTC`, `America/Los_Angeles` |
-| `dnac_version mismatch` | SDK version exceeds appliance version | Set `dnac_version: 2.3.7.9` in `inventory.yml` |
-| TLS errors | Self-signed certificate | Set `dnac_verify: false` for lab environments |
+| `catc_version mismatch` | SDK version exceeds appliance version | Set `catc_version: "2.3.7.9"` in `inventory.yml` |
+| TLS errors | Self-signed certificate | Set `catc_verify: false` for lab environments |

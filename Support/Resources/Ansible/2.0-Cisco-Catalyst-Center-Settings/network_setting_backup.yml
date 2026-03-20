@@ -8,23 +8,25 @@
 # ============================================================================
 
 ---
-- name: Apply Network Settings from settings.json
+- name: Apply Network Settings and Device Credentials from settings.json
   hosts: catalyst_center
   gather_facts: no
   vars_files:
     - vault.yml
+  vars:
+    DEBUG: "{{ lookup('env', 'DEBUG') | default(false) | bool }}"
 
   module_defaults:
-    # cisco.catalystcenter modules accept catalystcenter_* connection params
-    # via module_defaults.  YAML anchor (&catc_auth) injected into every module.
-    cisco.catalystcenter.sites_info: &catc_auth
-      catalystcenter_host:     "{{ catc_host }}"
-      catalystcenter_username: "{{ catc_username }}"
-      catalystcenter_password: "{{ catc_password }}"
-      catalystcenter_verify:   "{{ catc_verify }}"
-      catalystcenter_port:     "{{ catc_port }}"
-      catalystcenter_version:  "{{ catc_version }}"
-      catalystcenter_debug:    "{{ catc_debug }}"
+    cisco.dnac.device_credential_workflow_manager:
+      dnac_host: "{{ dnac_host }}"
+      dnac_username: "{{ dnac_username }}"
+      dnac_password: "{{ dnac_password }}"
+      dnac_verify: "{{ dnac_verify }}"
+      dnac_port: "{{ dnac_port }}"
+      dnac_version: "{{ dnac_version }}"
+      dnac_debug: "{{ dnac_debug }}"
+      dnac_log_level: "{{ dnac_log_level }}"
+      dnac_log: "{{ dnac_log }}"
 
   tasks:
 
@@ -38,19 +40,9 @@
           {{ settings_json_path if settings_json_path.startswith('/')
              else (playbook_dir + '/' + settings_json_path) }}
 
-    - name: "DEBUG | Resolved JSON path"
-      debug:
-        var: _resolved_json_path
-      when: catc_debug | default(false) | bool
-
     - name: Load settings input JSON
       set_fact:
         settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
-
-    - name: "DEBUG | settings_data (raw JSON)"
-      debug:
-        var: settings_data
-      when: catc_debug | default(false) | bool
 
     - name: Validate that project key exists in input data
       assert:
@@ -93,28 +85,25 @@
           {%- endfor -%}
           {{ ns.result }}
 
-    - name: "DEBUG | Site names derived from settings.json"
+    - name: --DEBUG-- Site names derived from settings.json
+      when: DEBUG
       debug:
-        var: site_names
-      when: catc_debug | default(false) | bool
+        msg: "{{ site_names }}"
 
-    # ── Step 3: Authenticate (required for raw URI PUT — see NCND01243 note) ──
+    # ── Step 3: Authenticate and resolve site IDs ─────────────────────────────
     #
-    # We intentionally retain the raw PUT to /dna/intent/api/v1/network/{siteId}
-    # because that composite-settings endpoint does NOT trigger the NCND01243
-    # cross-validation that fires when clientAndEndpoint_aaa is sent alone to the
-    # disaggregated PUT /dna/intent/api/v1/sites/{id}/aaaSettings endpoint.
-    # The token obtained here is used exclusively in tasks/apply_network_settings.yml.
-    # All cisco.catalystcenter module calls authenticate via module_defaults above.
+    # Obtain a short-lived auth token from Catalyst Center, then fetch the full
+    # site hierarchy and build a site-name → site-ID lookup map for use in the
+    # v1 /dna/intent/api/v1/network/{siteId} REST endpoint.
     #
     - name: Authenticate with Catalyst Center
       ansible.builtin.uri:
-        url: "https://{{ catc_host }}:{{ catc_port }}/dna/system/api/v1/auth/token"
+        url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/system/api/v1/auth/token"
         method: POST
-        user: "{{ catc_username }}"
-        password: "{{ catc_password }}"
+        user: "{{ dnac_username }}"
+        password: "{{ dnac_password }}"
         force_basic_auth: true
-        validate_certs: "{{ catc_verify }}"
+        validate_certs: "{{ dnac_verify }}"
         status_code: 200
       register: _auth_response
       no_log: true
@@ -124,43 +113,28 @@
         _catc_token: "{{ _auth_response.json.Token }}"
       no_log: true
 
-    # ── Step 3b: Resolve all site IDs via collection module ───────────────────
-    #
-    # cisco.catalystcenter.sites_info fetches all sites when called without a
-    # name filter — identical to the Phase A pattern used in playbook 1.0.
-    # Credentials are injected from module_defaults; no manual token handling.
-    # Response key: catalystcenter_response.response[] with siteNameHierarchy + id.
-    #
-    - name: "Phase A — Fetch all sites from Catalyst Center"
-      cisco.catalystcenter.sites_info:
-      register: _all_sites_info
-
-    - name: "DEBUG | _all_sites_info (raw)"
-      debug:
-        msg:
-          response_count: "{{ _all_sites_info.catalyst_response.response | default([]) | length }}"
-          response:        "{{ _all_sites_info.catalyst_response.response | default([]) }}"
-      when: catc_debug | default(false) | bool
+    - name: Fetch all sites from Catalyst Center
+      ansible.builtin.uri:
+        url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/site?limit=500&offset=1"
+        method: GET
+        headers:
+          X-Auth-Token: "{{ _catc_token }}"
+        validate_certs: "{{ dnac_verify }}"
+        status_code: 200
+      register: _all_sites
 
     - name: Build site name-to-ID map
-      # The cisco.catalystcenter.sites_info module returns data under
-      # catalyst_response (not catalystcenter_response), and the hierarchy
-      # attribute is nameHierarchy (not siteNameHierarchy).
-      # The Global root entry has no nameHierarchy key — selectattr filters it
-      # out so it never appears as an empty-string key in the map.
       set_fact:
         _site_id_map: >-
-          {%- set sites = _all_sites_info.catalyst_response.response | default([]) -%}
-          {%- set named = sites | selectattr('nameHierarchy', 'defined') | list -%}
           {{ dict(
-               named | map(attribute='nameHierarchy')
-               | zip(named | map(attribute='id'))
+               _all_sites.json.response | map(attribute='siteNameHierarchy')
+               | zip(_all_sites.json.response | map(attribute='id'))
              ) }}
 
-    - name: "DEBUG | Site name-to-ID map"
+    - name: --DEBUG-- Site name-to-ID map
+      when: DEBUG
       debug:
-        var: _site_id_map
-      when: catc_debug | default(false) | bool
+        msg: "{{ _site_id_map }}"
 
     # ── Step 4: Build v1 network settings payload list ────────────────────────
     #
@@ -310,10 +284,10 @@
           {%- endfor -%}
           {{ ns.result }}
 
-    - name: "DEBUG | v1 network settings payload list"
+    - name: --DEBUG-- v1 network settings payload list
+      when: DEBUG
       debug:
-        var: network_settings_list
-      when: catc_debug | default(false) | bool
+        msg: "{{ network_settings_list }}"
 
     - name: Validate network settings list is non-empty
       assert:
@@ -321,27 +295,125 @@
         fail_msg: "No network settings found in input JSON — check that fields are non-null."
         success_msg: "{{ network_settings_list | length }} site(s) have settings to apply."
 
-    # ── Step 5: Apply network settings per site (via include_tasks) ───────────
+    # ── Step 5: Build global device credential list ──────────────────────────────
     #
-    # include_tasks is used instead of a plain loop so that any set_fact inside
-    # the task file takes effect before the next iteration runs — the same
-    # pattern used by playbook 1.0's tasks/create_or_update_site.yml.
+    # settings.json entries with a non-null device_credentials block supply the
+    # exact global_credential_details structure expected by the module.
     #
-    # tasks/apply_network_settings.yml:
-    #   - Validates the site UUID is non-empty (guards against unknown site paths)
-    #   - Issues PUT /dna/intent/api/v1/network/{siteId} via ansible.builtin.uri
-    #     using _catc_token obtained in Step 3 (NCND01243 bypass — see README)
+    - name: Build global credential payload list
+      set_fact:
+        credential_list: >-
+          {%- set ns = namespace(result=[]) -%}
+          {%- for entry in settings_data.project -%}
+            {%- if entry.device_credentials -%}
+              {%- set ns.result = ns.result + [{'global_credential_details': entry.device_credentials}] -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ ns.result }}
+
+    - name: --DEBUG-- Global credential payload list
+      when: DEBUG
+      debug:
+        msg: "{{ credential_list }}"
+
+    # ── Step 6: Build credential-to-site assignment list ───────────────────────
     #
-    - name: Apply network settings per site
-      include_tasks: tasks/apply_network_settings.yml
+    # settings.json entries with a non-null assign_credentials block supply the
+    # exact assign_credentials_to_site structure expected by the module.
+    #
+    - name: Build credential-to-site assignment list
+      set_fact:
+        credential_assign_list: >-
+          {%- set ns = namespace(result=[]) -%}
+          {%- for entry in settings_data.project -%}
+            {%- if entry.assign_credentials -%}
+              {%- set ns.result = ns.result + [{'assign_credentials_to_site': entry.assign_credentials}] -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ ns.result }}
+
+    - name: --DEBUG-- Credential assignment payload list
+      when: DEBUG
+      debug:
+        msg: "{{ credential_assign_list }}"
+
+    # ── Step 7: Apply network settings via REST v1 ────────────────────────────
+    #
+    # PUTs the camelCase payload to /dna/intent/api/v1/network/{siteId}.
+    # Catalyst Center responds 202 Accepted; the response body contains an async
+    # task URL that can be polled for final status if needed.
+    # Only keys present in the payload are sent — absent/null fields in
+    # settings.json are never transmitted, so clientAndEndpoint_aaa can be
+    # set independently of network_aaa.
+    #
+    - name: Apply v1 network settings per site
+      ansible.builtin.uri:
+        url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/network/{{ item.site_id }}"
+        method: PUT
+        headers:
+          X-Auth-Token: "{{ _catc_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          settings: "{{ item.settings }}"
+        validate_certs: "{{ dnac_verify }}"
+        status_code:
+          - 200
+          - 202
       loop: "{{ network_settings_list }}"
       loop_control:
-        loop_var: site_config
-        label: "{{ site_config.site_name }}"
+        label: "{{ item.site_name }}"
+      register: settings_results
 
-    # ── Step 6: Summary ───────────────────────────────────────────────────────
-    - name: Network settings applied
+    - name: --DEBUG-- Network settings results
+      when: DEBUG
+      debug:
+        msg: "{{ settings_results }}"
+
+    # ── Step 8: Create / update global device credentials ─────────────────────
+    #
+    # Creates CLI, SNMPv2c R/O, SNMPv2c R/W and NETCONF credentials globally.
+    # Skipped automatically if credential_list is empty.
+    #
+    - name: Create/update global device credentials
+      cisco.dnac.device_credential_workflow_manager:
+        state: merged
+        config:
+          - "{{ item }}"
+      loop: "{{ credential_list }}"
+      when: credential_list | length > 0
+      register: credential_results
+
+    - name: --DEBUG-- Credential create results
+      when: DEBUG and credential_list | length > 0
+      debug:
+        msg: "{{ credential_results }}"
+
+    # ── Step 9: Assign credentials to sites ───────────────────────────────────
+    #
+    # Associates the created credentials with each non-Global site that has
+    # device credential data in the JSON.
+    # Skipped automatically if no site-level assignments are defined.
+    #
+    - name: Assign credentials per site
+      cisco.dnac.device_credential_workflow_manager:
+        state: merged
+        config:
+          - "{{ item }}"
+      loop: "{{ credential_assign_list }}"
+      when: credential_assign_list | length > 0
+      register: assign_results
+
+    - name: --DEBUG-- Credential assignment results
+      when: DEBUG and credential_assign_list | length > 0
+      debug:
+        msg: "{{ assign_results }}"
+
+    # ── Step 10: Summary ───────────────────────────────────────────────────────
+    - name: Settings synchronization complete
       debug:
         msg:
           - "Network settings applied successfully"
           - "Sites configured: {{ network_settings_list | map(attribute='site_name') | list | join(', ') }}"
+          - "Global credential sets created: {{ credential_list | length }}"
+          - "Site credential assignments: {{ credential_assign_list | length }}"
