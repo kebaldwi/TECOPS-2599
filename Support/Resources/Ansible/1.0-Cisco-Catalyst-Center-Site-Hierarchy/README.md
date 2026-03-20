@@ -19,7 +19,7 @@
 5. [Configuration](#configuration)
    - [Inventory](#inventory)
    - [Vault (Credentials)](#vault-credentials)
-6. [Input Data Structure — `devices.json`](#input-data-structure--devicesjson)
+6. [Input Data Structure — `settings.json`](#input-data-structure--settingsjson)
    - [Top-Level Schema](#top-level-schema)
    - [Field Reference](#field-reference)
    - [Type-Specific Fields](#type-specific-fields)
@@ -41,7 +41,7 @@
 
 This playbook automates the creation and management of the **Site Hierarchy** in Cisco Catalyst Center. The site hierarchy organises network locations into a tree of **Areas**, **Buildings**, and **Floors** — the fundamental grouping structure that all other automation (settings, discovery, templates, and profiles) relies upon.
 
-The playbook is data-driven and reads a `devices.json` file, derives every required path (including intermediate parent nodes), sorts them from shallowest to deepest, and calls individual `cisco.catalystcenter` modules in order — guaranteeing that parent sites always exist before children are created.
+The playbook is data-driven and reads `settings.json` (the single source of truth), derives every required path (including intermediate parent nodes), sorts them from shallowest to deepest, and calls individual `cisco.catalystcenter` modules in order — guaranteeing that parent sites always exist before children are created.
 
 > **Why individual modules instead of `site_workflow_manager`?**  
 > `cisco.catalystcenter` is the current, actively maintained collection (replaces the legacy `cisco.dnac`). Individual modules expose every API call explicitly — which API endpoint fires, which UUID is required as `parentId`, and why the create/update/delete split exists. This transparency makes the playbook ideal for **lab and teaching scenarios**.
@@ -94,7 +94,7 @@ The diagram below shows every decision point and state transition from startup t
 ├── tasks/
 │   ├── create_or_update_site.yml  # Phase B: per-site create/update logic (include_tasks)
 │   └── delete_site.yml            # Phase C: per-site delete logic (include_tasks)
-├── site_input.json.example     # Example input file (devices.json format)
+├── site_input.json.example     # Example input file (settings.json schema)
 ├── vault.yml                   # Ansible Vault encrypted credentials (git-ignored)
 ├── vault.yml.example           # Plain-text credential template
 ├── .vault_pass                 # Vault password file (git-ignored, chmod 600)
@@ -105,13 +105,13 @@ The diagram below shows every decision point and state transition from startup t
     └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
-The playbook references `devices.json` from the project tree by default:
+The playbook uses `settings.json` from the project tree as its **single source of truth**:
 
 ```
 Projects/
 └── BGP_EVPN/
     └── Settings/
-        └── devices.json        # Site hierarchy + device assignment input data
+        └── settings.json       # Single source of truth: hierarchy, network settings, credentials
 ```
 
 ---
@@ -162,8 +162,8 @@ all:
       catc_verify:  false
       catc_debug:   false
 
-      # Input file path (relative or absolute)
-      devices_json_path: "site_input.json"
+      # Input file path (relative or absolute) — single source of truth
+      settings_json_path: "../../../../Projects/BGP_EVPN/Settings/settings.json"
 
       # Building defaults — applied when JSON entry omits these fields
       default_building_address:   "1 Cisco Way, San Jose, CA 95134"
@@ -172,11 +172,12 @@ all:
       default_building_longitude: -121.8863
 
       # Floor defaults — applied when JSON entry omits these fields
-      default_floor_rf_model:  "Cubes And Walled Offices"
-      default_floor_width:     100
-      default_floor_length:    100
-      default_floor_height:    10
-      default_floor_number:    1
+      default_floor_rf_model:          "Cubes And Walled Offices"
+      default_floor_units_of_measure:  "feet"
+      default_floor_width:             100
+      default_floor_length:            100
+      default_floor_height:            10
+      default_floor_number:            1
 ```
 
 | Variable | Purpose |
@@ -186,8 +187,9 @@ all:
 | `catc_version` | SDK version string — must be ≤ appliance version |
 | `catc_verify` | SSL certificate verification (`false` for self-signed certs) |
 | `catc_debug` | Enable verbose `catalystcentersdk` tracing |
-| `devices_json_path` | Relative or absolute path to the input JSON file |
+| `settings_json_path` | Relative or absolute path to `settings.json` (single source of truth) |
 | `default_building_*` | Fallback values for buildings with no address/coordinate data |
+| `default_floor_units_of_measure` | Floor measurement unit sent to CatC API (`feet` or `meters`); required by `POST /v2/floors` |
 | `default_floor_*` | Fallback values for floors with no dimension data |
 
 ### Vault (Credentials)
@@ -206,7 +208,7 @@ catc_password: "your_catc_password_here"
 
 ---
 
-## Input Data Structure — `devices.json`
+## Input Data Structure — `settings.json`
 
 ### Top-Level Schema
 
@@ -234,9 +236,10 @@ Every entry in the `project` array represents exactly **one node** in the site h
 | `latitude` | float | Building only | GPS latitude. Falls back to `default_building_latitude`. |
 | `longitude` | float | Building only | GPS longitude. Falls back to `default_building_longitude`. |
 | `rf_model` | string | Floor only | RF environment model (see CatC UI for valid values). Falls back to `default_floor_rf_model`. |
-| `width` | int | Floor only | Floor width in feet. Falls back to `default_floor_width`. |
-| `length` | int | Floor only | Floor length in feet. Falls back to `default_floor_length`. |
-| `height` | int | Floor only | Ceiling height in feet. Falls back to `default_floor_height`. |
+| `units_of_measure` | string | Floor only | Measurement unit: `feet` or `meters`. **Required by `POST /dna/intent/api/v2/floors`**. Falls back to `default_floor_units_of_measure`. |
+| `width` | int | Floor only | Floor width in the chosen unit. Falls back to `default_floor_width`. |
+| `length` | int | Floor only | Floor length in the chosen unit. Falls back to `default_floor_length`. |
+| `height` | int | Floor only | Ceiling height in the chosen unit. Falls back to `default_floor_height`. |
 | `floor_number` | int | Floor only | Floor number (required by CatC ≥ 2.3.7.6). Falls back to `default_floor_number`. |
 
 > **Valid `rf_model` values:** `Cubes And Walled Offices`, `Drywall Office Only`, `Indoor High Ceiling`, `Outdoor Open Space`, `Free Space`, `Sparse`, `Very Sparse`
@@ -346,11 +349,12 @@ Three maps are built in a single `set_fact`:
 site_type_map["Global/PODS/POD 0/Building P0/Floor 1"] = "floor"
 
 floor_info_map["Global/PODS/POD 0/Building P0/Floor 1"] = {
-  "rf_model":     "Cubes And Walled Offices",
-  "width":        100,
-  "length":       100,
-  "height":       10,
-  "floor_number": 1
+  "rf_model":         "Cubes And Walled Offices",
+  "units_of_measure": "feet",
+  "width":            100,
+  "length":           100,
+  "height":           10,
+  "floor_number":     1
 }
 ```
 
@@ -430,7 +434,7 @@ path = "Global/PODS/POD 0/Building P0/Floor 1"
 4. exists?   = path in site_id_map     → False (first run)
 
    if NOT exists:
-     POST /dna/intent/api/v1/site  { type: floor, site: { floor: { name, parentName, rfModel, ... } } }  ← cisco.dnac.site
+     POST /dna/intent/api/v2/floors  { name, parentId, rfModel, unitsOfMeasure, floorNumber, ... }  ← cisco.catalystcenter.floors
      GET  /dna/intent/api/v1/sites?nameHierarchy=<path>   ← ID resolution
      site_id_map[path] = new UUID
 
@@ -455,14 +459,14 @@ Sites not found in `site_id_map` are silently skipped.
 ## Data Transformation Reference
 
 ```
-devices.json
+settings.json
 └── project[]
     └── [n].HierarchyName + SiteType + metadata
               │
               ▼ Step 2 — set_fact (3 maps)
     site_type_map     = { "Global/.../.../Floor 1": "floor", ... }
     building_info_map = { "Global/.../Building":    {address, ...}, ... }
-    floor_info_map    = { "Global/.../Floor 1":     {rf_model, ...}, ... }
+    floor_info_map    = { "Global/.../Floor 1":     {rf_model, units_of_measure, ...}, ... }
               │
               ▼ Step 3 — path expansion + dedup + depth sort
     all_site_paths = [
@@ -481,7 +485,7 @@ devices.json
               ▼ Phase B — include_tasks (serial, depth-sorted)
     per NEW site   → POST /dna/intent/api/v1/areas        (area)
                    → POST /dna/intent/api/v2/buildings     (building)
-                   → POST /dna/intent/api/v1/site          (floor — cisco.dnac.site; v2 POST returns 500 on CatC 2.3.x)
+                   → POST /dna/intent/api/v2/floors        (floor — cisco.catalystcenter.floors; unitsOfMeasure required)
                    → GET /dna/intent/api/v1/sites?nameHierarchy=<path>  (UUID)
                    → site_id_map[path] = new UUID  ← visible to next iteration
     per EXISTING   → PUT  /dna/intent/api/v1/areas/{id}
@@ -499,20 +503,19 @@ devices.json
 ansible-playbook site_hierarchy.yml --vault-password-file .vault_pass
 ```
 
-### Use the shared BGP_EVPN devices.json
+### Use the shared BGP_EVPN settings.json (default)
 
 ```bash
 ansible-playbook site_hierarchy.yml \
-  --vault-password-file .vault_pass \
-  -e devices_json_path=../../../../Projects/BGP_EVPN/Settings/devices.json
+  --vault-password-file .vault_pass
 ```
 
-### Use an absolute or custom path
+### Override the input path at runtime
 
 ```bash
 ansible-playbook site_hierarchy.yml \
   --vault-password-file .vault_pass \
-  -e devices_json_path=/absolute/path/to/devices.json
+  -e settings_json_path=/absolute/path/to/settings.json
 ```
 
 ### Override building/floor defaults at runtime
@@ -630,6 +633,7 @@ On subsequent runs, existing sites receive `UPDATE` calls that return `result: "
 | `name/parent_name should not be None` | `SiteType` missing from a JSON entry | Add explicit `SiteType` to every non-null entry |
 | `country should not be None` | Building has no `country` field | Add `country` to the JSON entry or set `default_building_country` |
 | `floorNumber validation error` | CatC ≥ 2.3.7.6 requires this field | Add `floor_number` to each floor entry or set `default_floor_number` |
+| `HTTP 500` on floor CREATE | `unitsOfMeasure` omitted from `POST /v2/floors` | Verify `default_floor_units_of_measure` is set in `inventory.yml` (default: `feet`) |
 | `Parent site not found` / `parentId required` | Parent UUID not in `site_id_map` | Ensure all ancestor paths exist in the JSON with explicit `SiteType` |
 | `Cannot delete — site has children` | Trying to delete parent before child | Use `state=deleted` (auto-reverses order), or delete manually deepest-first |
 | `catalystcentersdk not installed` | Missing Python SDK | Run `pip install -r requirements.txt` |
@@ -639,7 +643,7 @@ On subsequent runs, existing sites receive `UPDATE` calls that return `result: "
 | Version mismatch warning | `catc_version` > appliance version | Set `catc_version: "2.3.7.9"` (or lower to match appliance) |
 | `retries exhausted` on ID query | CatC slow to commit new site | Increase `retries` or `delay` in `tasks/create_or_update_site.yml` |
 ├── site_hierarchy.yml       # Main playbook
-├── site_input.json.example  # Example input file (devices.json format)
+├── site_input.json.example  # Example input file (settings.json schema)
 ├── vault.yml.example        # Credential template
 ├── vault.yml                # Encrypted credentials (ansible-vault, not committed)
 └── .vault_pass              # Vault password file (not committed)
@@ -687,7 +691,7 @@ ansible-vault encrypt vault.yml --vault-password-file .vault_pass
 
 ## Input File Format
 
-The playbook accepts a JSON file with the same structure as `devices.json` used across the Projects folder. The key field is `HierarchyName` — a `/`-separated path from `Global` down to the target site.
+The playbook accepts a JSON file with the same structure as `settings.json` used across the Projects folder. The key field is `HierarchyName` — a `/`-separated path from `Global` down to the target site.
 
 ### Required Fields (all entries)
 
@@ -712,6 +716,7 @@ The playbook accepts a JSON file with the same structure as `devices.json` used 
 | Field | Default (from `inventory.yml`) |
 |-------|--------------------------------|
 | `rf_model` | `default_floor_rf_model` |
+| `units_of_measure` | `default_floor_units_of_measure` (required by `POST /v2/floors`) |
 | `width` | `default_floor_width` |
 | `length` | `default_floor_length` |
 | `height` | `default_floor_height` |
@@ -792,7 +797,7 @@ See `site_input.json.example` for a complete reference. Abbreviated form:
 
 ## Running the Playbook
 
-**Build or update site hierarchy from the default input file:**
+**Build or update site hierarchy from the default input file (`settings.json`):**
 
 ```bash
 ansible-playbook site_hierarchy.yml --vault-password-file .vault_pass
@@ -803,23 +808,15 @@ ansible-playbook site_hierarchy.yml --vault-password-file .vault_pass
 ```bash
 ansible-playbook site_hierarchy.yml \
   --vault-password-file .vault_pass \
-  -e devices_json_path=/path/to/your/devices.json
+  -e settings_json_path=/path/to/your/settings.json
 ```
 
-**Use the TRADITIONAL/Settings/devices.json directly:**
+**Use the BGP_EVPN/Settings/settings.json directly:**
 
 ```bash
 ansible-playbook site_hierarchy.yml \
   --vault-password-file .vault_pass \
-  -e "devices_json_path=../../../../Projects/TRADITIONAL/Settings/devices.json"
-```
-
-**Use the BGP_EVPN/Settings/devices.json directly:**
-
-```bash
-ansible-playbook site_hierarchy.yml \
-  --vault-password-file .vault_pass \
-  -e "devices_json_path=../../../../Projects/BGP_EVPN/Settings/devices.json"
+  -e "settings_json_path=../../../../Projects/BGP_EVPN/Settings/settings.json"
 ```
 
 **Preview payloads before committing (no `--check` mode support):**
@@ -854,7 +851,7 @@ With a specific input file:
 ansible-playbook site_hierarchy.yml \
   --vault-password-file .vault_pass \
   -e "state=deleted" \
-  -e "devices_json_path=../../../../Projects/BGP_EVPN/Settings/devices.json"
+  -e "settings_json_path=../../../../Projects/BGP_EVPN/Settings/settings.json"
 ```
 
 > **Important:** The playbook automatically reverses the site order when `state=deleted`, deleting children before their parents so CatC never tries to remove a site that still has children. Ensure no devices are assigned to any of the sites before running with `state=deleted`.
@@ -862,11 +859,11 @@ ansible-playbook site_hierarchy.yml \
 ## How It Works
 
 ```
-1. Load devices.json
+1. Load settings.json (single source of truth)
         │
         ▼
 2. Build lookup maps
-   site_type_map / building_info_map / floor_info_map
+   site_type_map / building_info_map / floor_info_map (incl. units_of_measure)
         │
         ▼
 3. Collect all unique paths across all HierarchyName entries
