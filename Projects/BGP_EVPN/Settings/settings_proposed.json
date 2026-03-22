@@ -58,7 +58,7 @@
                         "description": "NETCONF-netadmin",
                         "netconf_port": "830"
                     }
-                },
+                }
             },
             "network_profile": {
                 "profile_name": "BGP-EVPN-Switching",
