@@ -12,6 +12,7 @@
 {# DEFN-IPSEC.j2 removed - IPSEC tunnelling deprecated #}
 {# Dereference Catalyst Center magic variable #}
 {% set DEVICE_HOSTNAME = __device.hostname | default('', true) %}
+{% set DEVICE_HOSTNAME = DEVICE_HOSTNAME.split('.')[0] %}
 {# Resolve the VRF objects for this device #}
 {% set vrf_objs = [] %}
 {{ vrf_definition(DEFN_VRF, DEFN_VRF_TO_NODE, DEVICE_HOSTNAME) }}
