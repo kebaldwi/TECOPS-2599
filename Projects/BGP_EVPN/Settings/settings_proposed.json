@@ -38,26 +38,26 @@
                     "protocol": "RADIUS",
                     "shared_secret": "C1sco12345",
                     "secondary_server_address": null
+                }
+            },
+            "device_credentials": {
+                "cli_credential": {
+                    "description": "CLI-net-admin",
+                    "username": "net-admin",
+                    "password": "cisco",
+                    "enable_password": "cisco"
                 },
-                "device_credentials": {
-                    "cli_credential": {
-                        "description": "CLI-net-admin",
-                        "username": "net-admin",
-                        "password": "cisco",
-                        "enable_password": "cisco"
-                    },
-                    "snmp_v2c_read": {
-                        "description": "RO",
-                        "read_community": "RO"
-                    },
-                    "snmp_v2c_write": {
-                        "description": "RW",
-                        "write_community": "RO"
-                    },
-                    "netconf_credential": {
-                        "description": "NETCONF-netadmin",
-                        "netconf_port": "830"
-                    }
+                "snmp_v2c_read": {
+                    "description": "RO",
+                    "read_community": "RO"
+                },
+                "snmp_v2c_write": {
+                    "description": "RW",
+                    "write_community": "RO"
+                },
+                "netconf_credential": {
+                    "description": "NETCONF-netadmin",
+                    "netconf_port": "830"
                 }
             },
             "network_profile": {
