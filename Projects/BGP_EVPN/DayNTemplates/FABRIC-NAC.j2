@@ -486,13 +486,13 @@ policy-map type control subscriber IOT_PM_{{vrf.id}}
 {% endif %}
 {% for data in DEFN_DEFAULT_VLANS %}
   {% if data.node == DEVICE_HOSTNAME %}
-    {% do vlanArray.append(vlan['id']) %}
+    {% do vlanArray.append(data['id']) %}
   {% endif %}
 {% endfor %}
 
 {#- DOT1x CTS RoleBased Enforcement -#}
 dot1x system-auth-control
 cts role-based enforcement
-cts role-based enforcement vlan-list 1,{{ vlanArray|join(',' }}
+cts role-based enforcement vlan-list 1,{{ vlanArray|join(',') }}
 
 {# end of file #}

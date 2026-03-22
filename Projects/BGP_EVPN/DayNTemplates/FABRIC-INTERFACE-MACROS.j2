@@ -188,8 +188,8 @@
 {% endmacro %}
 !
 {#- Interface IOT Configuration IBNS2.0 Template Macro -#}
-{% macro ibns_IOT(vrf.id) %} 
-  template IOT_IBNS-{{vrf.id}}
+{% macro ibns_IOT(vrf_id) %} 
+  template IOT_IBNS-{{vrf_id}}
    dot1x pae authenticator
    dot1x timeout tx-period 7
    dot1x timeout supp-timeout 7
@@ -200,7 +200,7 @@
    access-session port-control auto
    authentication periodic
    authentication timer reauthenticate server
-   service-policy type control subscriber NAC_IOT_PM_{{vrf.id}}
+   service-policy type control subscriber NAC_IOT_PM_{{vrf_id}}
    load-interval 30
 {% endmacro %}
 !
