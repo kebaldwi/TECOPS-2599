@@ -1,0 +1,123 @@
+---
+# =============================================================================
+# tasks/netconf_create_or_update.yml
+#
+# Creates or updates ONE NETCONF global credential.
+# Loop variable: netconf_config  (set by the include_tasks loop in
+#                                 credentials.yml Phase C)
+#
+# Connection params are inherited from the play-level module_defaults block in
+# credentials.yml (cisco.dnac.netconf_credential: *catc_auth).
+#
+# netconf_id_map is a play-scope fact updated with set_fact after each CREATE
+# so subsequent iterations always have a current UUID.  This is why
+# include_tasks is used instead of a plain loop — set_fact inside include_tasks
+# takes effect before the next iteration starts, whereas set_fact inside a
+# plain loop only takes effect after the ENTIRE loop completes.
+# (Same rationale as 1.0's include_tasks for create_or_update_site.yml.)
+#
+# Credential existence is determined from netconf_id_map, which is built in
+# Phase C of credentials.yml from the response of
+# cisco.dnac.global_credential_info (credentialSubType: NETCONF).
+#
+# API paths:
+#   CREATE → POST /dna/intent/api/v1/global-credential/netconf
+#             body: payload list  (state: present, payload: [{...}])
+#   UPDATE → PUT  /dna/intent/api/v1/global-credential/netconf
+#             body: single object (state: present, id + description + netconfPort)
+# =============================================================================
+
+# ── Step 1: Derive existence flag and current UUID ────────────────────────────
+- name: "Derive exists / id  | {{ netconf_config.description }}"
+  set_fact:
+    _nc_exists: "{{ netconf_config.description in netconf_id_map }}"
+    _nc_id:     "{{ netconf_id_map.get(netconf_config.description, '') }}"
+
+- name: "DEBUG | Step 1 — exists={{ _nc_exists }}  id={{ _nc_id }}"
+  debug:
+    msg:
+      description: "{{ netconf_config.description }}"
+      exists:      "{{ _nc_exists }}"
+      id:          "{{ _nc_id }}"
+  when: catc_debug | default(false) | bool
+
+# =============================================================================
+# CREATE — credential does not yet exist
+# =============================================================================
+
+# ── POST new NETCONF credential ───────────────────────────────────────────────
+# state: present + payload list → cisco.dnac.netconf_credential issues
+# POST /dna/intent/api/v1/global-credential/netconf
+# The payload is wrapped in a list as required by the create form of the module.
+- name: "NETCONF | CREATE  | {{ netconf_config.description }}"
+  cisco.dnac.netconf_credential:
+    state: present
+    payload:
+      - description: "{{ netconf_config.description }}"
+        netconfPort:  "{{ netconf_config.netconf_port }}"
+  register: _nc_create
+  # CatC returns HTTP 201 with an empty body for this endpoint; the SDK raises
+  # "Module result deserialization failed" even though the credential was created.
+  # ignore_errors allows the re-query below to confirm actual creation.
+  ignore_errors: true
+  when: not _nc_exists
+
+- name: "DEBUG | CREATE result  | {{ netconf_config.description }}"
+  debug:
+    var: _nc_create
+  when:
+    - catc_debug | default(false) | bool
+    - not _nc_exists
+
+# ── Resolve newly created NETCONF credential UUID ─────────────────────────────
+# Re-fetches all NETCONF credentials to capture the UUID assigned by CatC.
+# Mirrors the sites_info resolution pattern used in 1.0's
+# create_or_update_site.yml — fetch, scan by description, store UUID in map.
+- name: "NETCONF | Resolve new UUID  | {{ netconf_config.description }}"
+  cisco.dnac.global_credential_info:
+    credentialSubType: NETCONF
+  register: _nc_resolve
+  when: not _nc_exists
+
+- name: "DEBUG | Resolve result  | {{ netconf_config.description }}"
+  debug:
+    var: _nc_resolve
+  when:
+    - catc_debug | default(false) | bool
+    - not _nc_exists
+
+- name: "Update netconf_id_map with new UUID  | {{ netconf_config.description }}"
+  set_fact:
+    netconf_id_map: >-
+      {%- set ns = namespace(new_id='') -%}
+      {%- for cred in _nc_resolve.dnac_response.response | default([]) -%}
+        {%- if cred.description == netconf_config.description -%}
+          {%- set ns.new_id = cred.id -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ netconf_id_map | combine({netconf_config.description: ns.new_id}) }}
+  when: not _nc_exists
+
+# =============================================================================
+# UPDATE — credential already exists
+# =============================================================================
+
+# ── PUT existing NETCONF credential ───────────────────────────────────────────
+# state: present + id + scalar fields → cisco.dnac.netconf_credential
+# issues PUT /dna/intent/api/v1/global-credential/netconf
+# Supplying `id` switches the module from create (POST) to update (PUT).
+- name: "NETCONF | UPDATE  | {{ netconf_config.description }}"
+  cisco.dnac.netconf_credential:
+    state:       present
+    id:          "{{ _nc_id }}"
+    description: "{{ netconf_config.description }}"
+    netconfPort: "{{ netconf_config.netconf_port }}"
+  register: _nc_update
+  when: _nc_exists
+
+- name: "DEBUG | UPDATE result  | {{ netconf_config.description }}"
+  debug:
+    var: _nc_update
+  when:
+    - catc_debug | default(false) | bool
+    - _nc_exists
