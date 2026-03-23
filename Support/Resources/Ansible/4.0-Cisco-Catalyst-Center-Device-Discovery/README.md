@@ -412,6 +412,40 @@ devices.json
         → GET  /dna/intent/api/v1/discovery/{id}  (poll for completion)
 ```
 
+**Before — `devices.json` entry:**
+
+```json
+{
+  "HierarchyName": "Global/PODS/POD 0/Building P0/Floor 1",
+  "DeviceList":    "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5, 198.19.1.6"
+}
+```
+
+> `DeviceList` is a raw comma-separated string with optional whitespace around entries. The Jinja2 expression `entry.DeviceList.split(',') | map('trim') | list` strips whitespace from each token before building the list. Only entries where `DeviceList` is non-null produce a discovery item.
+
+**After — `discovery_list[0]`** (submitted to `discovery_workflow_manager`):
+
+```json
+{
+  "discovery_name":              "Global/PODS/POD 0/Building P0/Floor 1",
+  "discovery_type":              "MULTI RANGE",
+  "ip_address_list":             ["198.19.1.1", "198.19.1.2", "198.19.1.3", "198.19.1.4", "198.19.1.5", "198.19.1.6"],
+  "protocol_order":              "ssh",
+  "retry":                       5,
+  "timeout":                     3,
+  "preferred_mgmt_ip_method":    "UseLoopBack",
+  "discovery_specific_credentials": { "net_conf_port": "830" },
+  "global_credentials": {
+    "cli_credentials_list":          [{ "description": "CLI-net-admin", "username": "net-admin" }],
+    "snmp_v2_read_credential_list":  [{ "description": "RO" }],
+    "snmp_v2_write_credential_list": [{ "description": "RW" }],
+    "net_conf_port_list":            [{ "description": "NETCONF-netadmin" }]
+  }
+}
+```
+
+Each `discovery_list` item triggers one `POST /dna/intent/api/v1/discovery` call, after which the module polls `GET /dna/intent/api/v1/discovery/{id}` until the job reaches a terminal state and reports per-IP reachability.
+
 ---
 
 ## Running the Playbook

@@ -443,6 +443,44 @@ devices.json
     → POST /dna/intent/api/v1/assign-device-to-site/{siteId}/device
 ```
 
+**Before — `devices.json` `project[]` (excerpt):**
+
+```json
+[
+  { "HierarchyName": "Global",                                       "DeviceList": null },
+  { "HierarchyName": "Global/PODS",                                  "DeviceList": null },
+  { "HierarchyName": "Global/PODS/POD 0/Building P0/Floor 1",
+    "DeviceList": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6" }
+]
+```
+
+> Entries with `DeviceList: null` are skipped. IPs in non-null entries are split, trimmed, and accumulated into a dict keyed by site path. If two entries share the same `HierarchyName`, their IP lists are merged automatically via the namespace accumulator.
+
+**After — `site_device_map` (Step 2):**
+
+```json
+{
+  "Global/PODS/POD 0/Building P0/Floor 1": [
+    "198.19.1.1", "198.19.1.2", "198.19.1.3",
+    "198.19.1.4", "198.19.1.5", "198.19.1.6"
+  ]
+}
+```
+
+**After — per-site assign payload (Step 4):**
+
+```json
+{
+  "siteId": "5b689937-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
+  "device": [
+    { "ip": "198.19.1.1" }, { "ip": "198.19.1.2" }, { "ip": "198.19.1.3" },
+    { "ip": "198.19.1.4" }, { "ip": "198.19.1.5" }, { "ip": "198.19.1.6" }
+  ]
+}
+```
+
+The `siteId` is resolved from `site_info_results.results[n].dnac_response.response[0].id` — a `cisco.dnac.site_info` lookup keyed by the site path string from `site_device_map`. The IP list is converted from a plain string list to `[{ip: ...}]` objects inline in the module parameters.
+
 ---
 
 ## Running the Playbook

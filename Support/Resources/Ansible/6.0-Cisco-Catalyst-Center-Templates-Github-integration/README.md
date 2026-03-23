@@ -744,6 +744,113 @@ This playbook suite ships `requirements.yml` pinned to `cisco.dnac 6.46.0`, whic
 
 ---
 
+## Data Transformation Reference
+
+```
+git_repo (GitHub URL)
+    │
+    ▼ Stage 1 — GET /repos/{slug}/git/trees/{branch}?recursive=1
+raw tree[] (all files in repo)
+    filter: path starts with git_repo_subfolder/
+    ├─ filter: ends with .j2  → api_template_files[]
+    └─ filter: ends with .yml → api_composite_files[]
+    │
+    ▼ Stage 2 — per file: GET raw content + GET last commit metadata
+enriched_template_files[]  = [{ name, path, content, commit_message, diff_content }]
+enriched_composite_files[] = [{ name, path, content (YAML parsed) }]
+    │
+    ▼ Stage 3 — composite .yml parsed → composite_referenced_templates[]
+    template NOT in composite_referenced → regular_template_list[]   ← DEFN-*, FUNC-*
+    template     in composite_referenced → priority_template_list[]  ← FABRIC-*
+sorted_template_files = regular_template_list + priority_template_list
+    │                ← un-referenced templates first, composite members last
+    ▼ Stage 4 — include_tasks: process-template.yml / process-composite.yml
+template_workflow_configs[]  ← one entry per .j2 file
+composite_workflow_configs[] ← one entry per .yml composite file
+    │
+    ▼ Stage 5 — cisco.dnac.template_workflow_manager (state: merged)
+    call 1: templates  → POST /dna/intent/api/v1/template-programmer/project/{id}/template
+    call 2: composites → POST /dna/intent/api/v1/template-programmer/project/{id}/template
+                         (composite: true, containing_templates: [...])
+```
+
+**Before — GitHub tree API response (truncated):**
+
+```json
+{
+  "tree": [
+    { "path": "BGP_EVPN/DayNTemplates/DEFN-LOOPBACKS.j2",  "type": "blob" },
+    { "path": "BGP_EVPN/DayNTemplates/FABRIC-NVE.j2",      "type": "blob" },
+    { "path": "BGP_EVPN/DayNTemplates/BGP-EVPN-BUILD.yml",  "type": "blob" },
+    { "path": "BGP_EVPN/DayNTemplates/README.md",           "type": "blob" }
+  ]
+}
+```
+
+> Only entries under `git_repo_subfolder/` matching `.j2` or `.yml` are kept. All other file types (`.md`, `.png`, `.json`, etc.) are silently ignored.
+
+**After — filtered file lists:**
+
+```json
+{
+  "api_template_files":  ["BGP_EVPN/DayNTemplates/DEFN-LOOPBACKS.j2", "BGP_EVPN/DayNTemplates/FABRIC-NVE.j2"],
+  "api_composite_files": ["BGP_EVPN/DayNTemplates/BGP-EVPN-BUILD.yml"]
+}
+```
+
+**After — template ordering decision (Stage 3):**
+
+```
+BGP-EVPN-BUILD.yml defines containing_templates: [FABRIC-NVE.j2, ...]
+
+regular_template_list  → [DEFN-LOOPBACKS.j2]   ← not referenced by any composite
+priority_template_list → [FABRIC-NVE.j2]        ← referenced in BGP-EVPN-BUILD.yml
+
+sorted_template_files  = [DEFN-LOOPBACKS.j2, FABRIC-NVE.j2]
+```
+
+**After — `template_workflow_configs[0]`** (submitted in Stage 5 call 1):
+
+```json
+{
+  "configuration_templates": {
+    "template_name":        "DEFN-LOOPBACKS.j2",
+    "project_name":         "Building P0",
+    "language":             "JINJA",
+    "template_content":     "...",
+    "template_description": "Template synced from Git Building P0 | add loopback definitions",
+    "device_types":         [{ "product_family": "Switches and Hubs", "product_series": "Cisco Catalyst 9000 Series" }],
+    "software_type":        "IOS",
+    "software_variant":     "XE",
+    "composite":            false,
+    "failure_policy":       "ABORT_TARGET_ON_ERROR",
+    "version":              "1.0"
+  }
+}
+```
+
+**After — `composite_workflow_configs[0]`** (submitted in Stage 5 call 2):
+
+```json
+{
+  "configuration_templates": {
+    "template_name":        "BGP-EVPN-BUILD.j2",
+    "project_name":         "Building P0",
+    "language":             "JINJA",
+    "composite":            true,
+    "template_content":     "",
+    "containing_templates": [
+      { "name": "DEFN-LOOPBACKS.j2", "composite": false, "project_name": "Building P0" },
+      { "name": "FABRIC-NVE.j2",     "composite": false, "project_name": "Building P0" }
+    ]
+  }
+}
+```
+
+Templates are synced in two separate `template_workflow_manager` calls: all individual templates first, then all composite templates. This guarantees every member template exists in Catalyst Center before the composite that references it is created or updated.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |

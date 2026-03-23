@@ -615,6 +615,31 @@ settings.json
          └── POST /dna/intent/api/v1/networkprofile/{id}/site  (assign)
 ```
 
+**Before — `project[0].network_profile` (in `settings.json`):**
+
+```json
+{
+  "profile_name":         "BGP-EVPN-Switching",
+  "site_names":           ["Global/PODS/POD 0/Building P0/Floor 1"],
+  "day_n_templates":      ["BGP-EVPN-BUILD.j2"],
+  "onboarding_templates": null
+}
+```
+
+> `onboarding_templates: null` is falsy and excluded by the Jinja2 `if truthy | combine(...)` guard. Only `day_n_templates` and `onboarding_templates` undergo this check — `profile_name` and `site_names` are always present in the output dict.
+
+**After — `profile_list[0]`** (submitted to `network_profile_switching_workflow_manager`):
+
+```json
+{
+  "profile_name":    "BGP-EVPN-Switching",
+  "site_names":      ["Global/PODS/POD 0/Building P0/Floor 1"],
+  "day_n_templates": ["BGP-EVPN-BUILD.j2"]
+}
+```
+
+The module resolves both template names and site path strings to UUIDs internally. Profile creation, update, and site assignment are handled idempotently in a single `state: merged` call — no manual UUID lookup is required.
+
 ---
 
 ## Running the Playbook
