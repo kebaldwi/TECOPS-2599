@@ -96,3 +96,24 @@ flowchart TD
     style note3 fill:#fdfefe,color:#555,stroke:#bdc3c7
     style note4 fill:#fdfefe,color:#555,stroke:#bdc3c7
     style note5 fill:#fdfefe,color:#555,stroke:#bdc3c7
+
+    subgraph LEGEND["Legend"]
+        direction LR
+        L1["Infrastructure Playbook\n(reads settings.json / devices.json)"]
+        L2["GitHub-Sourced Playbook\n(reads GitHub repo)"]
+        L3["Deployment Playbook\n(pushes config to devices)"]
+        L4[("Input Data Source\n(local JSON / GitHub)")]
+        L5[("Catalyst Center Resource\n(artifact produced by playbook)")]
+        L6([" Final State\n(devices configured)"])
+        L7(["Ordering Note"])
+    end
+
+    style LEGEND fill:#f8f9fa,stroke:#aab7b8,color:#333
+
+    style L1 fill:#2980b9,color:#fff,stroke:#1a5276
+    style L2 fill:#8e44ad,color:#fff,stroke:#6c3483
+    style L3 fill:#16a085,color:#fff,stroke:#0e6655
+    style L4 fill:#34495e,color:#fff,stroke:#2c3e50
+    style L5 fill:#f39c12,color:#fff,stroke:#d68910
+    style L6 fill:#27ae60,color:#fff,stroke:#1e8449
+    style L7 fill:#fdfefe,color:#555,stroke:#bdc3c7
