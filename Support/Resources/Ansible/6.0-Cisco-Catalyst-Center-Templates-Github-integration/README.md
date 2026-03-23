@@ -2,7 +2,12 @@
 
 > **Playbook:** `ansible-git-catc.yml`  
 > **Included tasks:** `process-template.yml`, `process-composite.yml`  
-> **Module:** `cisco.dnac.template_workflow_manager`  
+> **Modules:** `cisco.dnac.template_workflow_manager` (create/update/version CatC templates), `ansible.builtin.uri` (GitHub API)  
+> **API Endpoints (GitHub):**  
+> &nbsp;&nbsp;`GET {git_api_base}/repos/{repo}/git/trees/{branch}?recursive=1` — fetch full repo file tree  
+> &nbsp;&nbsp;`GET https://raw.githubusercontent.com/{repo}/{branch}/{path}` — fetch raw `.j2` template or `.yml` composite file content  
+> &nbsp;&nbsp;`GET {git_api_base}/repos/{repo}/commits?path={path}&per_page=1&sha={branch}` — fetch last commit metadata per file  
+> &nbsp;&nbsp;`GET {git_api_base}/repos/{repo}/commits/{sha}` — fetch commit diff (conditional: `include_diff_header=true`)  
 > **Minimum Catalyst Center version:** 2.3.7.6  
 > **Minimum Ansible version:** 2.15  
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  
@@ -646,6 +651,31 @@ dnac_password: "your_password"
 # git_token: "ghp_..."   # optional, for private repos
 ```
 
+> **Important — GitHub API Rate Limiting**
+>
+> By default, requests to the GitHub REST API are **unauthenticated** (when `git_token` is commented out or omitted). Unauthenticated callers are limited to **60 requests per hour** per IP address. If this limit is exceeded the playbook will fail immediately at the "Fetch repository file tree" task with:
+>
+> ```
+> fatal: [catalyst_center]: FAILED! => {"msg": "Status code was 403 and not [200]: HTTP Error 403: rate limit exceeded", ...}
+> ```
+>
+> Even for **public repositories**, it is strongly recommended to set `git_token` to raise the limit to **5,000 requests/hour**.
+>
+> **To add your token:**
+>
+> 1. Generate a GitHub Personal Access Token at <https://github.com/settings/tokens>.
+>    For public repositories the `public_repo` (read) scope is sufficient.
+>    For private repositories add the `repo` scope.
+> 2. Edit the vault in-place (stays encrypted on disk):
+>    ```bash
+>    EDITOR=nano ansible-vault edit vault.yml --vault-password-file .vault_pass
+>    ```
+> 3. Uncomment and populate the token line:
+>    ```yaml
+>    git_token: "ghp_yourActualTokenHere"
+>    ```
+> 4. Save and quit — ansible-vault re-encrypts automatically.
+
 ---
 
 ## Setup & Usage
@@ -721,7 +751,7 @@ This playbook suite ships `requirements.yml` pinned to `cisco.dnac 6.46.0`, whic
 | `No inventory was parsed` | `ansible.cfg` ignored | Run `chmod o-w .` on the project directory |
 | `NCTP10073: syntax errors` | CatC Jinja2 parser limitation (e.g., `not in`) | Rewrite to `not X in Y` in source template |
 | Composite fails with missing templates | Individual templates not synced first | Ensure templates in composite `.yml` exist in CatC; the playbook handles ordering automatically |
-| `403` from GitHub API | Rate limit or missing token for private repo | Add `git_token` to `vault.yml` |
+| `403` from GitHub API — `"Status code was 403 and not [200]: HTTP Error 403: rate limit exceeded"` | Unauthenticated requests are capped at 60/hr per IP. `git_token` is missing or commented out in `vault.yml` | Set `git_token` in `vault.yml` (see [Vault section](#vaultyml)). Authenticated requests are allowed 5,000/hr. Also required for private repos. |
 | Wrong templates picked up | `git_repo_subfolder` not set or wrong | Verify subfolder path matches repository structure |
 
 ---

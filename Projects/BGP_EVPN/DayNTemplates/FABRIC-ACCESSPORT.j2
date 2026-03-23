@@ -20,7 +20,7 @@
 {% set vlanArray = [] %}
 {% for data in DEFN_DEFAULT_VLANS %}
   {% if data.node == DEVICE_HOSTNAME %}
-    {% do vlanArray.append(vlan['id']) %}
+    {% do vlanArray.append(data['id']) %}
   {% endif %}
 {% endfor %}
 
@@ -84,7 +84,7 @@
   {% endif %}
 {% endfor %}
 
-{# if 'autoconf' in modeArray #}
+{% if 'autoconf' in modeArray %}
   {% include "{{ TEMPLATE_PROJECT_NAME }}/FABRIC-SMARTPORT.j2" %}
 {% endif %}
 
@@ -116,4 +116,4 @@
     {% endif %}
   {% endfor %}
 
-{% end of file %}
+{# End of File #}

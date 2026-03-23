@@ -238,7 +238,7 @@
               {%- endif -%}
             {%- endif -%}
             {%- if raw.syslog_server -%}
-              {%- set syslog = {} -%}
+              {%- set syslog = {'ipAddresses': []} -%}
               {%- if raw.syslog_server.ip_addresses is defined and raw.syslog_server.ip_addresses -%}
                 {%- set syslog = syslog | combine({'ipAddresses': raw.syslog_server.ip_addresses}) -%}
               {%- endif -%}
@@ -250,7 +250,7 @@
               {%- endif -%}
             {%- endif -%}
             {%- if raw.snmp_server -%}
-              {%- set snmp = {} -%}
+              {%- set snmp = {'ipAddresses': []} -%}
               {%- if raw.snmp_server.ip_addresses is defined and raw.snmp_server.ip_addresses -%}
                 {%- set snmp = snmp | combine({'ipAddresses': raw.snmp_server.ip_addresses}) -%}
               {%- endif -%}

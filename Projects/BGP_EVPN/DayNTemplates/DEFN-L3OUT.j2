@@ -2,7 +2,7 @@
 {% set DEFN_L3OUT = [
   {
     'vrf': 'red',
-    'node': 'Spine-01.dcloud.cisco.com',
+    'node': 'Spine-01',
     'neighbour_asn': '65002',
     'interfaces': {
       'GigabitEthernet1/0/5.2': {'parent': 'GigabitEthernet1/0/5', 'name': 'uplink1', 'vlan': '2', 'ipaddr': '198.19.2.50 255.255.255.252', 'neighbour': '198.19.2.49'},
@@ -11,7 +11,7 @@
   },
   {
     'vrf': 'red',
-    'node': 'Spine-02.dcloud.cisco.com',
+    'node': 'Spine-02',
     'neighbour_asn': '65002',
     'interfaces': {
       'GigabitEthernet1/0/5.2': {'parent': 'GigabitEthernet1/0/5', 'name': 'uplink1', 'vlan': '2', 'ipaddr': '198.19.2.58 255.255.255.252', 'neighbour': '198.19.2.57'},

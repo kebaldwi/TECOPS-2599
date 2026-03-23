@@ -6,7 +6,7 @@
 {% for input_vrf in DEFN_VRF_TO_NODE[DEVICE_HOSTNAME] %}
   {% set _vrf = (DEFN_VRF | selectattr("id", "equalto", input_vrf) | list | first) %}
   {% if _vrf %}
-    {% do vrf_objs.append(_vrf | first) %}
+    {% do vrf_objs.append(_vrf) %}
   {% endif %}
 {% endfor %}
 {% endmacro %}
