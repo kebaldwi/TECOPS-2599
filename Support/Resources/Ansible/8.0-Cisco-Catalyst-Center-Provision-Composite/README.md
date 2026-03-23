@@ -2,8 +2,14 @@
 
 > **Playbook:** `deploy_composite_template.yml`  
 > **Included tasks:** `tasks/deploy_entry.yml`  
-> **Module:** `cisco.dnac.configuration_template_deploy_v2`  
-> **API endpoint:** `POST /dna/intent/api/v2/template-programmer/template/deploy`  
+> **Modules:** `cisco.dnac.configuration_template_deploy_v2` (deploy composite template), `ansible.builtin.uri` (auth token + template query + device lookup + task polling)  
+> **API Endpoints:**  
+> &nbsp;&nbsp;`POST /dna/system/api/v1/auth/token` — obtain short-lived JWT  
+> &nbsp;&nbsp;`POST /dna/intent/api/v2/template-programmer/template/deploy` — deploy composite template (via collection module)  
+> &nbsp;&nbsp;`GET  /dna/intent/api/v1/template-programmer/template?projectNames={name}` — list all templates in project (resolve latest version UUID)  
+> &nbsp;&nbsp;`GET  /dna/intent/api/v1/template-programmer/template/{templateId}` — fetch composite template detail (extract member templates)  
+> &nbsp;&nbsp;`GET  /dna/intent/api/v1/network-device?managementIpAddress={ip}` — resolve device UUID and hostname per target IP  
+> &nbsp;&nbsp;`GET  /dna/intent/api/v1/task/{taskId}` — poll async deploy task per device until `endTime` set or `isError=true`  
 > **Minimum Catalyst Center version:** 2.3.7.6  
 > **Minimum Ansible version:** 2.15  
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  

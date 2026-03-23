@@ -1,8 +1,12 @@
-# 2.0 — Cisco Catalyst Center: Network Settings & Device Credentials Automation
+# 2.0 — Cisco Catalyst Center: Network Settings Automation
 
 > **Playbook:** `network_settings.yml`  
 > **Included tasks:** `tasks/apply_network_settings.yml`  
-> **Modules:** `cisco.catalystcenter.sites_info` (site ID resolution), `ansible.builtin.uri` (network settings — NCND01243 bypass), `cisco.catalystcenter.device_credential_workflow_manager` (credentials)  
+> **Modules:** `cisco.catalystcenter.sites_info` (site ID resolution), `ansible.builtin.uri` (auth token + network settings + execution polling)  
+> **API Endpoints:**  
+> &nbsp;&nbsp;`POST /dna/system/api/v1/auth/token` — obtain short-lived JWT  
+> &nbsp;&nbsp;`PUT  /dna/intent/api/v1/network/{siteId}` — apply composite network settings per site (202 Accepted, async)  
+> &nbsp;&nbsp;`GET  /dna/intent/api/v1/dnacaap/management/execution-status/{executionId}` — poll background task until `SUCCESS`/`FAILURE`  
 > **Minimum Catalyst Center version:** 2.3.7.6  
 > **Minimum Ansible version:** 2.15  
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  
@@ -23,21 +27,15 @@
 6. [Input Data Structure — `settings.json`](#input-data-structure--settingsjson)
    - [Top-Level Schema](#top-level-schema)
    - [The `network_settings` Block](#the-network_settings-block)
-   - [The `device_credentials` Block](#the-device_credentials-block)
-   - [The `assign_credentials` Block](#the-assign_credentials-block)
    - [Full Example](#full-example)
 7. [Design Decision — Why Not `network_settings_workflow_manager`?](#design-decision--why-not-network_settings_workflow_manager)
 8. [Playbook Walkthrough — Step by Step](#playbook-walkthrough--step-by-step)
    - [Step 1: Load and Validate Input Data](#step-1-load-and-validate-input-data)
    - [Step 2: Derive Site Names](#step-2-derive-site-names)
    - [Step 3: Authenticate and Resolve Site IDs](#step-3-authenticate-and-resolve-site-ids)
-   - [Step 4: Build v2 Network Settings Payload](#step-4-build-v2-network-settings-payload)
-   - [Step 5: Build Global Credential Payload](#step-5-build-global-credential-payload)
-   - [Step 6: Build Credential Assignment Payload](#step-6-build-credential-assignment-payload)
-   - [Step 7: Apply Network Settings via REST v2](#step-7-apply-network-settings-via-rest-v2)
-   - [Step 8: Create/Update Global Device Credentials](#step-8-createupdate-global-device-credentials)
-   - [Step 9: Assign Credentials to Sites](#step-9-assign-credentials-to-sites)
-   - [Step 10: Summary](#step-10-summary)
+   - [Step 4: Build v1 Network Settings Payload](#step-4-build-v1-network-settings-payload)
+   - [Step 5: Apply Network Settings via include_tasks](#step-5-apply-network-settings-via-include_tasks)
+   - [Step 6: Summary](#step-6-summary)
 9. [Data Transformation Reference](#data-transformation-reference)
 10. [Running the Playbook](#running-the-playbook)
 11. [Debug Mode](#debug-mode)
@@ -48,18 +46,18 @@
 
 ## Overview
 
-This playbook applies **network infrastructure settings** (DNS, DHCP, NTP, SNMP, Syslog, AAA, banner) to individual sites in Cisco Catalyst Center, and simultaneously manages **global device credentials** (CLI, SNMPv2c, NETCONF) that allow Catalyst Center to communicate with discovered network devices.
+This playbook applies **network infrastructure settings** (DNS, DHCP, NTP, SNMP, Syslog, AAA, banner) to individual sites in Cisco Catalyst Center.
 
-Both operations are fully idempotent. If a setting already matches the desired state in CatC, the module will not re-push it.
+Device credentials (CLI, SNMPv2c, NETCONF) are managed by [3.0 — Cisco Catalyst Center: Credentials](../3.0-Cisco-Catalyst-Center-Credentials/README.md) — run that playbook after this one.
+
+This operation is fully idempotent. If settings already match the desired state in CatC, the PUT will return `status: SUCCESS` with no changes applied.
 
 ### What it does
 
 | Action | Mechanism |
 |--------|-----------|
 | Resolves all site paths → UUID map | `cisco.catalystcenter.sites_info` (Phase A — same pattern as playbook 1.0) |
-| Applies DNS, DHCP, NTP, SNMP, Syslog, Banner, NetFlow, AAA per site | `ansible.builtin.uri` → `PUT /dna/intent/api/v1/network/{siteId}` (NCND01243 bypass) |
-| Creates/updates global CLI, SNMPv2c R/O, SNMPv2c R/W, NETCONF credentials | `cisco.catalystcenter.device_credential_workflow_manager` |
-| Assigns global credentials to designated sites | `cisco.catalystcenter.device_credential_workflow_manager` |
+| Applies DNS, DHCP, NTP, SNMP, Syslog, Banner, AAA per site | `ansible.builtin.uri` → `PUT /dna/intent/api/v1/network/{siteId}` (NCND01243 bypass) |
 
 ### Logical Flow
 
@@ -72,6 +70,8 @@ The diagram below shows every decision point and state transition from startup t
 ### Playbook ordering dependency
 
 This playbook must run **after** [1.0 — Site Hierarchy](../1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md). The site paths referenced in `settings.json` must already exist in CatC before network settings can be applied to them.
+
+Device credentials are configured in [3.0 — Cisco Catalyst Center: Credentials](../3.0-Cisco-Catalyst-Center-Credentials/README.md), which should run after this playbook.
 
 ---
 
@@ -109,7 +109,7 @@ The `PUT /dna/intent/api/v1/network/{siteId}` endpoint accepts a composite setti
 | `cisco.catalystcenter.network_settings_workflow_manager` (or legacy `cisco.dnac`) with only `client_and_endpoint_aaa` | Sends `aaaClient` via `PUT /v1/sites/{id}/aaaSettings`; CatC cross-checks against empty legacy `aaaNetwork` placeholder | **Yes — fails** |
 | `PUT /dna/intent/api/v1/network/{siteId}` with only `clientAndEndpoint_aaa` | Composite settings endpoint; validation path does not trigger the cross-check | **No — succeeds ✅** |
 
-> **Verified (2026-03-17):** Playbook ran successfully with `network_aaa: null` in `settings.json` using `PUT /dna/intent/api/v1/network/{siteId}`. Result: `ok=17 changed=2 failed=0`. Only `client_and_endpoint_aaa` was present in the payload; no NCND01243 error was raised.
+> **Verified (2026-03-23):** Playbook ran successfully with `network_aaa: null` in `settings.json` using `PUT /dna/intent/api/v1/network/{siteId}`. Result: `ok=27 changed=0 failed=0`. Only `client_and_endpoint_aaa` was present in the payload; no NCND01243 error was raised. Execution status polled via `executionStatusUrl` until `status: SUCCESS` confirmed.
 >
 > **Operational note:** `network_aaa` can be set to `null` in `settings.json` when using `PUT /dna/intent/api/v1/network/{siteId}`. Only `client_and_endpoint_aaa` needs to be populated.
 
@@ -267,7 +267,7 @@ Resolves to: `Global/PODS/POD 0/Building P0`
 
 ### The `network_settings` Block
 
-All fields use **snake_case names** matching `settings.json`. They are mapped to camelCase before submission to `PUT /dna/intent/api/v1/network/{siteId}` (see [Step 4](#step-4-build-v1-network-settings-payload) for the full field mapping). Any top-level key whose value is `null` is omitted from the payload.
+All fields use **snake_case names** matching `settings.json`.
 
 ```json
 "network_settings": {
@@ -319,47 +319,9 @@ All fields use **snake_case names** matching `settings.json`. They are mapped to
 | `network_aaa` | AAA for network device authentication |
 | `client_and_endpoint_aaa` | AAA for endpoint/802.1X |
 
-### The `device_credentials` Block
+> Fields are mapped to camelCase before submission to `PUT /dna/intent/api/v1/network/{siteId}` (see [Step 4](#step-4-build-v1-network-settings-payload) for the full mapping). Any top-level key whose value is `null` is omitted from the payload so CatC leaves that setting untouched.
 
-Defines the **global credentials** created in CatC and available to all discovery and provisioning operations. This structure maps directly to the `global_credential_details` schema of `device_credential_workflow_manager`.
-
-```json
-"device_credentials": {
-  "cli_credential": [
-    {
-      "description":     "CLI-net-admin",
-      "username":        "net-admin",
-      "password":        "cisco",
-      "enable_password": "cisco"
-    }
-  ],
-  "snmp_v2c_read": [
-    { "description": "RO", "read_community": "RO" }
-  ],
-  "snmp_v2c_write": [
-    { "description": "RW", "write_community": "RO" }
-  ],
-  "netconf_credential": [
-    { "description": "NETCONF-netadmin", "netconf_port": "830" }
-  ]
-}
-```
-
-### The `assign_credentials` Block
-
-Associates the global credentials created above with a specific site. Maps directly to the `assign_credentials_to_site` schema.
-
-```json
-"assign_credentials": {
-  "site_name": ["Global/PODS/POD 0/Building P0"],
-  "cli_credential": {
-    "description": "CLI-net-admin",
-    "username":    "net-admin"
-  },
-  "snmp_v2c_read":  { "description": "RO" },
-  "snmp_v2c_write": { "description": "RW" }
-}
-```
+> **Note:** The `device_credentials` and `assign_credentials` keys that appear in `settings.json` are consumed by [3.0 — Credentials](../3.0-Cisco-Catalyst-Center-Credentials/README.md) — they are **not** read by this playbook.
 
 ### Full Example
 
@@ -398,23 +360,13 @@ Associates the global credentials created above with a specific site. Maps direc
           "protocol":                "RADIUS",
           "shared_secret":           "C1sco12345"
         }
-      },
-      "device_credentials": {
-        "cli_credential":    [{ "description": "CLI-net-admin", "username": "net-admin", "password": "cisco", "enable_password": "cisco" }],
-        "snmp_v2c_read":     [{ "description": "RO", "read_community": "RO" }],
-        "snmp_v2c_write":    [{ "description": "RW", "write_community": "RO" }],
-        "netconf_credential":[{ "description": "NETCONF-netadmin", "netconf_port": "830" }]
-      },
-      "assign_credentials": {
-        "site_name": ["Global/PODS/POD 0/Building P0"],
-        "cli_credential":  { "description": "CLI-net-admin", "username": "net-admin" },
-        "snmp_v2c_read":   { "description": "RO" },
-        "snmp_v2c_write":  { "description": "RW" }
       }
     }
   ]
 }
 ```
+
+> The `device_credentials` and `assign_credentials` keys that appear in the real `settings.json` are shown in the [3.0 — Credentials README](../3.0-Cisco-Catalyst-Center-Credentials/README.md).
 
 ---
 
@@ -461,14 +413,14 @@ Output site_names[0]: "Global/PODS/POD 0/Building P0"
 `POST /dna/system/api/v1/auth/token` using the vault credentials (Basic Auth). The token is stored in `_catc_token` with `no_log: true`. It is used exclusively by the raw URI in `tasks/apply_network_settings.yml`. All `cisco.catalystcenter` module calls authenticate via the `module_defaults` block instead.
 
 **Step 3b — Site ID map via `cisco.catalystcenter.sites_info` (Phase A):**
-`cisco.catalystcenter.sites_info` is called without a name filter to return all sites — identical to the Phase A pattern used by playbook 1.0. The response key is `catalystcenter_response.response[]`. A Jinja2 `dict()` + `zip()` expression builds the map:
+`cisco.catalystcenter.sites_info` is called without a name filter to return all sites — identical to the Phase A pattern used by playbook 1.0. The response key is `catalyst_response.response[]` (note: `catalyst_response`, not `catalystcenter_response`) and the hierarchy attribute is `nameHierarchy` (not `siteNameHierarchy`). Sites without a `nameHierarchy` key (i.e. the Global root) are filtered out before building the map. A Jinja2 `dict()` + `zip()` expression builds the map:
 
 ```jinja2
+{%- set sites = _all_sites_info.catalyst_response.response | default([]) -%}
+{%- set named = sites | selectattr('nameHierarchy', 'defined') | list -%}
 {{ dict(
-     _all_sites_info.catalystcenter_response.response | default([])
-     | map(attribute='siteNameHierarchy')
-     | zip(_all_sites_info.catalystcenter_response.response | default([])
-     | map(attribute='id'))
+     named | map(attribute='nameHierarchy')
+     | zip(named | map(attribute='id'))
    ) }}
 ```
 
@@ -502,6 +454,10 @@ This replaces the legacy `GET /dna/intent/api/v1/site?limit=500` raw URI call wi
 | `message_of_the_day.retain_existing_banner` | `messageOfTheday.retainExistingBanner` |
 | `snmp_server.configure_dnac_ip` | `snmpServer.configureDnacIP` |
 | `syslog_server.configure_dnac_ip` | `syslogServer.configureDnacIP` |
+
+> **CatC quirk — `retainExistingBanner`:** CatC's internal Rhino script calls `.toLowerCase()` on this value, so it must be serialized as the **string** `"true"` or `"false"`, not a JSON boolean. The playbook applies `| string | lower` to enforce this.
+>
+> **CatC quirk — `snmpServer.ipAddresses` / `syslogServer.ipAddresses`:** CatC's internal script always reads `.ipAddresses.length`, even when only `configureDnacIP` is set. If `ipAddresses` is absent from the payload, the script throws `TypeError: Cannot read property "length" from undefined`. The playbook always includes `"ipAddresses": []` in both `snmpServer` and `syslogServer` sub-payloads to prevent this.
 | `network_aaa.server_type` | `network_aaa.servers` |
 | `network_aaa.primary_server_address` | `network_aaa.ipAddress` |
 | `network_aaa.pan_address` | `network_aaa.network` |
@@ -515,62 +471,18 @@ This replaces the legacy `GET /dna/intent/api/v1/site?limit=500` raw URI call wi
 
 The site UUID resolved in Step 3 is embedded as `site_id` alongside the payload for use in the REST URL.
 
-### Step 5: Build Global Credential Payload
-
-**Purpose:** Extract entries that have a non-null `device_credentials` block and wrap each in the `global_credential_details` envelope expected by the module.
-
-```jinja2
-{%- if entry.device_credentials -%}
-  {%- set ns.result = ns.result + [{'global_credential_details': entry.device_credentials}] -%}
-{%- endif -%}
-```
-
-**Output example:**
-
-```yaml
-credential_list:
-  - global_credential_details:
-      cli_credential:
-        - description: CLI-net-admin
-          username: net-admin
-          password: cisco
-          enable_password: cisco
-      snmp_v2c_read:
-        - description: RO
-          read_community: RO
-      snmp_v2c_write:
-        - description: RW
-          write_community: RO
-      netconf_credential:
-        - description: NETCONF-netadmin
-          netconf_port: "830"
-```
-
-### Step 6: Build Credential Assignment Payload
-
-**Purpose:** Extract entries that have a non-null `assign_credentials` block and wrap each in the `assign_credentials_to_site` envelope.
-
-```yaml
-credential_assign_list:
-  - assign_credentials_to_site:
-      site_name:
-        - "Global/PODS/POD 0/Building P0"
-      cli_credential:
-        description: CLI-net-admin
-        username: net-admin
-      snmp_v2c_read:
-        description: RO
-      snmp_v2c_write:
-        description: RW
-```
-
-### Step 7: Apply Network Settings via include_tasks
+### Step 5: Apply Network Settings via include_tasks
 
 `include_tasks: tasks/apply_network_settings.yml` is used with a loop over `network_settings_list` instead of a plain `loop:` on an inline task file. This mirrors the 1.0 pattern in `tasks/create_or_update_site.yml` — `set_fact` inside `include_tasks` takes effect between iterations, unlike `set_fact` inside a plain `loop:`.
 
 Each call to `apply_network_settings.yml`:
 1. Asserts the site UUID is non-empty (fast-fail if site path not found in Phase A)
 2. Issues `PUT /dna/intent/api/v1/network/{siteId}` via `ansible.builtin.uri` with the `_catc_token` from Step 3a
+3. Extracts `executionStatusUrl` from the 202 response body
+4. Polls `GET {executionStatusUrl}` (up to 12 × 5 s = 60 s) until CatC reports `SUCCESS` or `FAILURE`
+5. Asserts `status == SUCCESS` — fails the play with the full CatC `bapiError` detail if not
+
+> **Why polling is required:** `PUT /dna/intent/api/v1/network/{siteId}` responds `202 Accepted` immediately and schedules a background Rhino scripted task. Without polling `executionStatusUrl`, a playbook run always appears successful even when CatC's background task fails — resulting in no visible change in the UI and no Ansible error. The polling step transforms this silent failure into an explicit, actionable error.
 
 ```yaml
 - name: "Apply network settings  | {{ site_config.site_name }}"
@@ -583,44 +495,14 @@ Each call to `apply_network_settings.yml`:
 
 Using `ansible.builtin.uri` gives complete control over the request body — only keys that are non-null in `settings.json` appear in the payload. This is what allows `network_aaa: null`: the key is simply absent from the PUT body, and the composite endpoint does not cross-check it against the legacy `aaa.network.server.*` placeholders (see [Design Decision](#design-decision--why-not-network_settings_workflow_manager)).
 
-### Step 8: Create/Update Global Device Credentials
+### Step 6: Summary
 
 ```yaml
-- name: Create/update global device credentials
-  cisco.catalystcenter.device_credential_workflow_manager:
-    state: merged
-    config:
-      - "{{ item }}"
-  loop: "{{ credential_list }}"
-  when: credential_list | length > 0
-```
-
-This step is automatically skipped when no entries in the JSON have a `device_credentials` block. Authentication is injected by `module_defaults`.
-
-### Step 9: Assign Credentials to Sites
-
-```yaml
-- name: Assign credentials per site
-  cisco.catalystcenter.device_credential_workflow_manager:
-    state: merged
-    config:
-      - "{{ item }}"
-  loop: "{{ credential_assign_list }}"
-  when: credential_assign_list | length > 0
-```
-
-The `device_credential_workflow_manager` module handles both credential creation (Step 8) and assignment (Step 9) — they are distinguished by the presence of `global_credential_details` vs. `assign_credentials_to_site` in the `config` payload.
-
-### Step 10: Summary
-
-```yaml
-- name: Settings synchronization complete
+- name: Network settings applied
   debug:
     msg:
       - "Network settings applied successfully"
       - "Sites configured: {{ network_settings_list | map(attribute='site_name') | list | join(', ') }}"
-      - "Global credential sets created: {{ credential_list | length }}"
-      - "Site credential assignments: {{ credential_assign_list | length }}"
 ```
 
 ---
@@ -633,30 +515,21 @@ settings.json
     ├── HierarchyParent/Area/Bldg/Floor fields
     │         │
     │         ▼ Step 2 — deepest non-null path resolution
-    │   site_names[i] = "Global/PODS/POD 0/Building P0"
+    │   site_names[i] = "Global/PODS/POD 0/Building P0/Floor 1"
     │
-    ├── network_settings (null/absent fields omitted per-key)
-    │         │
-    │         ▼ Step 3 — auth token + GET /dna/intent/api/v1/site → site UUID map
-    │         ▼ Step 4 — snake_case→camelCase mapping, site_id injected
-    │   network_settings_list[i] = {site_name, site_id, settings: {camelCase...}}
-    │
-    ├── device_credentials
-    │         │
-    │         ▼ Step 5 — wrap in global_credential_details
-    │   credential_list[i] = {global_credential_details: {...}}
-    │
-    └── assign_credentials
+    └── network_settings (null/absent top-level keys omitted)
               │
-              ▼ Step 6 — wrap in assign_credentials_to_site
-        credential_assign_list[i] = {assign_credentials_to_site: {...}}
-
+              ▼ Step 3 — auth token + sites_info → site UUID map
+              ▼ Step 4 — snake_case→camelCase mapping, site_id injected
+        network_settings_list[i] = {site_name, site_id, settings: {camelCase...}}
               │
-              ▼ Steps 7-9 — API calls
-    ansible.builtin.uri (tasks/apply_network_settings.yml) → PUT /dna/intent/api/v1/network/{siteId}
-    cisco.catalystcenter.device_credential_workflow_manager → POST /dna/intent/api/v1/global-credential
-    cisco.catalystcenter.device_credential_workflow_manager → POST /dna/intent/api/v1/credential-to-site/{siteId}
+              ▼ Step 5 — per-site include_tasks loop
+    ansible.builtin.uri → PUT /dna/intent/api/v1/network/{siteId}
+    ansible.builtin.uri → GET executionStatusUrl  (poll until SUCCESS/FAILURE)
 ```
+
+> `device_credentials` and `assign_credentials` keys in `settings.json` are read by
+> [3.0 — Credentials](../3.0-Cisco-Catalyst-Center-Credentials/README.md), not this playbook.
 
 ---
 
@@ -698,12 +571,10 @@ Set `catc_debug: true` in `inventory.yml` (or pass `-e catc_debug=true` at runti
 | `DEBUG \| _all_sites_info (raw)` | Full `sites_info` module response |
 | `DEBUG \| Site name-to-ID map` | The `_site_id_map` dict (siteNameHierarchy → UUID) |
 | `DEBUG \| v1 network settings payload list` | The full `network_settings_list` with camelCase keys and `site_id` |
-| `DEBUG \| Global credential payload list` | The full `credential_list` |
-| `DEBUG \| Credential assignment payload list` | The full `credential_assign_list` |
 | `DEBUG \| site_config` (per-site) | Site name, UUID, and camelCase settings payload |
-| `DEBUG \| Apply result` (per-site) | Raw `uri` response from the PUT call |
-| `DEBUG \| Credential create results` | Raw module return from Step 8 |
-| `DEBUG \| Credential assignment results` | Raw module return from Step 9 |
+| `DEBUG \| Apply result` (per-site) | Raw `uri` response from the PUT call (includes `executionStatusUrl`) |
+| `DEBUG \| Execution status URL` (per-site) | The `executionStatusUrl` extracted from the 202 response |
+| `DEBUG \| Execution poll result` (per-site) | Full execution status object from CatC (`status`, `bapiError`, timing) |
 
 ---
 
@@ -722,30 +593,32 @@ ok: [catalyst_center]
 TASK [Phase A — Fetch all sites from Catalyst Center] **************************
 ok: [catalyst_center]
 
-TASK [apply_network_settings.yml : Validate site ID resolved | Global/PODS/POD 0/Building P0] ***
+TASK [Validate site ID resolved  | Global/PODS/POD 0/Building P0/Floor 1] ******
+ok: [catalyst_center] => { "msg": "Site ID resolved: 5b689937-..." }
+
+TASK [Apply network settings  | Global/PODS/POD 0/Building P0/Floor 1] *********
 ok: [catalyst_center]
 
-TASK [apply_network_settings.yml : Apply network settings  | Global/PODS/POD 0/Building P0] ***
+TASK [Extract execution status URL  | Global/PODS/POD 0/Building P0/Floor 1] ***
 ok: [catalyst_center]
 
-TASK [Create/update global device credentials] *********************************
-changed: [catalyst_center]
+TASK [Poll execution status  | Global/PODS/POD 0/Building P0/Floor 1] **********
+FAILED - RETRYING: (12 retries left).
+ok: [catalyst_center]
 
-TASK [Assign credentials per site] *********************************************
-changed: [catalyst_center]
+TASK [Assert execution succeeded  | Global/PODS/POD 0/Building P0/Floor 1] *****
+ok: [catalyst_center] => { "msg": "Network settings successfully applied for 'Global/PODS/POD 0/Building P0/Floor 1'." }
 
-TASK [Settings synchronization complete] ***************************************
+TASK [Network settings applied] ************************************************
 ok: [catalyst_center] => {
     "msg": [
         "Network settings applied successfully",
-        "Sites configured: Global/PODS/POD 0/Building P0",
-        "Global credential sets created: 1",
-        "Site credential assignments: 1"
+        "Sites configured: Global/PODS/POD 0/Building P0/Floor 1"
     ]
 }
 
 PLAY RECAP *********************************************************************
-catalyst_center : ok=17  changed=2  unreachable=0  failed=0  skipped=0
+catalyst_center : ok=27  changed=0  unreachable=0  failed=0  skipped=0
 ```
 
 `skipped=0` — debug tasks are now guarded by `catc_debug | default(false) | bool` (inventory variable), so there are no env-var-based conditionals to skip.
@@ -756,10 +629,11 @@ catalyst_center : ok=17  changed=2  unreachable=0  failed=0  skipped=0
 
 | Symptom | Likely Cause | Resolution |
 |---------|-------------|------------|
+| Settings submitted but no change visible in CatC UI; playbook reports success | `PUT /dna/intent/api/v1/network/{siteId}` returned 202 but the background Rhino task failed silently — without polling `executionStatusUrl` there is no signal | Ensure the execution status polling + assert step is present in `tasks/apply_network_settings.yml`; run with `catc_debug=true` to see the `bapiError` detail |
+| `Assert execution succeeded` fails with `bapiError: TypeError: inputData.value[i].retainExistingBanner.toLowerCase is not a function` | `retainExistingBanner` was sent as a JSON boolean instead of the string `"false"` | Ensure `\| string \| lower` is applied to `retain_existing_banner` in the payload builder |
+| `Assert execution succeeded` fails with `bapiError: TypeError: Cannot read property "length" from undefined` | `snmpServer` or `syslogServer` was sent without an `ipAddresses` key; CatC's script calls `.ipAddresses.length` unconditionally | Ensure the payload builder initialises both with `{'ipAddresses': []}` before adding optional fields |
 | `Site not found` | Site path does not exist in CatC | Run playbook 1.0 first to create the hierarchy |
 | `null value for required field` | A settings sub-key has `null` where CatC expects a value | Remove the key entirely from the JSON (null filtering only removes top-level keys) |
-| `Credential already exists` | Same description, different password | Module is idempotent — it will update to the new password |
-| `Credential assignment failed` | Credential description not found globally | Ensure Step 7 (credential creation) succeeded before Step 8 runs |
 | `AAA shared_secret missing` | `client_and_endpoint_aaa` block has no `shared_secret` | Add `shared_secret` to the `client_and_endpoint_aaa` block |
 | `NCND01243: sharedSecret cannot be different` | Using `network_settings_workflow_manager` which routes through `PUT /v1/sites/{id}/aaaSettings` — that endpoint cross-checks `clientAndEndpoint_aaa.sharedSecret` against the legacy `aaa.network.server.*` placeholder at Global | Switch to `PUT /dna/intent/api/v1/network/{siteId}` (this playbook already does this) and set `network_aaa: null` in `settings.json` |
 | `Timezone invalid` | Non-standard timezone string | Use an IANA string, e.g. `America/Toronto`, `UTC`, `America/Los_Angeles` |

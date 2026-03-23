@@ -2,7 +2,12 @@
 
 > **Playbook:** `ansible-git-catc.yml`  
 > **Included tasks:** `process-template.yml`, `process-composite.yml`  
-> **Module:** `cisco.dnac.template_workflow_manager`  
+> **Modules:** `cisco.dnac.template_workflow_manager` (create/update/version CatC templates), `ansible.builtin.uri` (GitHub API)  
+> **API Endpoints (GitHub):**  
+> &nbsp;&nbsp;`GET {git_api_base}/repos/{repo}/git/trees/{branch}?recursive=1` — fetch full repo file tree  
+> &nbsp;&nbsp;`GET https://raw.githubusercontent.com/{repo}/{branch}/{path}` — fetch raw `.j2` template or `.yml` composite file content  
+> &nbsp;&nbsp;`GET {git_api_base}/repos/{repo}/commits?path={path}&per_page=1&sha={branch}` — fetch last commit metadata per file  
+> &nbsp;&nbsp;`GET {git_api_base}/repos/{repo}/commits/{sha}` — fetch commit diff (conditional: `include_diff_header=true`)  
 > **Minimum Catalyst Center version:** 2.3.7.6  
 > **Minimum Ansible version:** 2.15  
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  
