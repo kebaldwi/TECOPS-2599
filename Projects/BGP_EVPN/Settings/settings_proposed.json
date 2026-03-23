@@ -7,7 +7,7 @@
             "HierarchyParent": "Global/PODS",
             "HierarchyBldgAddress": "300 E Tasman Dr, Bldg 10, San Jose, CA 95134",
             "network_settings": {
-                "dhcp_server": null,
+                "dhcp_server": ["198.18.133.1"],
                 "dns_server": {
                     "domain_name": "dcloud.cisco.com",
                     "primary_ip_address": "198.18.133.1",
