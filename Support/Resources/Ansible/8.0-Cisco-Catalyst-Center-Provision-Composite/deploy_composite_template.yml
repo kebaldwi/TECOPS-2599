@@ -8,7 +8,7 @@
 # ============================================================================
 
 ---
-- name: Deploy Composite Templates to Managed Devices from devices.json
+- name: Deploy Composite Templates to Managed Devices from settings.json
   hosts: catalyst_center
   gather_facts: no
   vars_files:
@@ -31,27 +31,31 @@
     # ── Step 1: Load input data ───────────────────────────────────────────────
     # Resolve path: absolute paths used as-is; relative paths resolved from
     # the playbook directory so callers can pass paths relative to the repo root.
-    - name: Resolve devices_json_path to absolute
+    - name: Resolve settings_json_path to absolute
       set_fact:
         _resolved_json_path: >-
-          {{ devices_json_path if devices_json_path.startswith('/')
-             else (playbook_dir + '/' + devices_json_path) }}
+          {{ settings_json_path if settings_json_path.startswith('/')
+             else (playbook_dir + '/' + settings_json_path) }}
 
-    - name: Load devices input JSON
+    - name: Load settings input JSON
       set_fact:
-        devices_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
+        settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 
     - name: Validate that project key exists in input data
       assert:
-        that: devices_data.project is defined and devices_data.project | length > 0
+        that: settings_data.project is defined and settings_data.project | length > 0
         fail_msg: "Input JSON must contain a non-empty 'project' list."
-        success_msg: "Input data loaded — {{ devices_data.project | length }} entries found."
+        success_msg: "Input data loaded — {{ settings_data.project | length }} entries found."
 
     # ── Step 2: Build composite template deploy entries ───────────────────────
     #
-    # Iterate every site entry in devices.json.  For each DayNTemplateNames
-    # element where DeployTemplate=true and TemplateName is non-null, create
-    # a deploy entry dict that the per-template included task file will consume.
+    # Iterate every site entry in settings.json.  DayNTemplateNames is now
+    # nested under entry.network_profile.  The site path is reconstructed
+    # from the split HierarchyParent/Area/Bldg/Floor fields.
+    #
+    # For each DayNTemplateNames element where DeployTemplate=true and
+    # TemplateName is non-null, create a deploy entry dict that the
+    # per-template included task file will consume.
     #
     # Sample _deploy_entries element:
     #   {
@@ -66,11 +70,25 @@
       set_fact:
         _deploy_entries: >-
           {%- set ns = namespace(result=[]) -%}
-          {%- for entry in devices_data.project -%}
-            {%- for tpl in (entry.DayNTemplateNames | default([])) -%}
+          {%- for entry in settings_data.project -%}
+            {%- set parent = entry.HierarchyParent | default('Global') -%}
+            {%- set area   = entry.HierarchyArea   | default('') -%}
+            {%- set bldg   = entry.HierarchyBldg   | default('') -%}
+            {%- set floor  = entry.HierarchyFloor  | default('') -%}
+            {%- if floor -%}
+              {%- set site_path = parent + '/' + area + '/' + bldg + '/' + floor -%}
+            {%- elif bldg -%}
+              {%- set site_path = parent + '/' + area + '/' + bldg -%}
+            {%- elif area -%}
+              {%- set site_path = parent + '/' + area -%}
+            {%- else -%}
+              {%- set site_path = parent -%}
+            {%- endif -%}
+            {%- set prof = entry.network_profile | default({}) -%}
+            {%- for tpl in (prof.DayNTemplateNames | default([])) -%}
               {%- if tpl.DeployTemplate and tpl.TemplateName is not none -%}
                 {%- set deploy_entry = {
-                  'site':            entry.HierarchyName,
+                  'site':            site_path,
                   'template_name':   tpl.TemplateName,
                   'project_name':    tpl.Project,
                   'template_target': tpl.TemplateTarget | default([]),

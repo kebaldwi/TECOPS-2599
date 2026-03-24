@@ -1,4 +1,4 @@
-# 6.0 — Cisco Catalyst Center: Network Switching Profile Automation
+# 7.0 — Cisco Catalyst Center: Network Switching Profile Automation
 
 > **Playbook:** `network_profile.yml`  
 > **Module:** `cisco.dnac.network_profile_switching_workflow_manager`  
@@ -81,7 +81,7 @@ The diagram below shows every decision point and state transition from startup t
 ## Directory Structure
 
 ```
-6.0-Cisco-Catalyst-Center-Network-Profile/
+7.0-Cisco-Catalyst-Center-Network-Profile/
 ├── ansible.cfg                 # Ansible defaults (inventory path, host key checking)
 ├── inventory.yml               # Catalyst Center host + connection variables
 ├── network_profile.yml         # Main playbook (this file)
@@ -334,7 +334,7 @@ To create a second profile that spans multiple sites and uses both template type
 `playbook_dir` is an Ansible magic variable that holds the directory containing the playbook file. For a relative path like `../../../../Projects/BGP_EVPN/Settings/settings.json`, the resolved value would be:
 
 ```
-/path/to/repo/Support/Resources/Ansible/6.0-Cisco-Catalyst-Center-Network-Profile/
+/path/to/repo/Support/Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/
 ../../../../Projects/BGP_EVPN/Settings/settings.json
 → /path/to/repo/Projects/BGP_EVPN/Settings/settings.json
 ```

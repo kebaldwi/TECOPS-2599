@@ -8,7 +8,7 @@
 # ============================================================================
 
 ---
-- name: Build Catalyst Center Site Hierarchy from devices.json
+- name: Build Catalyst Center Site Hierarchy from settings.json
   hosts: catalyst_center
   gather_facts: no
   vars_files:

@@ -1,4 +1,4 @@
-# 7.0 — Cisco Catalyst Center: Composite Template Deployment
+# 8.0 — Cisco Catalyst Center: Composite Template Deployment
 
 > **Playbook:** `deploy_composite_template.yml`  
 > **Included tasks:** `tasks/deploy_entry.yml`  
@@ -108,15 +108,15 @@ The diagram below shows every decision point and state transition from startup t
 | `dnacentersdk` | >= 2.11.0 |
 | `cisco.dnac` collection | 6.46.0 |
 | Cisco Catalyst Center | >= 2.3.7.6 |
-| Composite template | Must already exist in CatC with member templates attached (run 5.0 first) |
-| Target devices | Must be discovered and managed in CatC (run 3.0 and 4.0 first) |
+| Composite template | Must already exist in CatC with member templates attached (run 6.0 first) |
+| Target devices | Must be discovered and managed in CatC (run 4.0 and 5.0 first) |
 
 ---
 
 ## Directory Structure
 
 ```
-7.0-Cisco-Catalyst-Center-Provision-Composite/
+8.0-Cisco-Catalyst-Center-Provision-Composite/
 ├── ansible.cfg                         # Ansible defaults (inventory path)
 ├── inventory.yml                       # CatC connection + deploy variables
 ├── deploy_composite_template.yml       # Main playbook
@@ -133,13 +133,13 @@ The diagram below shows every decision point and state transition from startup t
 └── README.md                           # This document
 ```
 
-Input data comes from the shared `devices.json` in the project tree:
+Input data comes from the shared `settings.json` in the project tree:
 
 ```
 Projects/
 └── BGP_EVPN/
     └── Settings/
-        └── devices.json        # Site hierarchy + device list + template deploy data
+        └── settings.json        # Site hierarchy + device list + template deploy data
 ```
 
 ---
@@ -191,7 +191,7 @@ all:
       dnac_log_level: INFO
 
       # Input file
-      devices_json_path: "../../../../Projects/BGP_EVPN/Settings/devices.json"
+      settings_json_path: "../../../../Projects/BGP_EVPN/Settings/settings.json"
 
       # Deploy behaviour
       force_push_template: false
@@ -206,7 +206,7 @@ all:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `devices_json_path` | Relative or absolute path to the `devices.json` input file | `../../../../Projects/BGP_EVPN/Settings/devices.json` |
+| `settings_json_path` | Relative or absolute path to the `settings.json` input file | `../../../../Projects/BGP_EVPN/Settings/settings.json` |
 | `force_push_template` | When `true`, push to devices even if they appear in-sync with the template | `false` |
 | `member_template_params` | Dict of per-member template parameter overrides keyed by template name | `{}` |
 | `task_poll_retries` | Maximum number of task status polls after submitting a deploy request | `36` |
@@ -230,7 +230,7 @@ dnac_password: "your_catc_password_here"
 
 ---
 
-## Input Data Structure — `devices.json`
+## Input Data Structure — `settings.json`
 
 ### Top-Level Schema
 
@@ -238,20 +238,25 @@ dnac_password: "your_catc_password_here"
 {
   "project": [
     {
-      "HierarchyName":     "<full site path>",
-      "SiteType":          "<area|building|floor|null>",
-      "DeviceList":        "<ip1,ip2,...> or null",
-      "DayNTemplateNames": [ ... ]
+      "HierarchyParent": "Global/PODS",
+      "HierarchyArea":   "POD 0",
+      "HierarchyBldg":   "Building P0",
+      "HierarchyFloor":  "Floor 1",
+      "device_list":     "<ip1,ip2,...> or null",
+      "network_profile": {
+        "profile_name":     "<profile name>",
+        "DayNTemplateNames": [ ... ]
+      }
     }
   ]
 }
 ```
 
-This playbook processes only entries where `DayNTemplateNames` contains at least one element with `DeployTemplate: true` and a non-null `TemplateName`. All other keys are safely ignored.
+This playbook processes only entries where `network_profile.DayNTemplateNames` contains at least one element with `DeployTemplate: true` and a non-null `TemplateName`. All other keys are safely ignored.
 
 ### The `DayNTemplateNames` Block
 
-Each element in the `DayNTemplateNames` array describes one composite template deployment target:
+Located at `entry.network_profile.DayNTemplateNames`, each element describes one composite template deployment target:
 
 ```json
 "DayNTemplateNames": [
@@ -281,32 +286,30 @@ Each element in the `DayNTemplateNames` array describes one composite template d
 {
   "project": [
     {
-      "HierarchyName": "Global",
-      "SiteType": null,
-      "DeviceList": null,
-      "DayNTemplateNames": [
-        { "TemplateName": null, "TemplateTag": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
-      ]
-    },
-    {
-      "HierarchyName": "Global/PODS/POD 0/Building P0/Floor 1",
-      "SiteType": "floor",
-      "DeviceList": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6",
-      "DayNTemplateNames": [
-        {
-          "TemplateName":   "BGP-EVPN-BUILD.j2",
-          "TemplateTag":    "DEMO",
-          "Project":        "Building P0",
-          "TemplateTarget": ["198.19.1.1","198.19.1.2","198.19.1.3","198.19.1.4","198.19.1.5","198.19.1.6"],
-          "DeployTemplate": true
-        }
-      ]
+      "HierarchyParent": "Global/PODS",
+      "HierarchyArea":   "POD 0",
+      "HierarchyBldg":   "Building P0",
+      "HierarchyFloor":  "Floor 1",
+      "HierarchyBldgAddress": "300 E Tasman Dr, San Jose, CA",
+      "device_list": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6",
+      "network_profile": {
+        "profile_name": "BGP-EVPN-Switching",
+        "DayNTemplateNames": [
+          {
+            "TemplateName":   "BGP-EVPN-BUILD.j2",
+            "TemplateTag":    "DEMO",
+            "Project":        "Building P0",
+            "TemplateTarget": ["198.19.1.1","198.19.1.2","198.19.1.3","198.19.1.4","198.19.1.5","198.19.1.6"],
+            "DeployTemplate": true
+          }
+        ]
+      }
     }
   ]
 }
 ```
 
-In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD.j2` from project `Building P0` is deployed to all six devices on Floor 1.
+In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD.j2` from project `Building P0` is deployed to all six devices on Floor 1. The site path `Global/PODS/POD 0/Building P0/Floor 1` is reconstructed from the split hierarchy fields.
 
 ---
 
@@ -321,14 +324,15 @@ In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │ Step 1 — Load Input                                                  │   │
 │  │   lookup('file') → from_json → assert                               │   │
-│  │   devices.json → devices_data                                        │   │
+│  │   settings.json → settings_data                                      │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                  │                                          │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │ Step 2 — Build Deploy Entries                                        │   │
-│  │   Iterate devices_data.project                                       │   │
-│  │   Filter: DayNTemplateNames[].DeployTemplate == true                 │   │
-│  │           DayNTemplateNames[].TemplateName is not null               │   │
+│  │   Iterate settings_data.project                                      │   │
+│  │   Reconstruct site path from HierarchyParent/Area/Bldg/Floor        │   │
+│  │   Filter: network_profile.DayNTemplateNames[].DeployTemplate==true  │   │
+│  │           network_profile.DayNTemplateNames[].TemplateName not null  │   │
 │  │   Output: _deploy_entries[]                                          │   │
 │  │     { site, template_name, project_name,                            │   │
 │  │       template_target[], template_tag }                              │   │
@@ -382,23 +386,23 @@ In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD
 The path is resolved to absolute, then a single `set_fact` reads and parses the file:
 
 ```yaml
-- name: Load devices input JSON
+- name: Load settings input JSON
   set_fact:
-    devices_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
+    settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 ```
 
-`lookup('file', ...)` reads the file from the controller filesystem and returns raw text; `from_json` parses it into a native Ansible dict. An `assert` task validates that `devices_data.project` is non-empty before any network calls are made.
+`lookup('file', ...)` reads the file from the controller filesystem and returns raw text; `from_json` parses it into a native Ansible dict. An `assert` task validates that `settings_data.project` is non-empty before any network calls are made.
 
 #### Step 2: Build Deploy Entries
 
-Iterates every site entry and every `DayNTemplateNames` element. Only entries satisfying both conditions are collected:
+Iterates every site entry and every `network_profile.DayNTemplateNames` element. Only entries satisfying both conditions are collected:
 
 - `tpl.DeployTemplate` is truthy
 - `tpl.TemplateName` is not `none`
 
 ```yaml
 _deploy_entries:
-  - site:            "Global/PODS/POD 0/Building P0/Floor 1"
+  - site:            "Global/PODS/POD 0/Building P0/Floor 1"  # reconstructed from split hierarchy fields
     template_name:   "BGP-EVPN-BUILD.j2"
     project_name:    "Building P0"
     template_target: ["198.19.1.1", "198.19.1.2", "198.19.1.3",
@@ -406,7 +410,7 @@ _deploy_entries:
     template_tag:    "DEMO"
 ```
 
-An `assert` task validates that at least one entry was collected; the playbook fails fast with an informative message if `devices.json` contains no qualifying entries.
+An `assert` task validates that at least one entry was collected; the playbook fails fast with an informative message if `settings.json` contains no qualifying entries.
 
 #### Step 3: Authenticate to Catalyst Center
 
@@ -894,7 +898,7 @@ ansible-playbook deploy_composite_template.yml --vault-password-file .vault_pass
 ```bash
 ansible-playbook deploy_composite_template.yml \
   --vault-password-file .vault_pass \
-  -e devices_json_path=/absolute/path/to/custom_devices.json
+  -e settings_json_path=/absolute/path/to/custom_settings.json
 ```
 
 **Force-push templates regardless of sync state:**
@@ -936,7 +940,7 @@ Debug tasks emit:
 
 | Variable | Content |
 |----------|---------|
-| `_deploy_entries` | Full list of extracted deploy entries from `devices.json` |
+| `_deploy_entries` | Full list of extracted deploy entries from `settings.json` |
 | `_template_version_map` | Complete name → `{rootId, versionId}` map for all templates in the project |
 | `_composite_raw_id` | Composite root UUID (used to call the detail endpoint in Step B) |
 | `_composite_template_id` | Composite version UUID (sent as `templateId` in the deploy payload) |
@@ -955,19 +959,16 @@ Debug tasks emit:
 A successful run for one composite template across six devices looks like:
 
 ```
-PLAY [Deploy Composite Templates to Managed Devices from devices.json] *********
+PLAY [Deploy Composite Templates to Managed Devices from settings.json] *********
 
-TASK [Resolve devices_json_path to absolute] ***********************************
+TASK [Resolve settings_json_path to absolute] **********************************
 ok: [catalyst_center]
 
-TASK [Load devices input JSON] *************************************************
-ok: [catalyst_center]
-
-TASK [Parse devices input JSON] ************************************************
+TASK [Load settings input JSON] ************************************************
 ok: [catalyst_center]
 
 TASK [Validate that project key exists in input data] **************************
-ok: [catalyst_center] => Input data loaded — 5 entries found.
+ok: [catalyst_center] => Input data loaded — 1 entries found.
 
 TASK [Build DayN composite template deploy entries] ****************************
 ok: [catalyst_center]
@@ -1043,29 +1044,32 @@ This playbook sits at the end of the automation chain. All upstream steps must c
 1.0 Site Hierarchy
         │
         ▼
-2.0 Network Settings & Credentials
+2.0 Network Settings
         │
         ▼
-3.0 Device Discovery
+3.0 Device Credentials
         │
         ▼
-4.0 Assign Devices to Site
+4.0 Device Discovery
         │
         ▼
-5.0 Template GitOps Sync ──→ Templates must exist in CatC as composite
+5.0 Assign Devices to Site
+        │
+        ▼
+6.0 Template GitOps Sync ──→ Templates must exist in CatC as composite
         │                     with member templates attached
         ▼
-6.0 Network Profile (optional — for profile-based template binding)
+7.0 Network Profile (optional — for profile-based template binding)
         │
         ▼
-7.0 Composite Template Deployment (this playbook)
+8.0 Composite Template Deployment (this playbook)
 ```
 
 | Dependency | Reason |
 |------------|--------|
-| 3.0 Discovery | Devices must be in CatC inventory before UUIDs can be resolved |
-| 4.0 Assign to Site | Devices must be at a known site for template scoping |
-| 5.0 Template Sync | The composite template and all its member templates must exist in CatC before the project lookup in Step A can succeed |
+| 4.0 Discovery | Devices must be in CatC inventory before UUIDs can be resolved |
+| 5.0 Assign to Site | Devices must be at a known site for template scoping |
+| 6.0 Template Sync | The composite template and all its member templates must exist in CatC before the project lookup in Step A can succeed |
 
 ---
 
@@ -1079,7 +1083,7 @@ This playbook sits at the end of the automation chain. All upstream steps must c
 | `isError: True` / `NCTP10028` in task status | `targetInfo` is empty or not populated at the composite level | Ensure top-level `targetInfo` has at least one device entry. An empty `[]` at the composite level causes this error regardless of member-level `targetInfo`. |
 | `isError: True` with template push error on device | Template apply error on device | Check CatC → Provision → Templates history for the specific device error. Common causes: unreachable device, Jinja2 render error, missing parameter. |
 | Task status poll times out | CatC is slow to process the deploy | Increase `task_poll_retries` and/or `task_poll_delay` to extend the polling window. |
-| `assert` fails: no deploy entries found | No `DayNTemplateNames` entries with `DeployTemplate: true` in `devices.json` | Verify at least one entry in `devices.json` has `DeployTemplate: true` and a non-null `TemplateName` and `Project`. |
+| `assert` fails: no deploy entries found | No `DayNTemplateNames` entries with `DeployTemplate: true` in `settings.json` | Verify at least one entry in `settings.json` has `DeployTemplate: true` and a non-null `TemplateName` and `Project` under `network_profile.DayNTemplateNames`. |
 | `401 Unauthorized` from REST calls | Vault credentials incorrect or expired | Verify `dnac_username` / `dnac_password` in `vault.yml`. Re-encrypt if recently changed. |
 | `SSL: CERTIFICATE_VERIFY_FAILED` | TLS verification enabled against self-signed cert | Set `dnac_verify: false` in inventory for lab environments, or add the CatC CA cert to the system trust store for production. |
 | Deploy succeeds but stale config is pushed to device | `templateId` is the root UUID instead of the version UUID | The template list endpoint (`?projectNames=`) must be used — not the project endpoint — to obtain `versionsInfo[0].id`. The playbook already uses this endpoint; this symptom appears if the endpoint was reverted. |

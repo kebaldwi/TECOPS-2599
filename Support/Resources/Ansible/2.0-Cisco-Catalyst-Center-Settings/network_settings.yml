@@ -180,7 +180,12 @@
     #   message_of_the_day.banner_message   → messageOfTheday.bannerMessage
     #   message_of_the_day.retain_…banner   → messageOfTheday.retainExistingBanner
     #   snmp_server.configure_dnac_ip       → snmpServer.configureDnacIP
+    #   snmp_server.ip_addresses            → snmpServer.ipAddresses
     #   syslog_server.configure_dnac_ip     → syslogServer.configureDnacIP
+    #   syslog_server.ip_addresses          → syslogServer.ipAddresses
+    #   netflow_server.configure_dnac_ip    → netflowcollector.configureDnacIP
+    #   netflow_server.ip_address           → netflowcollector.ipAddress
+    #   netflow_server.port                 → netflowcollector.port
     #   network_aaa.server_type             → network_aaa.servers
     #   network_aaa.primary_server_address  → network_aaa.ipAddress
     #   network_aaa.pan_address             → network_aaa.network
@@ -259,6 +264,21 @@
               {%- endif -%}
               {%- if snmp | length > 0 -%}
                 {%- set payload = payload | combine({'snmpServer': snmp}) -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- if raw.netflow_server -%}
+              {%- set netflow = {} -%}
+              {%- if raw.netflow_server.ip_address is defined and raw.netflow_server.ip_address -%}
+                {%- set netflow = netflow | combine({'ipAddress': raw.netflow_server.ip_address}) -%}
+              {%- endif -%}
+              {%- if raw.netflow_server.port is defined and raw.netflow_server.port is not none -%}
+                {%- set netflow = netflow | combine({'port': raw.netflow_server.port | int}) -%}
+              {%- endif -%}
+              {%- if raw.netflow_server.configure_dnac_ip is defined and raw.netflow_server.configure_dnac_ip is not none -%}
+                {%- set netflow = netflow | combine({'configureDnacIP': raw.netflow_server.configure_dnac_ip}) -%}
+              {%- endif -%}
+              {%- if netflow | length > 0 -%}
+                {%- set payload = payload | combine({'netflowcollector': netflow}) -%}
               {%- endif -%}
             {%- endif -%}
             {%- if raw.network_aaa -%}

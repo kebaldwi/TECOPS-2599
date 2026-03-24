@@ -8,7 +8,7 @@
 # ============================================================================
 
 ---
-- name: Discover Devices in Catalyst Center from devices.json
+- name: Discover Devices in Catalyst Center from settings.json
   hosts: catalyst_center
   gather_facts: no
   vars_files:
@@ -31,27 +31,30 @@
   tasks:
 
     # ── Step 1: Load input data ───────────────────────────────────────────────
-    - name: Resolve devices_json_path to absolute
+    - name: Resolve settings_json_path to absolute
       set_fact:
         _resolved_json_path: >-
-          {{ devices_json_path if devices_json_path.startswith('/')
-             else (playbook_dir + '/' + devices_json_path) }}
+          {{ settings_json_path if settings_json_path.startswith('/')
+             else (playbook_dir + '/' + settings_json_path) }}
 
-    - name: Load devices input JSON
+    - name: Load settings input JSON
       set_fact:
-        devices_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
+        settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
 
     - name: Validate that project key exists in input data
       assert:
-        that: devices_data.project is defined and devices_data.project | length > 0
+        that: settings_data.project is defined and settings_data.project | length > 0
         fail_msg: "Input JSON must contain a non-empty 'project' list."
-        success_msg: "Input data loaded — {{ devices_data.project | length }} entries found."
+        success_msg: "Input data loaded — {{ settings_data.project | length }} entries found."
 
     # ── Step 2: Build discovery config list ──────────────────────────────────
     #
-    # Each entry in devices.json that has a non-null DeviceList produces one
-    # discovery task.  The DeviceList is a comma-separated string of IPs that
+    # Each entry in settings.json that has a non-null device_list produces one
+    # discovery task.  The device_list is a comma-separated string of IPs that
     # is split into the module's ip_address_list.
+    #
+    # The discovery name is derived from the deepest non-null hierarchy field
+    # (Floor > Bldg > Area > Parent) to give each discovery a meaningful label.
     #
     # Discovery uses the global credentials already configured in Catalyst
     # Center (cli_credentials_list references description + username only).
@@ -62,11 +65,24 @@
       set_fact:
         discovery_list: >-
           {%- set ns = namespace(result=[]) -%}
-          {%- for entry in devices_data.project -%}
-            {%- if entry.DeviceList -%}
-              {%- set ips = entry.DeviceList.split(',') | map('trim') | list -%}
+          {%- for entry in settings_data.project -%}
+            {%- if entry.device_list -%}
+              {%- set ips = entry.device_list.split(',') | map('trim') | list -%}
+              {%- set parent = entry.HierarchyParent | default('Global') -%}
+              {%- set area   = entry.HierarchyArea   | default('') -%}
+              {%- set bldg   = entry.HierarchyBldg   | default('') -%}
+              {%- set floor  = entry.HierarchyFloor  | default('') -%}
+              {%- if floor -%}
+                {%- set disc_name = parent + '/' + area + '/' + bldg + '/' + floor -%}
+              {%- elif bldg -%}
+                {%- set disc_name = parent + '/' + area + '/' + bldg -%}
+              {%- elif area -%}
+                {%- set disc_name = parent + '/' + area -%}
+              {%- else -%}
+                {%- set disc_name = parent -%}
+              {%- endif -%}
               {%- set disc = {
-                'discovery_name': entry.HierarchyName | default('Device-Discovery'),
+                'discovery_name': disc_name,
                 'discovery_type': 'MULTI RANGE',
                 'ip_address_list': ips,
                 'protocol_order': 'ssh',
@@ -80,7 +96,7 @@
                   'cli_credentials_list': [{'description': 'CLI-net-admin', 'username': 'net-admin'}],
                   'snmp_v2_read_credential_list': [{'description': 'RO'}],
                   'snmp_v2_write_credential_list': [{'description': 'RW'}],
-                  'net_conf_port_list': [{'description': 'NETCONF-net-admin'}]
+                  'net_conf_port_list': [{'description': 'NETCONF-netadmin'}]
                 }
               } -%}
               {%- set ns.result = ns.result + [disc] -%}
@@ -96,7 +112,7 @@
     - name: Validate discovery list is non-empty
       assert:
         that: discovery_list | length > 0
-        fail_msg: "No entries with DeviceList found in input JSON."
+        fail_msg: "No entries with device_list found in input JSON."
         success_msg: "{{ discovery_list | length }} discovery task(s) to run."
 
     # ── Step 3: Run device discovery ─────────────────────────────────────────
