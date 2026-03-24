@@ -11,7 +11,7 @@
                 "dns_server": {
                     "domain_name": "dcloud.cisco.com",
                     "primary_ip_address": "198.18.133.1",
-                    "secondary_ip_address": null
+                    "secondary_ip_address": ""
                 },
                 "ntp_server": ["198.18.133.1"],
                 "timezone": "America/Toronto",
@@ -39,7 +39,7 @@
                     "pan_address": "198.18.133.27",
                     "protocol": "RADIUS",
                     "shared_secret": "C1sco12345",
-                    "secondary_server_address": null
+                    "secondary_server_address": ""
                 }
             },
             "device_credentials": {
@@ -66,7 +66,7 @@
                 "profile_name": "BGP-EVPN-Switching",
                 "site_names": ["Global/PODS/POD 0/Building P0/Floor 1"],
                 "day_n_templates": ["BGP-EVPN-BUILD.j2"],
-                "onboarding_templates": null
+                "onboarding_templates": ""
             }
         }
     ]
