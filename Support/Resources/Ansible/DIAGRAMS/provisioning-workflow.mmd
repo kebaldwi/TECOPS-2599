@@ -1,0 +1,119 @@
+flowchart TD
+    INPUT_S[("settings.json\nHierarchy · Network Settings\nCredentials · Network Profile")]
+    INPUT_D[("devices.json\nDeviceList · DayNTemplateNames")]
+    GITHUB[("GitHub Repository\nJinja2 · Composite YML")]
+
+    INPUT_S --> PB1
+    INPUT_S --> PB2
+    INPUT_S --> PB3
+    INPUT_S --> PB7
+    INPUT_D --> PB4
+    INPUT_D --> PB5
+    INPUT_D --> PB8
+    GITHUB  --> PB6
+
+    PB1["1.0 — Site Hierarchy\nsite_hierarchy.yml\n──────────────────────────\nCreates Areas · Buildings · Floors\nGET /v1/sites → site_id_map\nPOST /v1/areas  POST /v2/buildings  POST /v2/floors"]
+
+    PB2["2.0 — Network Settings\nnetwork_settings.yml\n──────────────────────────\nApplies DNS · DHCP · NTP · Timezone\nSNMP · Syslog · AAA · Banner\nPUT /v1/network/{siteId} + execution poll"]
+
+    PB3["3.0 — Device Credentials\ncredentials.yml\n──────────────────────────\nCreates CLI · SNMP v2c · NETCONF credentials\nAssigns credentials to sites\nPOST/PUT /v2/global-credential"]
+
+    PB4["4.0 — Device Discovery\ndevice_discovery.yml\n──────────────────────────\nDiscovers devices by management IP list\ncisco.dnac.discovery_workflow_manager\nPOST /v1/discovery + poll"]
+
+    PB5["5.0 — Assign To Site\nassign_to_site.yml\n──────────────────────────\nAssigns discovered devices to sites\nIP list → site UUID lookup\nPOST /v1/assign-device-to-site/{siteId}/device"]
+
+    PB6["6.0 — Template GitOps\nansible-git-catc.yml\n──────────────────────────\nSyncs Jinja2 templates and composite YML\nfrom GitHub to Catalyst Center project\ncisco.dnac.template_workflow_manager"]
+
+    PB7["7.0 — Network Profile\nnetwork_profile.yml\n──────────────────────────\nCreates Switching Network Profiles\nBinds Day-N templates to sites\ncisco.dnac.network_profile_switching_workflow_manager"]
+
+    PB8["8.0 — Provision Composite\ndeploy_composite_template.yml\n──────────────────────────\nDeploys composite Day-N templates to devices\nResolves template + device UUIDs via REST\nPOST /v2/template-programmer/template/deploy"]
+
+    SITES[("Catalyst Center\nSite Hierarchy\n(UUIDs)")]
+    SETTINGS_OUT[("Catalyst Center\nNetwork Settings\nper Site")]
+    CREDS_OUT[("Catalyst Center\nGlobal Credentials\n(CLI · SNMP · NETCONF)")]
+    DEVICES_INV[("Catalyst Center\nDevice Inventory\n(discovered)")]
+    DEVICES_ASSIGNED[("Catalyst Center\nDevices → Sites\n(assigned)")]
+    TEMPLATES_OUT[("Catalyst Center\nTemplate Project\n(Jinja2 + Composites)")]
+    PROFILES_OUT[("Catalyst Center\nNetwork Profile\n(Templates bound to Sites)")]
+    DEPLOYED[("Devices\nDay-N Configuration\nPushed & Verified")]
+
+    PB1 --> SITES
+    PB2 --> SETTINGS_OUT
+    PB3 --> CREDS_OUT
+    PB4 --> DEVICES_INV
+    PB5 --> DEVICES_ASSIGNED
+    PB6 --> TEMPLATES_OUT
+    PB7 --> PROFILES_OUT
+    PB8 --> DEPLOYED
+
+    SITES        --> PB2
+    SITES        --> PB3
+    SITES        --> PB5
+    SITES        --> PB7
+    CREDS_OUT    --> PB4
+    DEVICES_INV  --> PB5
+    TEMPLATES_OUT --> PB7
+    TEMPLATES_OUT --> PB8
+    DEVICES_ASSIGNED --> PB8
+    PROFILES_OUT --> PB8
+
+    note1(["Run 1.0 before any other playbook\nSite hierarchy must exist first"])
+    note2(["2.0 and 3.0 can run in either order\nboth depend only on 1.0"])
+    note3(["4.0 requires 3.0 credentials to exist\nDiscovery references creds by description"])
+    note4(["6.0 is independent of device state\ncan run any time after repo is configured"])
+    note5(["8.0 requires 5.0 + 6.0 + 7.0\nall must complete before composite deploy"])
+
+    PB1 -.-> note1
+    PB2 -.-> note2
+    PB3 -.-> note3
+    PB6 -.-> note4
+    PB8 -.-> note5
+
+    style PB1 fill:#2980b9,color:#fff,stroke:#1a5276
+    style PB2 fill:#2980b9,color:#fff,stroke:#1a5276
+    style PB3 fill:#2980b9,color:#fff,stroke:#1a5276
+    style PB4 fill:#2980b9,color:#fff,stroke:#1a5276
+    style PB5 fill:#2980b9,color:#fff,stroke:#1a5276
+    style PB6 fill:#8e44ad,color:#fff,stroke:#6c3483
+    style PB7 fill:#2980b9,color:#fff,stroke:#1a5276
+    style PB8 fill:#16a085,color:#fff,stroke:#0e6655
+
+    style SITES           fill:#f39c12,color:#fff,stroke:#d68910
+    style SETTINGS_OUT    fill:#f39c12,color:#fff,stroke:#d68910
+    style CREDS_OUT       fill:#f39c12,color:#fff,stroke:#d68910
+    style DEVICES_INV     fill:#f39c12,color:#fff,stroke:#d68910
+    style DEVICES_ASSIGNED fill:#f39c12,color:#fff,stroke:#d68910
+    style TEMPLATES_OUT   fill:#f39c12,color:#fff,stroke:#d68910
+    style PROFILES_OUT    fill:#f39c12,color:#fff,stroke:#d68910
+    style DEPLOYED        fill:#27ae60,color:#fff,stroke:#1e8449
+
+    style INPUT_S  fill:#34495e,color:#fff,stroke:#2c3e50
+    style INPUT_D  fill:#34495e,color:#fff,stroke:#2c3e50
+    style GITHUB   fill:#34495e,color:#fff,stroke:#2c3e50
+
+    style note1 fill:#fdfefe,color:#555,stroke:#bdc3c7
+    style note2 fill:#fdfefe,color:#555,stroke:#bdc3c7
+    style note3 fill:#fdfefe,color:#555,stroke:#bdc3c7
+    style note4 fill:#fdfefe,color:#555,stroke:#bdc3c7
+    style note5 fill:#fdfefe,color:#555,stroke:#bdc3c7
+
+    subgraph LEGEND["Legend"]
+        direction LR
+        L1["Infrastructure Playbook\n(reads settings.json / devices.json)"]
+        L2["GitHub-Sourced Playbook\n(reads GitHub repo)"]
+        L3["Deployment Playbook\n(pushes config to devices)"]
+        L4[("Input Data Source\n(local JSON / GitHub)")]
+        L5[("Catalyst Center Resource\n(artifact produced by playbook)")]
+        L6([" Final State\n(devices configured)"])
+        L7(["Ordering Note"])
+    end
+
+    style LEGEND fill:#f8f9fa,stroke:#aab7b8,color:#333
+
+    style L1 fill:#2980b9,color:#fff,stroke:#1a5276
+    style L2 fill:#8e44ad,color:#fff,stroke:#6c3483
+    style L3 fill:#16a085,color:#fff,stroke:#0e6655
+    style L4 fill:#34495e,color:#fff,stroke:#2c3e50
+    style L5 fill:#f39c12,color:#fff,stroke:#d68910
+    style L6 fill:#27ae60,color:#fff,stroke:#1e8449
+    style L7 fill:#fdfefe,color:#555,stroke:#bdc3c7
