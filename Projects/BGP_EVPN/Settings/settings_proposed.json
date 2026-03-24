@@ -39,7 +39,7 @@
                     "pan_address": "198.18.133.27",
                     "protocol": "RADIUS",
                     "shared_secret": "C1sco12345",
-                    "secondary_server_address": ""
+                    "secondary_server_address": null
                 }
             },
             "device_credentials": {
@@ -66,7 +66,7 @@
                 "profile_name": "BGP-EVPN-Switching",
                 "site_names": ["Global/PODS/POD 0/Building P0/Floor 1"],
                 "day_n_templates": ["BGP-EVPN-BUILD.j2"],
-                "onboarding_templates": ""
+                "onboarding_templates": null
             }
         }
     ]
