@@ -486,15 +486,33 @@
 # ── Step G: Summary and error propagation ───────────────────────────────────
 - name: "[{{ deploy_entry.template_name }}] Deployment summary"
   debug:
-    msg:
-      - "Template      : {{ deploy_entry.template_name }}"
-      - "Project       : {{ deploy_entry.project_name }}"
-      - "Site          : {{ deploy_entry.site }}"
-      - "Target devices: {{ deploy_entry.template_target | join(', ') }}"
-      - "Tasks submitted   : {{ _deploy_task_ids | map(attribute='taskId') | list }}"
-      - "Deployment IDs    : {{ _deployment_status_ids | map(attribute='deploymentId') | list }}"
-      - "Any API error     : {{ _deploy_results.results | selectattr('failed','equalto',true) | list | length > 0 }}"
-      - "Deployment results: {{ _deployment_status_ids | map(attribute='failureReason') | map('default', '') | map('ternary', 'FAILURE', 'SUCCESS') | list }}"
+    msg: >-
+      {%- set SEP  = '─' -%}
+      {%- set rows = [] -%}
+      {%- set _ = rows.append(('Template',       deploy_entry.template_name)) -%}
+      {%- set _ = rows.append(('Project',         deploy_entry.project_name)) -%}
+      {%- set _ = rows.append(('Site',            deploy_entry.site)) -%}
+      {%- set _ = rows.append(('Target devices',  deploy_entry.template_target | join(', '))) -%}
+      {%- set any_err = _deploy_results.results | selectattr('failed','equalto',true) | list | length > 0 -%}
+      {%- set _ = rows.append(('API errors',      'YES ✗' if any_err else 'none ✓')) -%}
+      {%- for d in _deployment_status_ids | default([]) -%}
+        {%- set result = '✓ SUCCESS' if d.failureReason | default('') | length == 0 else ('✗ FAILURE  ' + d.failureReason) -%}
+        {%- set _ = rows.append((d.ip, result)) -%}
+      {%- endfor -%}
+      {%- set col0w = (rows | map(attribute=0) | map('length') | max) + 2 -%}
+      {%- set col1w = (rows | map(attribute=1) | map('length') | max) + 2 -%}
+      {%- set bar   = '┌' + SEP * (col0w + 2) + '┬' + SEP * (col1w + 2) + '┐' -%}
+      {%- set mid   = '├' + SEP * (col0w + 2) + '┼' + SEP * (col1w + 2) + '┤' -%}
+      {%- set bot   = '└' + SEP * (col0w + 2) + '┴' + SEP * (col1w + 2) + '┘' -%}
+      {%- set ns = namespace(lines=[bar]) -%}
+      {%- for label, value in rows -%}
+        {%- set lpad = label.ljust(col0w) -%}
+        {%- set vpad = value.ljust(col1w) -%}
+        {%- set _ = ns.lines.append('│ ' + lpad + ' │ ' + vpad + ' │') -%}
+        {%- if not loop.last -%}{%- set _ = ns.lines.append(mid) -%}{%- endif -%}
+      {%- endfor -%}
+      {%- set _ = ns.lines.append(bot) -%}
+      {{ ns.lines | join('\n') }}
 
 - name: "[{{ deploy_entry.template_name }}] Fail if any deploy API call returned an error"
   ansible.builtin.fail:
