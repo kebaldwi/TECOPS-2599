@@ -9,7 +9,7 @@
 > &nbsp;&nbsp;`GET  /dna/intent/api/v1/template-programmer/template?projectNames={name}` — list all templates in project (resolve latest version UUID)  
 > &nbsp;&nbsp;`GET  /dna/intent/api/v1/template-programmer/template/{templateId}` — fetch composite template detail (extract member templates)  
 > &nbsp;&nbsp;`GET  /dna/intent/api/v1/network-device?managementIpAddress={ip}` — resolve device UUID and hostname per target IP  
-> &nbsp;&nbsp;`GET  /dna/intent/api/v1/task/{taskId}` — poll async deploy task per device until `endTime` set or `isError=true`  
+> &nbsp;&nbsp;`GET  /dna/intent/api/v1/task/{taskId}` — poll async deploy task per device until `endTime` set or `isError=true`; `progress` field contains `failureReason` (authoritative push result)  
 > **Minimum Catalyst Center version:** 2.3.7.6  
 > **Minimum Ansible version:** 2.15  
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  
@@ -47,6 +47,7 @@
      - [Step D: Build `memberTemplateDeploymentInfo`](#step-d-build-membertemplatedeploymentinfo)
      - [Step E: Deploy via REST API (`ansible.builtin.uri`)](#step-e-deploy-via-rest-api-ansiblebuiltinuri)
      - [Step F: Poll Async Task Status](#step-f-poll-async-task-status)
+     - [Step F2: Extract Deployment Result from Task Progress](#step-f2-extract-deployment-result-from-task-progress)
      - [Step G: Summary and Error Propagation](#step-g-summary-and-error-propagation)
 8. [Composite Deploy Payload Reference](#composite-deploy-payload-reference)
 9. [How CatC Template Version IDs Work](#how-catc-template-version-ids-work)
@@ -77,6 +78,7 @@ The playbook is data-driven: it reads the same `devices.json` file used across t
 | Builds composite deploy payload | `set_fact` — constructs `memberTemplateDeploymentInfo` |
 | Deploys composite template | `ansible.builtin.uri` — direct `POST /v2/template-programmer/template/deploy` with `copyingConfig: true` |
 | Polls async task to completion | `ansible.builtin.uri` with `until` + `retries` |
+| Extracts deployment push result from task progress | `set_fact` — regex-parses `failureReason` from task `progress` field (empty = SUCCESS) |
 
 ### What makes composite deployment different
 
@@ -374,7 +376,11 @@ In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD
 │  Step F ─ Poll GET /v1/task/<taskId>  (loop per device taskId)             │
 │           └─ until endTime is defined OR isError == true                   │
 │                                                                             │
-│  Step G ─ Summary debug + fail on error                                    │
+│  Step F2─ set_fact: regex-extract deploymentId + failureReason from        │
+│           task progress field                                               │
+│           └─ empty failureReason → SUCCESS; non-empty → FAILURE            │
+│                                                                             │
+│  Step G ─ Summary debug + fail on isError / non-empty failureReason        │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -690,11 +696,8 @@ The URI call uses `ignore_errors: true` because transient HTTP errors are checke
 GET /dna/intent/api/v1/task/<taskId>
 ```
 
-> **Why not the deploy-status endpoint?**  
-> The Template Programmer deploy status endpoint (`/template-programmer/template/deploy/status/<id>`) expects a **deployment ID**, not a task ID. In CatC 2.3.7.x, the `taskId` returned by the v2 deploy API is not a valid deployment ID — calling the status endpoint with it returns `404 NOT_FOUND`. The generic `/v1/task/<taskId>` endpoint is the correct polling target.
-
 ```yaml
-- name: Poll task {{ item.taskId }} for {{ item.ip }}
+- name: Poll async task status
   ansible.builtin.uri:
     url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/task/{{ item.taskId }}"
     method: GET
@@ -724,24 +727,71 @@ The `until` condition monitors two terminal signals:
 - **`endTime` is defined** — task completed (successfully or with an error recorded in `failureReason`)
 - **`isError == true`** — task reported a failure (may appear before `endTime` is set)
 
+Once a task reaches `endTime`, its `progress` field contains the authoritative push result, which Step F2 extracts.
+
+#### Step F2: Extract Deployment Result from Task Progress
+
+**Purpose:** Parse the authoritative config-push result for each device directly from the task `progress` field returned by Step F. No additional API call is required.
+
+The CatC task `progress` string always ends with:
+
+```
+...Template Deployemnt Id: <id> | failureReason: <reason>
+```
+
+> Note CatC's own typo: "Deployemnt" (not "Deployment"). The regex accounts for this: `Template Deploy[a-z]+ Id:`.
+
+An **empty `failureReason`** means the configuration was pushed successfully. A **non-empty value** is the exact error string from CatC, propagated to the Ansible fail task in Step G.
+
+```yaml
+- name: Extract Template Deployment IDs and failure reasons from task progress
+  set_fact:
+    _deployment_status_ids: >-
+      {%- set ns = namespace(result=[]) -%}
+      {%- for r in (_task_poll_results.results | default([])) -%}
+        {%- set progress = (r.json.response | default({})).progress | default('') -%}
+        {%- set id_match = progress | regex_search('Template Deploy[a-z]+ Id: ([a-zA-Z0-9-]+)', '\\1') -%}
+        {%- set fr_match = progress | regex_search('\| failureReason: (.*)$', '\\1') -%}
+        {%- set did = (id_match | first) if (id_match is not none and id_match | length > 0) else '' -%}
+        {%- set fr  = ((fr_match | first) | trim) if (fr_match is not none and fr_match | length > 0) else '' -%}
+        {%- set ns.result = ns.result + [{'ip': r.item.ip, 'deploymentId': did, 'failureReason': fr}] -%}
+      {%- endfor -%}
+      {{ ns.result }}
+```
+
+This produces `_deployment_status_ids` — a list of `{ip, deploymentId, failureReason}` dicts:
+
+```yaml
+_deployment_status_ids:
+  - { ip: "198.19.1.1", deploymentId: "47db17c2-52cd-4d68-bdfe-8cdfe96c2", failureReason: "" }
+  - { ip: "198.19.1.2", deploymentId: "073a48d8-b5f2-419e-95e0-01162a2dd", failureReason: "" }
+  ...
+```
+
+> **Why not poll `GET /dna/intent/api/v1/template-programmer/template/deploy/status/{deploymentId}`?**  
+> On this CatC version (2.3.7.x), the deployment ID embedded in the task `progress` field has only **9 hex characters** in the final UUID segment (RFC 4122 requires 12). The status endpoint returns `404 NOT_FOUND` for all such truncated IDs. The `failureReason` field in the same `progress` string is the exact equivalent of the status endpoint's `status` field — empty means `SUCCESS` — and requires no second API call or retry loop.
+
 #### Step G: Summary and Error Propagation
 
 A debug task prints a structured summary for every deployment:
 
 ```
-Template       : BGP-EVPN-BUILD.j2
-Project        : Building P0
-Site           : Global/PODS/POD 0/Building P0/Floor 1
-Target devices : 198.19.1.1, 198.19.1.2, 198.19.1.3, 198.19.1.4, 198.19.1.5, 198.19.1.6
-Tasks submitted: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'b2c3d4e5-...']
-Any module error: False
+Template          : BGP-EVPN-BUILD.j2
+Project           : Building P0
+Site              : Global/PODS/POD 0/Building P0/Floor 1
+Target devices    : 198.19.1.1, 198.19.1.2, 198.19.1.3, 198.19.1.4, 198.19.1.5, 198.19.1.6
+Tasks submitted   : ['019d225d-d9d4-7457-bf9a-56aef32e6f96', ...]
+Deployment IDs    : ['47db17c2-52cd-4d68-bdfe-8cdfe96c2', ...]
+Any API error     : False
+Deployment results: ['SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS']
 ```
 
-Two failure conditions are checked by looping over per-device results:
-1. **Module-level error** — `item.failed` is true for any device's deploy call (e.g., SDK exception, authentication failure)
-2. **Task-level error** — `item.json.response.isError` is true for any polled task (e.g., device unreachable, template Jinja2 render error)
+Three failure conditions are checked by looping over per-device results:
+1. **Module-level error** — `item.failed` is true for any device's deploy call (e.g., HTTP error, authentication failure)
+2. **Task-level error** — `item.json.response.isError` is true for any polled task (e.g., device unreachable, Jinja2 render error in CatC)
+3. **Deployment push failure** — `item.failureReason` is non-empty for any device in `_deployment_status_ids` (e.g., device unreachable during config push, commit failure)
 
-Either condition raises an Ansible `fail` task with the device IP, task ID, progress text, and failure reason included in the error message.
+Any condition raises an Ansible `fail` task with the device IP, deployment ID, and failure reason included in the error message.
 
 ---
 
@@ -969,8 +1019,9 @@ Debug tasks emit:
 | `_device_uuid_map` | IP → `{uuid, hostname}` mapping for all target devices |
 | `_target_info` | Top-level `targetInfo` list (all devices — before per-device split) |
 | `_member_deployment_info` | Final `memberTemplateDeploymentInfo` payload before split and submission |
-| `_deploy_results` | Raw `cisco.dnac.configuration_template_deploy_v2` module responses (one per device) |
+| `_deploy_results` | Raw `ansible.builtin.uri` module responses (one per device) |
 | `_deploy_task_ids` | List of `{ip, taskId}` dicts collected after per-device deploy calls |
+| `_deployment_status_ids` | List of `{ip, deploymentId, failureReason}` dicts extracted from task progress (Step F2) |
 
 ---
 
@@ -1033,26 +1084,43 @@ changed: [catalyst_center]
 
 ...
 
-TASK [[BGP-EVPN-BUILD.j2] Poll task <id> for 198.19.1.1] *********************
-ok: [catalyst_center]
-
+TASK [[BGP-EVPN-BUILD.j2] Poll async task status] *****************************
+ok: [catalyst_center] => (item=198.19.1.1 → 019d225d-d9d4-...)
+ok: [catalyst_center] => (item=198.19.1.2 → 019d225d-dc4e-...)
 ...
+
+TASK [[BGP-EVPN-BUILD.j2] Extract Template Deployment IDs and failure reasons from task progress] ***
+ok: [catalyst_center]
 
 TASK [[BGP-EVPN-BUILD.j2] Deployment summary] *********************************
 ok: [catalyst_center] =>
   msg:
-    - "Template       : BGP-EVPN-BUILD.j2"
-    - "Project        : Building P0"
-    - "Site           : Global/PODS/POD 0/Building P0/Floor 1"
-    - "Target devices : 198.19.1.1, 198.19.1.2, 198.19.1.3, 198.19.1.4, 198.19.1.5, 198.19.1.6"
-    - "Tasks submitted: ['a1b2c3d4-...', 'b2c3d4e5-...', ...]"
-    - "Any module error: False"
+    - "Template          : BGP-EVPN-BUILD.j2"
+    - "Project           : Building P0"
+    - "Site              : Global/PODS/POD 0/Building P0/Floor 1"
+    - "Target devices    : 198.19.1.1, 198.19.1.2, 198.19.1.3, 198.19.1.4, 198.19.1.5, 198.19.1.6"
+    - "Tasks submitted   : ['019d225d-d9d4-...', '019d225d-dc4e-...', ...]"
+    - "Deployment IDs    : ['47db17c2-52cd-...', '073a48d8-b5f2-...', ...]"
+    - "Any API error     : False"
+    - "Deployment results: ['SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS']"
+
+TASK [[BGP-EVPN-BUILD.j2] Fail if any deploy API call returned an error] ******
+skipping: [catalyst_center] => (item=198.19.1.1)
+...
+
+TASK [[BGP-EVPN-BUILD.j2] Fail if any async task reported an error] ***********
+skipping: [catalyst_center] => (item=198.19.1.1)
+...
+
+TASK [[BGP-EVPN-BUILD.j2] Fail if any Template Deployment push reported failure] ***
+skipping: [catalyst_center] => (item=198.19.1.1)
+...
 
 PLAY RECAP *********************************************************************
-catalyst_center  : ok=28  changed=6  unreachable=0  failed=0
+catalyst_center  : ok=25  changed=6  unreachable=0  failed=0
 ```
 
-> The `changed=6` count reflects one deploy call per device (six devices). Each deploy call that successfully submits to CatC is counted as `changed`.
+> The `changed=6` count reflects one deploy call per device (six devices). Each deploy call that successfully submits to CatC is counted as `changed`. The `ok=25` count covers all non-debug tasks from loading input through the three Step G fail checks.
 
 ---
 
@@ -1100,6 +1168,7 @@ This playbook sits at the end of the automation chain. All upstream steps must c
 | `Template '<name>' not found in project '<project>'` | Template name or project name mismatch | Verify the exact names in CatC → Template Editor. Names are case-sensitive. |
 | `Composite template has no containingTemplates` | Member templates not attached to composite in CatC | In Template Editor, open the composite and add member templates, then commit. |
 | `Device with management IP '<ip>' was not found` | Device not in CatC inventory or wrong IP | Confirm the device is discovered and managed in CatC. Check the IP matches the management IP displayed in Device Inventory. |
+| `Deployment results show FAILURE` / `Fail if any Template Deployment push reported failure` | Config push rejected by the device after CatC accepted the deploy task | The `failureReason` field in the task progress string was non-empty. Check the exact reason in the Ansible error message and CatC Audit Log under `Provision → Audit Logs`. Common causes: device unreachable during CLi push, commit failure, Jinja2 render error in CatC. |
 | `isError: True` / `NCTP10028` in task status | `targetInfo` is empty or not populated at the composite level | Ensure top-level `targetInfo` has at least one device entry. An empty `[]` at the composite level causes this error regardless of member-level `targetInfo`. |
 | `isError: True` with template push error on device | Template apply error on device | Check CatC → Provision → Templates history for the specific device error. Common causes: unreachable device, Jinja2 render error, missing parameter. |
 | Task status poll times out | CatC is slow to process the deploy | Increase `task_poll_retries` and/or `task_poll_delay` to extend the polling window. |

@@ -43,10 +43,15 @@ flowchart TD
     P -->|Yes| FAIL_E([Fail: isError=true<br/>+ failureReason])
     P -->|No| Q
 
-    Q["Step G - Summary<br/>template, site, tasks"]
-    Q --> R{More template<br/>entries?}
-    R -->|Yes| D
-    R -->|No| DONE
+    Q["Step F2 - Extract result<br/>regex-parse deploymentId +<br/>failureReason from progress<br/>empty failureReason → SUCCESS"]
+    Q --> QF{Any device<br/>failureReason<br/>non-empty?}
+    QF -->|Yes| FAIL_F([Fail: push failure<br/>+ failureReason])
+    QF -->|No| R
+
+    R["Step G - Summary<br/>template, site, tasks,<br/>deploymentIds, results"]
+    R --> S{More template<br/>entries?}
+    S -->|Yes| D
+    S -->|No| DONE
 
     DONE([Done])
 
@@ -55,5 +60,6 @@ flowchart TD
     style FAIL_C fill:#c0392b,color:#fff,stroke:#922b21
     style FAIL_D fill:#c0392b,color:#fff,stroke:#922b21
     style FAIL_E fill:#c0392b,color:#fff,stroke:#922b21
+    style FAIL_F fill:#c0392b,color:#fff,stroke:#922b21
     style DONE fill:#27ae60,color:#fff,stroke:#1e8449
     style START fill:#2980b9,color:#fff,stroke:#1a5276
