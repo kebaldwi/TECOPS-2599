@@ -50,8 +50,14 @@
     # ── Step 2: Build network profile config list ─────────────────────────────
     #
     # Each entry in settings.json that has a non-null network_profile block
-    # produces one profile config with profile_name, site_names, day_n_templates
-    # and optional onboarding_templates.
+    # produces one profile config.
+    #
+    # site_names is derived from the split hierarchy fields (site_names was
+    # removed from network_profile; the playbook reconstructs the full path).
+    #
+    # DayNTemplateNames / Day0TemplateNames are the new PascalCase object arrays;
+    # the WFM module still expects plain string lists for day_n_templates /
+    # onboarding_templates, so TemplateName values are extracted (nulls dropped).
     #
     - name: Build network profile config list
       set_fact:
@@ -60,12 +66,37 @@
           {%- for entry in settings_data.project -%}
             {%- if entry.network_profile is defined and entry.network_profile -%}
               {%- set prof = entry.network_profile -%}
-              {%- set cfg = {'profile_name': prof.profile_name, 'site_names': prof.site_names} -%}
-              {%- if prof.day_n_templates -%}
-                {%- set cfg = cfg | combine({'day_n_templates': prof.day_n_templates}) -%}
+              {%- set parent = entry.HierarchyParent | default('Global') -%}
+              {%- set area   = entry.HierarchyArea   | default('') -%}
+              {%- set bldg   = entry.HierarchyBldg   | default('') -%}
+              {%- set floor  = entry.HierarchyFloor  | default('') -%}
+              {%- if floor -%}
+                {%- set site_path = parent + '/' + area + '/' + bldg + '/' + floor -%}
+              {%- elif bldg -%}
+                {%- set site_path = parent + '/' + area + '/' + bldg -%}
+              {%- elif area -%}
+                {%- set site_path = parent + '/' + area -%}
+              {%- else -%}
+                {%- set site_path = parent -%}
               {%- endif -%}
-              {%- if prof.onboarding_templates -%}
-                {%- set cfg = cfg | combine({'onboarding_templates': prof.onboarding_templates}) -%}
+              {%- set cfg = {'profile_name': prof.profile_name, 'site_names': [site_path]} -%}
+              {%- if prof.DayNTemplateNames is defined and prof.DayNTemplateNames -%}
+                {%- set tnames = prof.DayNTemplateNames
+                    | selectattr('TemplateName', 'defined')
+                    | selectattr('TemplateName', 'ne', none)
+                    | map(attribute='TemplateName') | list -%}
+                {%- if tnames | length > 0 -%}
+                  {%- set cfg = cfg | combine({'day_n_templates': tnames}) -%}
+                {%- endif -%}
+              {%- endif -%}
+              {%- if prof.Day0TemplateNames is defined and prof.Day0TemplateNames -%}
+                {%- set tnames0 = prof.Day0TemplateNames
+                    | selectattr('TemplateName', 'defined')
+                    | selectattr('TemplateName', 'ne', none)
+                    | map(attribute='TemplateName') | list -%}
+                {%- if tnames0 | length > 0 -%}
+                  {%- set cfg = cfg | combine({'onboarding_templates': tnames0}) -%}
+                {%- endif -%}
               {%- endif -%}
               {%- set ns.result = ns.result + [cfg] -%}
             {%- endif -%}

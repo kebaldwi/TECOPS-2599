@@ -1,4 +1,4 @@
-# 5.0 — Cisco Catalyst Center: Template GitOps Automation
+# 6.0 — Cisco Catalyst Center: Template GitOps Automation
 
 > **Playbook:** `ansible-git-catc.yml`  
 > **Included tasks:** `process-template.yml`, `process-composite.yml`  
@@ -65,10 +65,10 @@ This playbook implements a **GitOps workflow** for Cisco Catalyst Center templat
 
 ### Playbook ordering dependency
 
-This playbook runs **independently** of the discovery/assignment chain but produces templates that are referenced by [6.0 — Network Profile](../6.0-Cisco-Catalyst-Center-Network-Profile/README.md). Templates must exist in CatC before a network profile can bind them to a site.
+This playbook runs **independently** of the discovery/assignment chain but produces templates that are referenced by [7.0 — Network Profile](../7.0-Cisco-Catalyst-Center-Network-Profile/README.md). Templates must exist in CatC before a network profile can bind them to a site.
 
 ```
-5.0 Templates (this playbook) ─────→ 6.0 Network Profile
+6.0 Templates (this playbook) ─────→ 7.0 Network Profile
                                              (binds templates to sites)
 ```
 

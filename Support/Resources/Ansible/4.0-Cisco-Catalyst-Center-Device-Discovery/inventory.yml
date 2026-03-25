@@ -25,6 +25,6 @@ all:
       dnac_log_level: INFO
 
       # ── Input file ────────────────────────────────────────────────────────
-      # Path to the devices.json-formatted input file.
-      # Can be overridden at runtime: -e devices_json_path=myfile.json
-      devices_json_path: "../../../../Projects/BGP_EVPN/Settings/devices.json"
+      # Path to the settings.json-formatted input file.
+      # Can be overridden at runtime: -e settings_json_path=myfile.json
+      settings_json_path: "../../../../Projects/BGP_EVPN/Settings/settings.json"

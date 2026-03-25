@@ -1,4 +1,4 @@
-# 3.0 — Cisco Catalyst Center: Device Discovery Automation
+# 4.0 — Cisco Catalyst Center: Device Discovery Automation
 
 > **Playbook:** `device_discovery.yml`  
 > **Module:** `cisco.dnac.discovery_workflow_manager`  
@@ -19,9 +19,10 @@
 5. [Configuration](#configuration)
    - [Inventory](#inventory)
    - [Vault (Credentials)](#vault-credentials)
-6. [Input Data Structure — `devices.json`](#input-data-structure--devicesjson)
+6. [Input Data Structure — `settings.json`](#input-data-structure--settingsjson)
    - [Top-Level Schema](#top-level-schema)
-   - [The `DeviceList` Field](#the-devicelist-field)
+   - [The `device_list` Field](#the-device_list-field)
+   - [Site Path Reconstruction](#site-path-reconstruction)
    - [Full Example](#full-example)
 7. [Playbook Walkthrough — Step by Step](#playbook-walkthrough--step-by-step)
    - [Step 1: Load and Validate Input Data](#step-1-load-and-validate-input-data)
@@ -39,15 +40,16 @@
 
 ## Overview
 
-This playbook automates **device discovery** in Cisco Catalyst Center. It reads a `devices.json` file, extracts every entry that has a `DeviceList` (a comma-separated list of management IP addresses), and submits one **MULTI RANGE** discovery job per entry to Catalyst Center.
+This playbook automates **device discovery** in Cisco Catalyst Center. It reads the shared `settings.json` file, extracts every project entry that has a `device_list` (a comma-separated list of management IP addresses), and submits one **MULTI RANGE** discovery job per entry to Catalyst Center.
 
-Catalyst Center's discovery engine then attempts to reach each IP using SSH (preferred), Telnet, or HTTPS, validates credentials against the configured global credential set, and adds the reachable devices to the device inventory.
+Catalyst Center's discovery engine then attempts to reach each IP using SSH, validates credentials against the configured global credential set (created by playbook 3.0), and adds the reachable devices to the device inventory.
 
 ### What it does
 
 | Action | Mechanism |
 |--------|-----------|
-| Loads and validates input JSON | `lookup('file', path) | from_json` + Jinja2 filters |
+| Loads and validates input JSON | `lookup('file', path) \| from_json` + Jinja2 filters |
+| Reconstructs site path from split hierarchy fields | Jinja2 conditional — deepest non-null level wins |
 | Splits comma-separated IP strings into lists | Jinja2 `split(',')` + `map('trim')` |
 | Builds one discovery job config per site entry | `set_fact` with `namespace` |
 | Submits all discovery jobs | `cisco.dnac.discovery_workflow_manager` — `state: merged` |
@@ -62,7 +64,13 @@ The diagram below shows every decision point and state transition from startup t
 
 ### Playbook ordering dependency
 
-This playbook should run **after** [2.0 — Settings](../2.0-Cisco-Catalyst-Center-Settings/README.md). Global credentials must exist in CatC before discovery can reference them by description. Discovery does not assign devices to sites — that is handled by [4.0 — Assign To Site](../4.0-Cisco-Catalyst-Center-Assign-To-Site/README.md).
+This playbook should run **after** [3.0 — Device Credentials](../3.0-Cisco-Catalyst-Center-Credentials/README.md). Global credentials must exist in CatC before discovery can reference them by description. Discovery does not assign devices to sites — that is handled by [5.0 — Assign To Site](../5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md).
+
+```
+1.0 Site Hierarchy  →  2.0 Settings  →  3.0 Credentials  →  4.0 Discovery (this)
+                                                                      ↓
+                                                             5.0 Assign to Site
+```
 
 ---
 
@@ -75,14 +83,14 @@ This playbook should run **after** [2.0 — Settings](../2.0-Cisco-Catalyst-Cent
 | `dnacentersdk` | >= 2.11.0 |
 | `cisco.dnac` collection | 6.46.0 |
 | Cisco Catalyst Center | >= 2.3.7.6 |
-| Global credentials | Must exist in CatC (run 2.0 first) |
+| Global credentials | Must exist in CatC (run 3.0 first) |
 
 ---
 
 ## Directory Structure
 
 ```
-3.0-Cisco-Catalyst-Center-Device-Discovery/
+4.0-Cisco-Catalyst-Center-Device-Discovery/
 ├── ansible.cfg                 # Ansible defaults (inventory path)
 ├── inventory.yml               # CatC connection + input file path
 ├── device_discovery.yml        # Main playbook
@@ -96,13 +104,13 @@ This playbook should run **after** [2.0 — Settings](../2.0-Cisco-Catalyst-Cent
     └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
-Input data comes from the shared `devices.json`:
+Input data comes from the shared `settings.json`:
 
 ```
 Projects/
 └── BGP_EVPN/
     └── Settings/
-        └── devices.json        # Site hierarchy + device list data
+        └── settings.json       # Single source of truth — site hierarchy + device list
 ```
 
 ---
@@ -139,12 +147,12 @@ all:
       dnac_log: true
       dnac_log_level: INFO
 
-      devices_json_path: "../../../../Projects/BGP_EVPN/Settings/devices.json"
+      settings_json_path: "../../../../Projects/BGP_EVPN/Settings/settings.json"
 ```
 
 | Variable | Purpose |
 |----------|---------|
-| `devices_json_path` | Relative or absolute path to the `devices.json` input file |
+| `settings_json_path` | Relative or absolute path to the `settings.json` input file |
 
 ### Vault (Credentials)
 
@@ -162,7 +170,7 @@ dnac_password: "your_catc_password_here"
 
 ---
 
-## Input Data Structure — `devices.json`
+## Input Data Structure — `settings.json`
 
 ### Top-Level Schema
 
@@ -170,23 +178,27 @@ dnac_password: "your_catc_password_here"
 {
   "project": [
     {
-      "HierarchyName": "<full site path>",
-      "SiteType":      "<area|building|floor|null>",
-      "DeviceList":    "<ip1,ip2,...> or null",
+      "HierarchyParent": "Global/PODS",
+      "HierarchyArea":   "POD 0",
+      "HierarchyBldg":   "Building P0",
+      "HierarchyFloor":  "Floor 1",
+      "device_list":     "<ip1,ip2,...> or null",
       ...
     }
   ]
 }
 ```
 
-This playbook only processes entries where `DeviceList` is non-null. All other fields are ignored.
+This playbook only processes entries where `device_list` is non-null. All other fields are ignored.
 
-### The `DeviceList` Field
+> **Note on the old `devices.json` format:** Previous versions of this playbook read a separate `devices.json` file containing `DeviceList` (PascalCase) and a flat `HierarchyName` string. `settings.json` consolidates all project data into one file and uses `device_list` (snake_case) and split hierarchy fields instead.
 
-`DeviceList` is a **comma-separated string** of management IP addresses (not a JSON array). The playbook splits and trims the string into an `ip_address_list` for the discovery module.
+### The `device_list` Field
+
+`device_list` is a **comma-separated string** of management IP addresses (not a JSON array). The playbook splits and trims the string into an `ip_address_list` for the discovery module.
 
 ```json
-"DeviceList": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6"
+"device_list": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6"
 ```
 
 **After splitting:**
@@ -201,11 +213,35 @@ ip_address_list:
   - 198.19.1.6
 ```
 
-> Entries where `DeviceList` is `null` (e.g., area or building nodes that have no directly managed devices) are automatically skipped.
+> Entries where `device_list` is `null` (e.g., area or building nodes that have no directly managed devices) are automatically skipped.
 
-### The `HierarchyName` Field and Discovery Job Name
+### Site Path Reconstruction
 
-The `HierarchyName` field on each entry is used as the `discovery_name` passed to the module. This name appears in the CatC **Discovery** view and in the discovery job history, making it immediately clear which site the devices were discovered into (e.g. `Global/PODS/POD 0/Building P0`). If `HierarchyName` is absent, it defaults to `"Device-Discovery"`.
+Because `settings.json` splits the hierarchy into separate fields instead of a flat `HierarchyName` string, the playbook reconstructs the site path using a Jinja2 conditional — the **deepest non-null level** determines the path:
+
+```jinja2
+{%- if floor -%}
+  {%- set site_path = parent + '/' + area + '/' + bldg + '/' + floor -%}
+{%- elif bldg -%}
+  {%- set site_path = parent + '/' + area + '/' + bldg -%}
+{%- elif area -%}
+  {%- set site_path = parent + '/' + area -%}
+{%- else -%}
+  {%- set site_path = parent -%}
+{%- endif -%}
+```
+
+**Example reconstruction:**
+
+```
+HierarchyParent: "Global/PODS"
+HierarchyArea:   "POD 0"
+HierarchyBldg:   "Building P0"
+HierarchyFloor:  "Floor 1"
+→ site_path = "Global/PODS/POD 0/Building P0/Floor 1"
+```
+
+This reconstructed path is used as the `discovery_name` passed to the module, so it appears in the CatC **Discovery** view and in the discovery job history.
 
 ### Full Example
 
@@ -213,40 +249,36 @@ The `HierarchyName` field on each entry is used as the `discovery_name` passed t
 {
   "project": [
     {
-      "HierarchyName": "Global",
-      "SiteType":      null,
-      "DeviceList":    null
-    },
-    {
-      "HierarchyName": "Global/PODS",
-      "SiteType":      "area",
-      "DeviceList":    null
-    },
-    {
-      "HierarchyName": "Global/PODS/POD 0/Building P0",
-      "SiteType":      "building",
-      "DeviceList":    null
-    },
-    {
-      "HierarchyName": "Global/PODS/POD 0/Building P0/Floor 1",
-      "SiteType":      "floor",
-      "Project":       "Building P0",
-      "DeviceList":    "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6",
-      "DayNTemplateNames": [
-        {
-          "TemplateName":   "BGP-EVPN-BUILD.j2",
-          "TemplateTag":    "DEMO",
-          "Project":        "Building P0",
-          "TemplateTarget": ["198.19.1.1","198.19.1.2","198.19.1.3"],
-          "DeployTemplate": true
-        }
-      ]
+      "HierarchyParent": "Global/PODS",
+      "HierarchyArea":   "POD 0",
+      "HierarchyBldg":   "Building P0",
+      "HierarchyFloor":  "Floor 1",
+      "HierarchyBldgAddress": "300 E Tasman Dr, San Jose, CA",
+      "device_list": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6",
+      "device_credentials": {
+        "cli_credential":     { "description": "CLI-net-admin", "username": "net-admin" },
+        "snmp_v2c_read":      { "description": "RO" },
+        "snmp_v2c_write":     { "description": "RW" },
+        "netconf_credential": { "description": "NETCONF-netadmin", "netconf_port": "830" }
+      },
+      "network_profile": {
+        "profile_name": "BGP-EVPN-Switching",
+        "DayNTemplateNames": [
+          {
+            "TemplateName":   "BGP-EVPN-BUILD.j2",
+            "TemplateTag":    "DEMO",
+            "Project":        "Building P0",
+            "TemplateTarget": ["198.19.1.1","198.19.1.2","198.19.1.3","198.19.1.4","198.19.1.5","198.19.1.6"],
+            "DeployTemplate": true
+          }
+        ]
+      }
     }
   ]
 }
 ```
 
-Only the last entry (Floor 1) has a `DeviceList` — one discovery job will be submitted covering all six IPs.
+This entry has a `device_list` — one discovery job will be submitted covering all six IPs under the reconstructed site path `Global/PODS/POD 0/Building P0/Floor 1`.
 
 ---
 
@@ -256,34 +288,63 @@ Only the last entry (Floor 1) has a `DeviceList` — one discovery job will be s
 
 The path is resolved to absolute, then `lookup('file', _resolved_json_path) | from_json` reads and parses the JSON in one step. An `assert` task validates the shape before any processing begins.
 
+```yaml
+- name: Resolve settings_json_path to absolute
+  set_fact:
+    _resolved_json_path: >-
+      {{ settings_json_path if settings_json_path.startswith('/')
+         else (playbook_dir + '/' + settings_json_path) }}
+
+- name: Load settings input JSON
+  set_fact:
+    settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
+
+- name: Validate that project key exists in input data
+  assert:
+    that: settings_data.project is defined and settings_data.project | length > 0
+    fail_msg: "Input JSON must contain a non-empty 'project' list."
+    success_msg: "Input data loaded — {{ settings_data.project | length }} entries found."
+```
+
 ### Step 2: Build Discovery Config List
 
-**Purpose:** Iterate over `devices_data.project`, extract entries with a non-null `DeviceList`, split the IP string, and build the complete discovery module config dict for each.
+**Purpose:** Iterate over `settings_data.project`, extract entries with a non-null `device_list`, reconstruct the site path from split hierarchy fields, split the IP string, and build the complete discovery module config dict for each.
 
 ```yaml
 - name: Build discovery config list
   set_fact:
     discovery_list: >-
       {%- set ns = namespace(result=[]) -%}
-      {%- for entry in devices_data.project -%}
-        {%- if entry.DeviceList -%}
-          {%- set ips = entry.DeviceList.split(',') | map('trim') | list -%}
+      {%- for entry in settings_data.project -%}
+        {%- if entry.device_list -%}
+          {%- set parent = entry.HierarchyParent | default('Global') -%}
+          {%- set area   = entry.HierarchyArea   | default('') -%}
+          {%- set bldg   = entry.HierarchyBldg   | default('') -%}
+          {%- set floor  = entry.HierarchyFloor  | default('') -%}
+          {%- if floor -%}
+            {%- set site_path = parent + '/' + area + '/' + bldg + '/' + floor -%}
+          {%- elif bldg -%}
+            {%- set site_path = parent + '/' + area + '/' + bldg -%}
+          {%- elif area -%}
+            {%- set site_path = parent + '/' + area -%}
+          {%- else -%}
+            {%- set site_path = parent -%}
+          {%- endif -%}
+          {%- set ips = entry.device_list.split(',') | map('trim') | list -%}
           {%- set disc = {
-            'discovery_name': entry.HierarchyName | default('Device-Discovery'),
+            'discovery_name': site_path,
             'discovery_type': 'MULTI RANGE',
             'ip_address_list': ips,
             'protocol_order': 'ssh',
             'retry': 5,
             'timeout': 3,
             'preferred_mgmt_ip_method': 'UseLoopBack',
-            'discovery_specific_credentials': {
-              'net_conf_port': '830'
-            },
+            'discovery_specific_credentials': {'net_conf_port': '830'},
             'global_credentials': {
-              'cli_credentials_list': [{'description': 'CLI-net-admin', 'username': 'net-admin'}],
-              'snmp_v2_read_credential_list': [{'description': 'RO'}],
+              'cli_credentials_list':          [{'description': 'CLI-net-admin', 'username': 'net-admin'}],
+              'snmp_v2_read_credential_list':  [{'description': 'RO'}],
               'snmp_v2_write_credential_list': [{'description': 'RW'}],
-              'net_conf_port_list': [{'description': 'NETCONF-net-admin'}]
+              'net_conf_port_list':            [{'description': 'NETCONF-netadmin'}]
             }
           } -%}
           {%- set ns.result = ns.result + [disc] -%}
@@ -296,15 +357,17 @@ The path is resolved to absolute, then `lookup('file', _resolved_json_path) | fr
 
 ```
 Input entry:
-  HierarchyName: "Global/PODS/POD 0/Building P0/Floor 1"
-  DeviceList:    "198.19.1.1,198.19.1.2,198.19.1.3"
+  HierarchyParent: "Global/PODS"
+  HierarchyArea:   "POD 0"
+  HierarchyBldg:   "Building P0"
+  HierarchyFloor:  "Floor 1"
+  device_list:     "198.19.1.1,198.19.1.2,198.19.1.3"
 
 Processing:
-  1. entry.DeviceList is truthy → enter block
-  2. ips = "198.19.1.1,198.19.1.2,198.19.1.3".split(',') | map('trim')
-         = ["198.19.1.1", "198.19.1.2", "198.19.1.3"]
-  3. Build disc dict (see Discovery Module Parameters below)
-  4. Append to ns.result
+  1. entry.device_list is truthy → enter block
+  2. site_path = "Global/PODS/POD 0/Building P0/Floor 1"
+  3. ips = ["198.19.1.1", "198.19.1.2", "198.19.1.3"]
+  4. Build disc dict with site_path as discovery_name
 
 Output discovery_list[0]:
   {
@@ -315,14 +378,12 @@ Output discovery_list[0]:
     "retry":                    5,
     "timeout":                  3,
     "preferred_mgmt_ip_method": "UseLoopBack",
-    "discovery_specific_credentials": {
-      "net_conf_port": "830"
-    },
+    "discovery_specific_credentials": { "net_conf_port": "830" },
     "global_credentials": {
-      "cli_credentials_list":           [{"description": "CLI-net-admin", "username": "net-admin"}],
+      "cli_credentials_list":          [{"description": "CLI-net-admin", "username": "net-admin"}],
       "snmp_v2_read_credential_list":  [{"description": "RO"}],
       "snmp_v2_write_credential_list": [{"description": "RW"}],
-      "net_conf_port_list":            [{"description": "NETCONF-net-admin"}]
+      "net_conf_port_list":            [{"description": "NETCONF-netadmin"}]
     }
   }
 ```
@@ -345,16 +406,18 @@ Each iteration submits one discovery job. CatC processes the job asynchronously 
 
 #### Credential references, not secrets
 
-The `global_credentials` block in the discovery config contains **description + username** pairs only, not passwords. CatC resolves these references to the actual secrets that were stored when the credentials were created (by playbook 2.0). This prevents credentials from being embedded in the input data file.
+The `global_credentials` block contains **description + username** pairs only, not passwords. CatC resolves these references to the actual secrets stored when the credentials were created by playbook 3.0. This prevents credentials being embedded in `settings.json`.
 
 ```json
 "cli_credentials_list": [
   {
-    "description": "CLI-net-admin",   ← matches the description set in 2.0
-    "username":    "net-admin"        ← used to disambiguate when multiple creds share a description
+    "description": "CLI-net-admin",     ← matches description set in 3.0
+    "username":    "net-admin"          ← disambiguates if multiple creds share a description
   }
 ]
 ```
+
+> **NETCONF credential name:** The global credential created by playbook 3.0 has description `NETCONF-netadmin`. The discovery config references it by this exact description. The earlier `NETCONF-net-admin` (with extra hyphen) was the old name and no longer applies.
 
 ### Step 4: Summary
 
@@ -367,19 +430,17 @@ The `global_credentials` block in the discovery config contains **description + 
       - "Devices targeted: {{ discovery_list | map(attribute='ip_address_list') | flatten | join(', ') }}"
 ```
 
-The `map(attribute='ip_address_list') | flatten` pattern extracts and flattens the nested IP lists across all discovery jobs into a single comma-separated string for the summary.
-
 ---
 
 ## Discovery Module Parameters Reference
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `discovery_type` | `MULTI RANGE` | Treats each IP in the list as an individual target. Use `RANGE` for contiguous subnets or `CDP`/`LLDP` for topology-based discovery. |
+| `discovery_type` | `MULTI RANGE` | Treats each IP in the list as an individual target (not a subnet). Use `RANGE` for contiguous subnets or `CDP`/`LLDP` for topology-based discovery. |
 | `protocol_order` | `ssh` | Primary protocol for device communication. Can also be `telnet` or `ssh,telnet`. |
 | `retry` | `5` | Number of connection retry attempts per device. |
 | `timeout` | `3` | Seconds to wait for each connection attempt. |
-| `discovery_specific_credentials.net_conf_port` | `830` | NETCONF port number passed to the discovery job. Must be placed under `discovery_specific_credentials` — the module reads it from there (top-level `netconf_port` is silently ignored). |
+| `discovery_specific_credentials.net_conf_port` | `830` | NETCONF port passed to the discovery job. Must be placed under `discovery_specific_credentials` — the module reads it from there only. A top-level `netconf_port` field is silently ignored. |
 | `preferred_mgmt_ip_method` | `UseLoopBack` | Prefer loopback interfaces as the management IP. Use `None` to use the discovery IP as-is. |
 
 ---
@@ -387,12 +448,13 @@ The `map(attribute='ip_address_list') | flatten` pattern extracts and flattens t
 ## Data Transformation Reference
 
 ```
-devices.json
+settings.json
 └── project[]
-    └── [n].DeviceList  (non-null entries only)
+    └── [n].device_list  (non-null entries only)
         "198.19.1.1,198.19.1.2, 198.19.1.3"
               │
-              ▼ Step 2 — split(',') | map('trim') | list
+              ▼ Step 2 — reconstruct site path + split(',') | map('trim') | list
+        site_path       = "Global/PODS/POD 0/Building P0/Floor 1"
         ip_address_list = ["198.19.1.1", "198.19.1.2", "198.19.1.3"]
               │
               ▼ Build disc dict
@@ -402,6 +464,7 @@ devices.json
           ip_address_list: [...],
           global_credentials: {
             cli_credentials_list: [{"description": "CLI-net-admin", ...}],
+            net_conf_port_list:   [{"description": "NETCONF-netadmin"}],
             ...
           }
         }
@@ -461,15 +524,15 @@ ansible-playbook device_discovery.yml --vault-password-file .vault_pass
 ```bash
 ansible-playbook device_discovery.yml \
   --vault-password-file .vault_pass \
-  -e devices_json_path=/absolute/path/to/devices.json
+  -e settings_json_path=/absolute/path/to/settings.json
 ```
 
-### Discover only specific devices (inline override)
+### Use a different project's settings
 
 ```bash
 ansible-playbook device_discovery.yml \
   --vault-password-file .vault_pass \
-  -e devices_json_path=../../../../Projects/TRADITIONAL/Settings/devices.json
+  -e settings_json_path=../../../../Projects/TRADITIONAL/Settings/settings.json
 ```
 
 ---
@@ -490,7 +553,7 @@ Prints:
 
 ```
 TASK [Validate that project key exists in input data] **************************
-ok: [catalyst_center] => { "msg": "Input data loaded — 5 entries found." }
+ok: [catalyst_center] => { "msg": "Input data loaded — 1 entries found." }
 
 TASK [Validate discovery list is non-empty] ************************************
 ok: [catalyst_center] => { "msg": "1 discovery task(s) to run." }
@@ -508,10 +571,10 @@ ok: [catalyst_center] => {
 }
 
 PLAY RECAP *********************************************************************
-catalyst_center : ok=6  changed=1  unreachable=0  failed=0  skipped=1
+catalyst_center : ok=7   changed=1   unreachable=0   failed=0   skipped=1
 ```
 
-After discovery completes, devices appear in **CatC → Provision → Inventory** with status `Reachable`. They are not yet assigned to a site — proceed with [4.0 — Assign To Site](../4.0-Cisco-Catalyst-Center-Assign-To-Site/README.md).
+After discovery completes, devices appear in **CatC → Provision → Inventory** with status `Reachable`. They are not yet assigned to a site — proceed with [5.0 — Assign To Site](../5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md).
 
 ---
 
@@ -519,11 +582,12 @@ After discovery completes, devices appear in **CatC → Provision → Inventory*
 
 | Symptom | Likely Cause | Resolution |
 |---------|-------------|------------|
-| `No entries with DeviceList found` | All entries have `null` DeviceList | Add IP addresses to the `DeviceList` field in the JSON |
-| `Global credential not found` | CLI/SNMP/NETCONF credential description not in CatC | Run playbook 2.0 first to create global credentials |
-| Discovery job stuck / times out | Devices unreachable from CatC | Verify IP reachability: `ping` from the CatC appliance to the device IPs |
-| Devices show `Unreachable` | Wrong credentials or SSH not enabled | Verify CLI credentials in playbook 2.0 match the device configuration |
+| `No entries with device_list found` | All entries have `null` device_list | Add IP addresses to the `device_list` field in `settings.json` |
+| `Global credential not found` | CLI/SNMP/NETCONF credential description not in CatC | Run playbook 3.0 first to create global credentials |
+| Discovery job stuck / times out | Devices unreachable from CatC | Verify IP reachability from the CatC appliance to the device IPs |
+| Devices show `Unreachable` | Wrong credentials or SSH not enabled | Verify CLI credentials in playbook 3.0 match the device configuration |
 | `NETCONF connection refused` | NETCONF not enabled on device | Configure `netconf-yang` on the device, or remove the NETCONF credential from the discovery config |
-| Duplicate discovery job name | Multiple entries have the same `HierarchyName` | Each `HierarchyName` must be unique — discovery job names are derived from it |
+| `Global credential not found: NETCONF-netadmin` | Credential name mismatch | Credential created in 3.0 must have description `NETCONF-netadmin` (no hyphen before `netadmin`) |
+| Duplicate discovery job name | Multiple entries resolve to same site path | Each project entry must produce a unique site path from its hierarchy fields |
 | `dnac_version mismatch` | SDK version exceeds appliance version | Set `dnac_version: 2.3.7.9` in `inventory.yml` |
 | TLS errors | Self-signed certificate | Set `dnac_verify: false` for lab environments |

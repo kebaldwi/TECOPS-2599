@@ -7,7 +7,6 @@
 {% include "{{ TEMPLATE_PROJECT_NAME }}/DEFN-OVERLAY.j2" %}
 {# Dereference Catalyst Center magic variable #}
 {% set DEVICE_HOSTNAME = __device.hostname | default('', true) %}
-{% set DEVICE_HOSTNAME = DEVICE_HOSTNAME.split('.')[0] %}
 {# UNDERLAY LOOPBACKS #}
 interface {{DEFN_LOOP_NAME['UNDERLAY']}}
  description UNDERLAY-NVE-INTERFACE

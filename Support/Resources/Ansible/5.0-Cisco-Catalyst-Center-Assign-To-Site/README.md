@@ -1,4 +1,4 @@
-# 4.0 — Cisco Catalyst Center: Assign Devices to Site Automation
+# 5.0 — Cisco Catalyst Center: Assign Devices to Site Automation
 
 > **Playbook:** `assign_to_site.yml`  
 > **Modules:** `cisco.dnac.site_info`, `cisco.dnac.assign_device_to_site`  
@@ -19,9 +19,10 @@
 5. [Configuration](#configuration)
    - [Inventory](#inventory)
    - [Vault (Credentials)](#vault-credentials)
-6. [Input Data Structure — `devices.json`](#input-data-structure--devicesjson)
+6. [Input Data Structure — `settings.json`](#input-data-structure--settingsjson)
    - [Top-Level Schema](#top-level-schema)
-   - [The `DeviceList` Field](#the-devicelist-field)
+   - [The `device_list` Field](#the-device_list-field)
+   - [Site Path Reconstruction](#site-path-reconstruction)
    - [Full Example](#full-example)
 7. [Playbook Walkthrough — Step by Step](#playbook-walkthrough--step-by-step)
    - [Step 1: Load and Validate Input Data](#step-1-load-and-validate-input-data)
@@ -39,7 +40,7 @@
 
 ## Overview
 
-This playbook assigns already-discovered devices to their designated sites in Cisco Catalyst Center. After [3.0 — Device Discovery](../3.0-Cisco-Catalyst-Center-Device-Discovery/README.md) adds devices to the CatC inventory, they appear in the **Global** site by default. This playbook reads the same `devices.json` file, maps each IP address to its target `HierarchyName`, looks up the site UUID from CatC, and calls `assign_device_to_site` to move each device into its correct site position.
+This playbook assigns already-discovered devices to their designated sites in Cisco Catalyst Center. After [4.0 — Device Discovery](../4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) adds devices to the CatC inventory, they appear in the **Global** site by default. This playbook reads the same `settings.json` file, reconstructs each site path from split hierarchy fields, groups device IPs by target site, looks up the site UUID from CatC, and calls `assign_device_to_site` to move each device into its correct site position.
 
 Site assignment is a prerequisite for template deployment, SWIM software management, and network profile application — all of which require devices to be anchored to a specific site.
 
@@ -47,7 +48,8 @@ Site assignment is a prerequisite for template deployment, SWIM software managem
 
 | Action | Module |
 |--------|--------|
-| Loads and validates input JSON | `lookup('file', path) | from_json` + Jinja2 filters |
+| Loads and validates input JSON | `lookup('file', path) \| from_json` + Jinja2 filters |
+| Reconstructs site path from split hierarchy fields | Jinja2 conditional — deepest non-null level wins |
 | Groups IPs by target site path | `set_fact` with dict accumulation |
 | Resolves site name → UUID | `cisco.dnac.site_info` |
 | Assigns IP list to site UUID | `cisco.dnac.assign_device_to_site` |
@@ -63,14 +65,16 @@ The diagram below shows every decision point and state transition from startup t
 ### Playbook ordering dependency
 
 ```
-1.0 Site Hierarchy  →  2.0 Settings  →  3.0 Discovery  →  4.0 Assign to Site
-                                                                     ↓
-                                                            5.0 Templates
-                                                                     ↓
-                                                            6.0 Network Profile
+1.0 Site Hierarchy  →  2.0 Settings  →  3.0 Credentials  →  4.0 Discovery
+                                                                      ↓
+                                                          5.0 Assign to Site (this)
+                                                                      ↓
+                                           6.0 Templates  →  7.0 Network Profile
+                                                                      ↓
+                                                       8.0 Composite Deployment
 ```
 
-Devices must exist in the CatC inventory (discovered by 3.0) before they can be assigned. Sites must exist (created by 1.0) before they can receive devices.
+Devices must exist in the CatC inventory (discovered by 4.0) before they can be assigned. Sites must exist (created by 1.0) before they can receive devices.
 
 ---
 
@@ -84,14 +88,14 @@ Devices must exist in the CatC inventory (discovered by 3.0) before they can be 
 | `cisco.dnac` collection | 6.46.0 |
 | Cisco Catalyst Center | >= 2.3.7.6 |
 | Site hierarchy | Must exist (run 1.0 first) |
-| Devices in inventory | Must be discovered (run 3.0 first) |
+| Devices in inventory | Must be discovered (run 4.0 first) |
 
 ---
 
 ## Directory Structure
 
 ```
-4.0-Cisco-Catalyst-Center-Assign-To-Site/
+5.0-Cisco-Catalyst-Center-Assign-To-Site/
 ├── ansible.cfg                 # Ansible defaults (inventory path)
 ├── inventory.yml               # CatC connection + input file path
 ├── assign_to_site.yml          # Main playbook
@@ -105,13 +109,13 @@ Devices must exist in the CatC inventory (discovered by 3.0) before they can be 
     └── logical-flow.png        # Rendered flowchart (referenced by README)
 ```
 
-Input data comes from the shared `devices.json`:
+Input data comes from the shared `settings.json`:
 
 ```
 Projects/
 └── BGP_EVPN/
     └── Settings/
-        └── devices.json        # Site hierarchy + device list data
+        └── settings.json       # Single source of truth — site hierarchy + device list
 ```
 
 ---
@@ -148,12 +152,12 @@ all:
       dnac_log: true
       dnac_log_level: INFO
 
-      devices_json_path: "../../../../Projects/BGP_EVPN/Settings/devices.json"
+      settings_json_path: "../../../../Projects/BGP_EVPN/Settings/settings.json"
 ```
 
 | Variable | Purpose |
 |----------|---------|
-| `devices_json_path` | Relative or absolute path to the `devices.json` input file |
+| `settings_json_path` | Relative or absolute path to the `settings.json` input file |
 
 ### Vault (Credentials)
 
@@ -171,7 +175,7 @@ dnac_password: "your_catc_password_here"
 
 ---
 
-## Input Data Structure — `devices.json`
+## Input Data Structure — `settings.json`
 
 ### Top-Level Schema
 
@@ -179,47 +183,58 @@ dnac_password: "your_catc_password_here"
 {
   "project": [
     {
-      "HierarchyName": "<full site path>",
-      "SiteType":      "<area|building|floor|null>",
-      "DeviceList":    "<ip1,ip2,...> or null",
+      "HierarchyParent": "Global/PODS",
+      "HierarchyArea":   "POD 0",
+      "HierarchyBldg":   "Building P0",
+      "HierarchyFloor":  "Floor 1",
+      "device_list":     "<ip1,ip2,...> or null",
       ...
     }
   ]
 }
 ```
 
-This playbook only processes entries where `DeviceList` is non-null. The `HierarchyName` of that entry becomes the target site for all IPs in its `DeviceList`.
+This playbook only processes entries where `device_list` is non-null. The reconstructed site path from that entry becomes the target site for all IPs in its `device_list`.
 
-### The `DeviceList` Field
+> **Note on the old `devices.json` format:** Previous versions of this playbook read `DeviceList` (PascalCase) and a flat `HierarchyName` string from a separate `devices.json` file. `settings.json` consolidates all project data and uses `device_list` (snake_case) and split hierarchy fields instead.
 
-Same format as playbook 3.0 — a **comma-separated string** of management IP addresses matching the addresses used during discovery.
+### The `device_list` Field
 
-```json
-"DeviceList": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6"
-```
-
-**Important:** The IP addresses here must exactly match the **management IPs** that Catalyst Center resolved for those devices during discovery. If `preferred_mgmt_ip_method: UseLoopBack` was used in playbook 3.0, these must be the loopback addresses, not the discovery IPs.
-
-### Multi-Site Support
-
-If multiple entries in `devices.json` have a non-null `DeviceList`, each entry's devices are assigned to that entry's `HierarchyName`. IPs for the same site across multiple entries are merged into a single assignment call.
+`device_list` is a **comma-separated string** of management IP addresses matching the addresses used during discovery. These must be the management IPs as CatC resolved them — if `preferred_mgmt_ip_method: UseLoopBack` was used in playbook 4.0, these must be the loopback addresses.
 
 ```json
-{
-  "project": [
-    {
-      "HierarchyName": "Global/PODS/POD 0/Building P0/Floor 1",
-      "DeviceList": "198.19.1.1,198.19.1.2"
-    },
-    {
-      "HierarchyName": "Global/PODS/POD 1/Building P1/Floor 1",
-      "DeviceList": "198.19.2.1,198.19.2.2"
-    }
-  ]
-}
+"device_list": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6"
 ```
 
-This will produce two separate assignment calls — one per unique site path.
+### Site Path Reconstruction
+
+Because `settings.json` uses split hierarchy fields instead of a flat `HierarchyName` string, the playbook reconstructs the target site path using a Jinja2 conditional — the **deepest non-null level** determines the path:
+
+```jinja2
+{%- set parent = entry.HierarchyParent | default('Global') -%}
+{%- set area   = entry.HierarchyArea   | default('') -%}
+{%- set bldg   = entry.HierarchyBldg   | default('') -%}
+{%- set floor  = entry.HierarchyFloor  | default('') -%}
+{%- if floor -%}
+  {%- set site_path = parent + '/' + area + '/' + bldg + '/' + floor -%}
+{%- elif bldg -%}
+  {%- set site_path = parent + '/' + area + '/' + bldg -%}
+{%- elif area -%}
+  {%- set site_path = parent + '/' + area -%}
+{%- else -%}
+  {%- set site_path = parent -%}
+{%- endif -%}
+```
+
+**Example reconstruction:**
+
+```
+HierarchyParent: "Global/PODS"
+HierarchyArea:   "POD 0"
+HierarchyBldg:   "Building P0"
+HierarchyFloor:  "Floor 1"
+→ site_path = "Global/PODS/POD 0/Building P0/Floor 1"
+```
 
 ### Full Example
 
@@ -227,30 +242,17 @@ This will produce two separate assignment calls — one per unique site path.
 {
   "project": [
     {
-      "HierarchyName": "Global",
-      "SiteType":      null,
-      "DeviceList":    null
-    },
-    {
-      "HierarchyName": "Global/PODS",
-      "SiteType":      "area",
-      "DeviceList":    null
-    },
-    {
-      "HierarchyName": "Global/PODS/POD 0/Building P0",
-      "SiteType":      "building",
-      "DeviceList":    null
-    },
-    {
-      "HierarchyName": "Global/PODS/POD 0/Building P0/Floor 1",
-      "SiteType":      "floor",
-      "DeviceList":    "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6"
+      "HierarchyParent": "Global/PODS",
+      "HierarchyArea":   "POD 0",
+      "HierarchyBldg":   "Building P0",
+      "HierarchyFloor":  "Floor 1",
+      "device_list": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6"
     }
   ]
 }
 ```
 
-Only the Floor 1 entry has devices — they will be assigned to `Global/PODS/POD 0/Building P0/Floor 1`.
+This entry will assign all six devices to `Global/PODS/POD 0/Building P0/Floor 1`.
 
 ---
 
@@ -260,19 +262,49 @@ Only the Floor 1 entry has devices — they will be assigned to `Global/PODS/POD
 
 The path is resolved to absolute, then `lookup('file', _resolved_json_path) | from_json` reads and parses the JSON in one step. An `assert` task validates the shape before any processing begins.
 
+```yaml
+- name: Resolve settings_json_path to absolute
+  set_fact:
+    _resolved_json_path: >-
+      {{ settings_json_path if settings_json_path.startswith('/')
+         else (playbook_dir + '/' + settings_json_path) }}
+
+- name: Load settings input JSON
+  set_fact:
+    settings_data: "{{ lookup('file', _resolved_json_path) | from_json }}"
+
+- name: Validate that project key exists in input data
+  assert:
+    that: settings_data.project is defined and settings_data.project | length > 0
+    fail_msg: "Input JSON must contain a non-empty 'project' list."
+    success_msg: "Input data loaded — {{ settings_data.project | length }} entries found."
+```
+
 ### Step 2: Build Per-Site Assignment Map
 
-**Purpose:** Create a dictionary that maps each unique `HierarchyName` to the accumulated list of IPs that belong to it. Using a dict (keyed by site path) naturally merges IPs when multiple entries share the same `HierarchyName`.
+**Purpose:** Create a dictionary that maps each unique reconstructed site path to the accumulated list of IPs that belong to it. Using a dict (keyed by site path) naturally merges IPs when multiple entries share the same target site.
 
 ```yaml
 - name: Build per-site assignment map
   set_fact:
     site_device_map: >-
       {%- set ns = namespace(result={}) -%}
-      {%- for entry in devices_data.project -%}
-        {%- if entry.DeviceList -%}
-          {%- set ips  = entry.DeviceList.split(',') | map('trim') | list -%}
-          {%- set site = entry.HierarchyName -%}
+      {%- for entry in settings_data.project -%}
+        {%- if entry.device_list -%}
+          {%- set parent = entry.HierarchyParent | default('Global') -%}
+          {%- set area   = entry.HierarchyArea   | default('') -%}
+          {%- set bldg   = entry.HierarchyBldg   | default('') -%}
+          {%- set floor  = entry.HierarchyFloor  | default('') -%}
+          {%- if floor -%}
+            {%- set site = parent + '/' + area + '/' + bldg + '/' + floor -%}
+          {%- elif bldg -%}
+            {%- set site = parent + '/' + area + '/' + bldg -%}
+          {%- elif area -%}
+            {%- set site = parent + '/' + area -%}
+          {%- else -%}
+            {%- set site = parent -%}
+          {%- endif -%}
+          {%- set ips = entry.device_list.split(',') | map('trim') | list -%}
           {%- if site in ns.result -%}
             {%- set ns.result = ns.result | combine({site: ns.result[site] + ips}) -%}
           {%- else -%}
@@ -286,22 +318,15 @@ The path is resolved to absolute, then `lookup('file', _resolved_json_path) | fr
 **Transformation trace:**
 
 ```
-Input project (2 entries with DeviceList):
-  [0] HierarchyName: "Global/PODS/POD 0/Building P0/Floor 1"
-      DeviceList:    "198.19.1.1,198.19.1.2,198.19.1.3"
-  [1] HierarchyName: "Global/PODS/POD 0/Building P0/Floor 1"   ← same site
-      DeviceList:    "198.19.1.4,198.19.1.5"
-
-Processing entry [0]:
-  site not in result → result = {"Global/.../Floor 1": ["198.19.1.1","198.19.1.2","198.19.1.3"]}
-
-Processing entry [1]:
-  site IN result → merge: result = {"Global/.../Floor 1": ["198.19.1.1","198.19.1.2","198.19.1.3","198.19.1.4","198.19.1.5"]}
+Input (1 entry with device_list):
+  HierarchyParent/Area/Bldg/Floor → "Global/PODS/POD 0/Building P0/Floor 1"
+  device_list: "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6"
 
 Output site_device_map:
   {
     "Global/PODS/POD 0/Building P0/Floor 1": [
-      "198.19.1.1", "198.19.1.2", "198.19.1.3", "198.19.1.4", "198.19.1.5"
+      "198.19.1.1", "198.19.1.2", "198.19.1.3",
+      "198.19.1.4", "198.19.1.5", "198.19.1.6"
     ]
   }
 ```
@@ -318,7 +343,7 @@ Output site_device_map:
   register: site_info_results
 ```
 
-`dict2items` converts the map into a list of `{key: "<site path>", value: [...ips...]}` objects, making it iterable. The `site_info` module is a **read-only info module** (no `state` parameter) — it simply returns the site details for the given name.
+`dict2items` converts the map into a list of `{key: "<site path>", value: [...ips...]}` objects, making it iterable. The `site_info` module is **read-only** — it simply returns the site details for the given name.
 
 **Example `site_info_results.results[0].dnac_response`:**
 
@@ -326,10 +351,9 @@ Output site_device_map:
 {
   "response": [
     {
-      "id":           "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "name":         "Floor 1",
-      "siteHierarchy": "Global/PODS/POD 0/Building P0/Floor 1",
-      "siteNameHierarchy": "Global/PODS/POD 0/Building P0/Floor 1"
+      "id":                  "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name":                "Floor 1",
+      "siteNameHierarchy":   "Global/PODS/POD 0/Building P0/Floor 1"
     }
   ]
 }
@@ -362,7 +386,7 @@ The UUID (`id`) is extracted in Step 4 using: `item.dnac_response.response[0].id
 | Expression | Resolves to |
 |-----------|-------------|
 | `item` | One result from `site_info_results.results` |
-| `item.item` | The original loop item passed to `site_info` (a `{key, value}` dict) |
+| `item.item` | The original loop item passed to `site_info` (a `{key, value}` dict from `dict2items`) |
 | `item.item.key` | The site path (e.g. `"Global/PODS/POD 0/Building P0/Floor 1"`) |
 | `item.dnac_response.response[0].id` | The site UUID returned by `site_info` |
 | `site_device_map[item.item.key]` | The IP list for this site |
@@ -384,8 +408,6 @@ device:
   - "198.19.1.2"
 ```
 
-The inline Jinja2 loop inside the task builds this structure dynamically from the flat IP list in `site_device_map`.
-
 **Complete transformation example:**
 
 ```
@@ -399,6 +421,8 @@ assign_device_to_site call:
   device:
     - ip: "198.19.1.1"
     - ip: "198.19.1.2"
+
+API endpoint: POST /dna/intent/api/v1/assign-device-to-site/{siteId}/device
 ```
 
 ### Step 5: Summary
@@ -419,11 +443,11 @@ assign_device_to_site call:
 ## Data Transformation Reference
 
 ```
-devices.json
+settings.json
 └── project[]
-    └── [n].HierarchyName + DeviceList  (non-null DeviceList only)
+    └── [n].HierarchyParent/Area/Bldg/Floor + device_list  (non-null device_list only)
               │
-              ▼ Step 2 — dict accumulation by site path
+              ▼ Step 2 — reconstruct site path + dict accumulation
     site_device_map = {
       "Global/PODS/POD 0/Building P0/Floor 1": [
         "198.19.1.1", "198.19.1.2", "198.19.1.3",
@@ -496,15 +520,15 @@ ansible-playbook assign_to_site.yml --vault-password-file .vault_pass
 ```bash
 ansible-playbook assign_to_site.yml \
   --vault-password-file .vault_pass \
-  -e devices_json_path=/absolute/path/to/devices.json
+  -e settings_json_path=/absolute/path/to/settings.json
 ```
 
-### Use the TRADITIONAL project devices
+### Use a different project's settings
 
 ```bash
 ansible-playbook assign_to_site.yml \
   --vault-password-file .vault_pass \
-  -e devices_json_path=../../../../Projects/TRADITIONAL/Settings/devices.json
+  -e settings_json_path=../../../../Projects/TRADITIONAL/Settings/settings.json
 ```
 
 ---
@@ -526,7 +550,7 @@ Prints:
 
 ```
 TASK [Validate that project key exists in input data] **************************
-ok: [catalyst_center] => { "msg": "Input data loaded — 5 entries found." }
+ok: [catalyst_center] => { "msg": "Input data loaded — 1 entries found." }
 
 TASK [Validate assignment map is non-empty] ************************************
 ok: [catalyst_center] => { "msg": "1 site(s) to assign devices to." }
@@ -547,7 +571,7 @@ ok: [catalyst_center] => {
 }
 
 PLAY RECAP *********************************************************************
-catalyst_center : ok=7  changed=1  unreachable=0  failed=0  skipped=1
+catalyst_center : ok=8   changed=1   unreachable=0   failed=0   skipped=1
 ```
 
 After assignment, devices appear under the correct site in **CatC → Provision → Inventory**. They are now eligible for template deployment and network profile application.
@@ -558,12 +582,12 @@ After assignment, devices appear under the correct site in **CatC → Provision 
 
 | Symptom | Likely Cause | Resolution |
 |---------|-------------|------------|
-| `No entries with DeviceList found` | All `DeviceList` values are null | Add IP addresses to the `DeviceList` field for floor-level entries |
-| `Site not found` | `HierarchyName` does not exist in CatC | Run playbook 1.0 first to create the site hierarchy |
-| `Device not found` | Device IP not in the CatC inventory | Run playbook 3.0 first to discover the devices |
+| `No entries with device_list found` | All `device_list` values are null | Add IP addresses to the `device_list` field for floor-level entries in `settings.json` |
+| `Site not found` | Reconstructed site path does not exist in CatC | Run playbook 1.0 first to create the site hierarchy. Verify `HierarchyParent/Area/Bldg/Floor` values match exactly. |
+| `Device not found` | Device IP not in the CatC inventory | Run playbook 4.0 first to discover the devices |
 | `Device already assigned` | Device already in the correct site | Idempotent — the module will not error, it confirms the existing assignment |
-| `response[0].id` KeyError | `site_info` returned empty `response` | Verify the site path matches exactly what was created in 1.0 (case-sensitive, spaces included) |
-| `IP must match management IP` | CatC resolves to loopback but input has interface IP | Use the loopback IP (same address used as `preferred_mgmt_ip_method: UseLoopBack` in 3.0) |
+| `response[0].id` KeyError | `site_info` returned empty `response` | Verify the reconstructed site path matches exactly what was created in 1.0 (case-sensitive, spaces included) |
+| `IP must match management IP` | CatC resolved to loopback but input has interface IP | Use the loopback IP (same address used as `preferred_mgmt_ip_method: UseLoopBack` in 4.0) |
 | `dnac_version mismatch` | SDK version exceeds appliance version | Set `dnac_version: 2.3.7.9` in `inventory.yml` |
 | TLS errors | Self-signed certificate | Set `dnac_verify: false` for lab environments |
 | Assignment succeeds but device not in site | CatC propagation delay | Wait 30–60 seconds and refresh the CatC inventory view |

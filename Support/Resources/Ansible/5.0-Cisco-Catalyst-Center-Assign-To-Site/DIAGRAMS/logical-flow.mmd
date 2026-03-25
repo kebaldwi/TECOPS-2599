@@ -1,20 +1,20 @@
 flowchart TD
     START([Start]) --> A
 
-    A["Load devices.json<br/>lookup('file') -&gt; from_json"]
+    A["Load settings.json<br/>lookup('file') -&gt; from_json"]
     A --> B{project key<br/>exists &amp; non-empty?}
     B -->|No| FAIL_A([Fail: invalid<br/>input JSON shape])
     B -->|Yes| C
 
-    C["Step 2 - Build per-site assignment map<br/>Walk each entry in devices.json<br/>filter: DeviceList is non-null<br/>split IPs, group by HierarchyName<br/>builds site_device_map: { site → [ip, ...] }"]
-    C --> D{any entries<br/>with DeviceList?}
-    D -->|No| FAIL_B([Fail: no DeviceList<br/>entries found])
+    C["Step 2 - Build per-site assignment map<br/>Walk each entry in settings.json<br/>filter: device_list is non-null<br/>reconstruct site path from hierarchy fields<br/>split IPs, group by site path<br/>builds site_device_map: { site → [ip, ...] }"]
+    C --> D{any entries<br/>with device_list?}
+    D -->|No| FAIL_B([Fail: no device_list<br/>entries found])
     D -->|Yes| E
 
     E(["For each unique site in site_device_map"])
     E --> F
 
-    F["Step 3 - Resolve site UUID<br/>site_info module<br/>query by HierarchyName<br/>returns site ID"]
+    F["Step 3 - Resolve site UUID<br/>site_info module<br/>query by reconstructed site path<br/>returns site ID"]
     F --> G{site UUID<br/>resolved?}
     G -->|No| FAIL_C([Fail: site not found<br/>in CatC — run 1.0 first])
     G -->|Yes| H
