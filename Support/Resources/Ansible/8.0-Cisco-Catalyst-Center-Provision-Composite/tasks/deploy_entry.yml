@@ -23,11 +23,14 @@
 #
 # GET /dna/intent/api/v1/template-programmer/template?projectNames=<project>
 # Returns a flat list of all templates in the project.  Unlike the project
-# endpoint, each entry here includes a `versionsInfo` array whose FIRST
-# element is the LATEST committed version:
+# endpoint, each entry here includes a `versionsInfo` array.
 #
-#   versionsInfo[0].id  → latest version UUID  (used as templateId in deploy)
-#   templateId          → root/parent UUID      (used as mainTemplateId in deploy)
+# IMPORTANT: versionsInfo is returned in RANDOM order — not chronological.
+# The latest committed version must be found by sorting on `versionTime`
+# (a Unix-millisecond timestamp) and taking the maximum value.
+#
+#   max(versionsInfo, key=versionTime).id  → latest version UUID
+#   templateId                             → root/parent UUID
 #
 # This is important because the CatC v2 deploy API requires:
 #   top-level templateId     = version UUID  (latest committed snapshot)
@@ -54,13 +57,15 @@
 - name: "[{{ deploy_entry.template_name }}] Build template name → version/root ID map"
   # Builds a dict keyed by template name:
   #   { 'TEMPLATE-NAME': { 'rootId': '<uuid>', 'versionId': '<uuid>' }, ... }
-  # versionId = versionsInfo[0].id (latest committed version) or falls back to rootId.
+  # versionId = the versionsInfo entry with the highest versionTime (latest committed).
+  # versionsInfo is returned in random order by CatC — sorting is required.
   set_fact:
     _template_version_map: >-
       {%- set ns = namespace(result={}) -%}
       {%- for tpl in (_template_list_result.json | default([])) -%}
         {%- set root_id    = tpl.templateId -%}
-        {%- set version_id = (tpl.versionsInfo | default([]) | first | default({})).id | default(root_id) -%}
+        {%- set sorted_versions = tpl.versionsInfo | default([]) | sort(attribute='versionTime', reverse=true) -%}
+        {%- set version_id = (sorted_versions | first | default({})).id | default(root_id) -%}
         {%- set ns.result = ns.result | combine({tpl.name: {'rootId': root_id, 'versionId': version_id}}) -%}
       {%- endfor -%}
       {{ ns.result }}
@@ -84,7 +89,7 @@
   debug:
     msg:
       - "Composite root ID    : {{ _composite_raw_id }}"
-      - "Composite templateId : {{ _composite_template_id }} (version, used in deploy)"
+      - "Composite templateId : {{ _composite_template_id }} (latest version by versionTime, used in deploy)"
       - "Composite mainTplId  : {{ _composite_main_id }} (root)"
 
 # ── Step B: Fetch composite template detail (for containingTemplates) ───────
