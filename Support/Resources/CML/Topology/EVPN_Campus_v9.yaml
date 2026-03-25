@@ -2003,16 +2003,16 @@ nodes:
           \ DHCP-SERVER\n!\nroute-map BGP-TO-OSPF permit 20\n match ip address prefix-list\
           \ DEFAULTRT\n!\nroute-map BGP-TO-OSPF permit 30\n match ip address prefix-list\
           \ MCLUSTER-LOOPBACKS\n!\nroute-map OSPF-TO-BGP permit 10\n match ip address\
-          \ prefix-list FABRIC-LOOPBACKS\n!\n!\n!\n!\n!\ncontrol-plane\n service-policy\
-          \ input system-cpp-policy\n!\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits\
-          \ 1\nline vty 0 4\n exec-timeout 0 0\n transport input ssh\nline vty 5 15\n\
-          \ transport input ssh\nexit\n!\nevent manager applet POST_STARTUP authorization\
-          \ bypass\nevent timer countdown time 60\naction 1.0 cli command \"enable\"\
-          \naction 1.1 cli command \"crypto key generate rsa usage-keys modulus 2048\"\
-          \naction 2.0 cli command \"config t\"\naction 2.1 cli command \"no event\
-          \ manager applet POST_STARTUP\"\naction 2.2 cli command \"end\"\naction\
-          \ 2.3 cli command \"wr\"\naction 2.4 cli command \"exit\"\nexit\n!\nnetconf-yang\n\
-          end"
+          \ prefix-list FABRIC-LOOPBACKS\n!\nsnmp-server community RO RO\nsnmp-server\
+          \ community RW RW\n!\n!\n!\n!\ncontrol-plane\n service-policy input system-cpp-policy\n\
+          !\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout\
+          \ 0 0\n transport input ssh\nline vty 5 15\n transport input ssh\nexit\n\
+          !\nevent manager applet POST_STARTUP authorization bypass\nevent timer countdown\
+          \ time 60\naction 1.0 cli command \"enable\"\naction 1.1 cli command \"\
+          crypto key generate rsa usage-keys modulus 2048\"\naction 2.0 cli command\
+          \ \"config t\"\naction 2.1 cli command \"no event manager applet POST_STARTUP\"\
+          \naction 2.2 cli command \"end\"\naction 2.3 cli command \"wr\"\naction\
+          \ 2.4 cli command \"exit\"\nexit\n!\nnetconf-yang\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -4247,28 +4247,29 @@ nodes:
           \ 0 C1sco12345\n!\nusername cisco privilege 15 password 0 cisco\nusername\
           \ net-admin privilege 15 password 0 C1sco12345\n!\nredundancy\n!\n!\n!\n\
           !\n!\n!\n!\n!\n!\n!\ninterface GigabitEthernet1\n vrf forwarding Mgmt-vrf\n\
-          \ ip address 198.18.128.110 255.255.192.0\n shutdown\n negotiation auto\n\
-          !\ninterface GigabitEthernet2\n no ip address\n shutdown\n negotiation auto\n\
-          !\ninterface GigabitEthernet2.100\n description dhcp-server-green\n encapsulation\
-          \ dot1Q 100\n vrf forwarding green\n ip address 198.18.143.100 255.255.255.0\n\
-          !\ninterface GigabitEthernet2.110\n description dhcp-server-blue\n encapsulation\
-          \ dot1Q 110\n vrf forwarding blue\n ip address 198.18.144.100 255.255.255.0\n\
-          !\ninterface GigabitEthernet2.120\n description dhcp-server-global\n encapsulation\
-          \ dot1Q 120\n ip address 198.19.2.78 255.255.255.252\n!\ninterface GigabitEthernet3\n\
-          \ no ip address\n shutdown\n negotiation auto\n!\ninterface GigabitEthernet4\n\
-          \ no ip address\n shutdown\n negotiation auto\n!\nip forward-protocol nd\n\
-          ip forward-protocol udp\n!\nno ip http server\nip http secure-server\nip\
-          \ route 0.0.0.0 0.0.0.0 198.19.2.77\nip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0\
-          \ 198.18.128.1\nip route vrf blue 0.0.0.0 0.0.0.0 198.18.144.1\nip route\
-          \ vrf green 0.0.0.0 0.0.0.0 198.18.143.1\nip ssh bulk-mode 131072\n!\n!\n\
-          !\n!\n!\ncontrol-plane\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits 1\n\
-          line aux 0\nline vty 0 4\n exec-timeout 0 0\n transport input ssh\n!\nevent\
-          \ manager applet POST_STARTUP authorization bypass\nevent timer countdown\
-          \ time 60\naction 1.0 cli command \"enable\"\naction 1.1 cli command \"\
-          crypto key generate rsa usage-keys modulus 2048\"\naction 2.0 cli command\
-          \ \"config t\"\naction 2.1 cli command \"no event manager applet POST_STARTUP\"\
-          \naction 2.2 cli command \"end\"\naction 2.3 cli command \"wr\"\naction\
-          \ 2.4 cli command \"exit\"\nexit\n!\nnetconf-yang\nend"
+          \ ip address 198.18.128.110 255.255.192.0\n no shutdown\n negotiation auto\n\
+          !\ninterface GigabitEthernet2\n no ip address\n no shutdown\n negotiation\
+          \ auto\n!\ninterface GigabitEthernet2.100\n description dhcp-server-green\n\
+          \ encapsulation dot1Q 100\n vrf forwarding green\n ip address 198.18.143.100\
+          \ 255.255.255.0\n!\ninterface GigabitEthernet2.110\n description dhcp-server-blue\n\
+          \ encapsulation dot1Q 110\n vrf forwarding blue\n ip address 198.18.144.100\
+          \ 255.255.255.0\n!\ninterface GigabitEthernet2.120\n description dhcp-server-global\n\
+          \ encapsulation dot1Q 120\n ip address 198.19.2.78 255.255.255.252\n!\n\
+          interface GigabitEthernet3\n no ip address\n shutdown\n negotiation auto\n\
+          !\ninterface GigabitEthernet4\n no ip address\n shutdown\n negotiation auto\n\
+          !\nip forward-protocol nd\nip forward-protocol udp\n!\nno ip http server\n\
+          ip http secure-server\nip route 0.0.0.0 0.0.0.0 198.19.2.77\nip route vrf\
+          \ Mgmt-vrf 0.0.0.0 0.0.0.0 198.18.128.1\nip route vrf blue 0.0.0.0 0.0.0.0\
+          \ 198.18.144.1\nip route vrf green 0.0.0.0 0.0.0.0 198.18.143.1\nip ssh\
+          \ bulk-mode 131072\n!\n!\n!\n!\n!\ncontrol-plane\n!\n!\nline con 0\n exec-timeout\
+          \ 0 0\n stopbits 1\nline aux 0\nline vty 0 4\n exec-timeout 0 0\n transport\
+          \ input ssh\n!\nevent manager applet POST_STARTUP authorization bypass\n\
+          event timer countdown time 60\naction 1.0 cli command \"enable\"\naction\
+          \ 1.1 cli command \"crypto key generate rsa usage-keys modulus 2048\"\n\
+          action 2.0 cli command \"config t\"\naction 2.1 cli command \"no event manager\
+          \ applet POST_STARTUP\"\naction 2.2 cli command \"end\"\naction 2.3 cli\
+          \ command \"wr\"\naction 2.4 cli command \"exit\"\nexit\n!\nnetconf-yang\n\
+          end"
     cpu_limit: null
     cpus: null
     data_volume: null
