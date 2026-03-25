@@ -352,6 +352,12 @@ Used by: **6.0**
 
 Jinja2 template files (`.j2`) and composite definitions (`.yml`) stored in a subfolder of the configured GitHub repository. Fetched at runtime via the GitHub REST API — no local clone required.
 
+| Parameter | Value |
+|-----------|-------|
+| `git_repo` | `https://github.com/imanassypov/CatalystCenter-BGP-EVPN-VXLAN.git` |
+| `git_branch` | `main` |
+| `git_repo_subfolder` | `BGP EVPN` |
+
 ---
 
 ## Compatibility Matrix
