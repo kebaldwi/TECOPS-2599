@@ -49,14 +49,15 @@
      - [Step F: Poll Async Task Status](#step-f-poll-async-task-status)
      - [Step F2: Extract Deployment Result from Task Progress](#step-f2-extract-deployment-result-from-task-progress)
      - [Step G: Summary and Error Propagation](#step-g-summary-and-error-propagation)
-8. [Composite Deploy Payload Reference](#composite-deploy-payload-reference)
-9. [How CatC Template Version IDs Work](#how-catc-template-version-ids-work)
-10. [Per-Member Template Parameters](#per-member-template-parameters)
-11. [Running the Playbook](#running-the-playbook)
-12. [Debug Mode](#debug-mode)
-13. [Expected Output](#expected-output)
-14. [Playbook Ordering Dependency](#playbook-ordering-dependency)
-15. [Troubleshooting](#troubleshooting)
+8. [Data Transformation Reference](#data-transformation-reference)
+9. [Composite Deploy Payload Reference](#composite-deploy-payload-reference)
+10. [How CatC Template Version IDs Work](#how-catc-template-version-ids-work)
+11. [Per-Member Template Parameters](#per-member-template-parameters)
+12. [Running the Playbook](#running-the-playbook)
+13. [Debug Mode](#debug-mode)
+14. [Expected Output](#expected-output)
+15. [Playbook Ordering Dependency](#playbook-ordering-dependency)
+16. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -956,6 +957,115 @@ ansible-playbook deploy_composite_template.yml \
 ```
 
 Member templates not listed in `member_template_params` receive `params: {}`. If none of your member templates require explicit parameter injection (for example they all resolve variables from `__device.*` system bindings), leave `member_template_params: {}` in inventory.
+
+---
+
+## Data Transformation Reference
+
+```
+devices.json
+└── project[]
+    └── [n].DayNTemplateNames[]    ← filter: DeployTemplate == true AND TemplateName not null
+              │
+              ▼ Step 2 — set_fact namespace loop
+    _deploy_entries[] = [{ site, template_name, project_name, template_target[], template_tag }]
+              │
+              ▼ Step 3 — POST /dna/system/api/v1/auth/token
+    _catc_token  (JWT, no_log: true)
+              │
+              ▼ Step 4 — include_tasks: deploy_entry.yml (per entry, loop_var: deploy_entry)
+    ┌─ Step A: GET /dna/intent/api/v1/template-programmer/template?projectNames=<project>
+    │  _template_version_map = { template_name: { versionId, rootId } }
+    │
+    ├─ Step B: GET /dna/intent/api/v1/template-programmer/template/<rootId>
+    │  _composite_template_id ← latest committed version UUID  (deploy target)
+    │  _composite_main_id     ← permanent root UUID            (mainTemplateId)
+    │  _member_templates[]    ← containingTemplates[] extracted from response
+    │
+    ├─ Step C: GET /dna/intent/api/v1/network-device?managementIpAddress=<ip>  (per IP)
+    │  _device_uuid_map = { ip: { uuid, hostname } }
+    │
+    ├─ Step D: set_fact — build memberTemplateDeploymentInfo per member × per device
+    │  _member_deployment_info[] = [{ templateId, mainTemplateId, targetInfo[], copyingConfig: true }]
+    │
+    └─ Step E: cisco.dnac.configuration_template_deploy_v2  (ONE call per device)
+       → POST /dna/intent/api/v2/template-programmer/template/deploy
+       → GET  /dna/intent/api/v1/task/{taskId}  (poll until endTime set or isError=true)
+```
+
+**Before — `DayNTemplateNames[]` (one `devices.json` project entry):**
+
+```json
+[
+  {
+    "TemplateName": "BGP-EVPN-BUILD.j2",
+    "Project":      "Building P0",
+    "TemplateTarget": ["198.19.1.1","198.19.1.2","198.19.1.3","198.19.1.4","198.19.1.5","198.19.1.6"],
+    "TemplateTag":  "DEMO",
+    "DeployTemplate": true
+  },
+  { "TemplateName": null, "Project": null, "TemplateTarget": [], "DeployTemplate": null }
+]
+```
+
+**After — `_deploy_entries[0]`** (null/false entries filtered out):
+
+```json
+{
+  "site":            "Global/PODS/POD 0/Building P0/Floor 1",
+  "template_name":   "BGP-EVPN-BUILD.j2",
+  "project_name":    "Building P0",
+  "template_target": ["198.19.1.1","198.19.1.2","198.19.1.3","198.19.1.4","198.19.1.5","198.19.1.6"],
+  "template_tag":    "DEMO"
+}
+```
+
+---
+
+**Before — template API response from `GET /template-programmer/template?projectNames=Building P0` (truncated):**
+
+```json
+[{
+  "name":         "BGP-EVPN-BUILD.j2",
+  "templateId":   "2cbdc2f3-ab12-4567-89cd-ef0123456789",
+  "versionsInfo": [
+    { "id": "5d4f4fa7-1234-5678-abcd-ef0123456789", "version": "2" },
+    { "id": "a1b2c3d4-5678-90ab-cdef-012345678901", "version": "1" }
+  ]
+}]
+```
+
+> `templateId` is the **permanent root UUID** used as `mainTemplateId`. `versionsInfo[0].id` is the **latest committed version UUID** used as `templateId` (the deploy target). These two UUIDs are different and both are required in the deploy payload — providing the wrong one silently deploys the wrong version.
+
+**After — `_template_version_map`:**
+
+```json
+{
+  "BGP-EVPN-BUILD.j2": {
+    "versionId": "5d4f4fa7-1234-5678-abcd-ef0123456789",
+    "rootId":    "2cbdc2f3-ab12-4567-89cd-ef0123456789"
+  }
+}
+```
+
+---
+
+**Before — device API response from `GET /network-device?managementIpAddress=198.19.1.1`:**
+
+```json
+{ "response": [{ "id": "28c35a52-3d4e-5f6a-7b8c-9d0e1f2a3b4c", "hostname": "Leaf01", "managementIpAddress": "198.19.1.1" }] }
+```
+
+**After — `_device_uuid_map`:**
+
+```json
+{
+  "198.19.1.1": { "uuid": "28c35a52-3d4e-5f6a-7b8c-9d0e1f2a3b4c", "hostname": "Leaf01" },
+  "198.19.1.2": { "uuid": "39d46b63-4e5f-6a7b-8c9d-0e1f2a3b4c5d", "hostname": "Leaf02" }
+}
+```
+
+The deploy call is issued **once per device** (not once per template): a single `configuration_template_deploy_v2` call per IP carries the full `memberTemplateDeploymentInfo` list for all member templates, keeping the push atomic per device while allowing the task poller to track each device's outcome independently.
 
 ---
 

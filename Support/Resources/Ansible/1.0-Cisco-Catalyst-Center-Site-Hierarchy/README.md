@@ -493,6 +493,34 @@ settings.json
                    → PUT  /dna/intent/api/v2/floors/{id}
 ```
 
+**Before — `cisco.dnac.sites_info` response (Phase A, all sites):**
+
+```json
+[
+  { "id": "a4208f2a-1b3c-4d5e-9f6a-7b8c9d0e1f2a", "name": "Global",      "nameHierarchy": "Global" },
+  { "id": "13b224f0-2c3d-4e5f-8a9b-0c1d2e3f4a5b", "name": "PODS",       "nameHierarchy": "Global/PODS" },
+  { "id": "f3e4a5b6-7c8d-9e0f-1a2b-3c4d5e6f7a8b", "name": "POD 0",      "nameHierarchy": "Global/PODS/POD 0" },
+  { "id": "2acb84d4-3d4e-5f6a-7b8c-9d0e1f2a3b4c", "name": "Building P0","nameHierarchy": "Global/PODS/POD 0/Building P0" },
+  { "id": "5b689937-4e5f-6a7b-8c9d-0e1f2a3b4c5d", "name": "Floor 1",    "nameHierarchy": "Global/PODS/POD 0/Building P0/Floor 1" }
+]
+```
+
+> The response attribute is `nameHierarchy` (not `siteNameHierarchy`). A `dict()` + `zip()` expression pairs each `nameHierarchy` value with its `id` to build the map. Sites without a `nameHierarchy` key (the Global root returned by older firmware) are dropped by a `selectattr('nameHierarchy', 'defined')` guard.
+
+**After — `site_id_map`:**
+
+```json
+{
+  "Global":                                       "a4208f2a-1b3c-4d5e-9f6a-7b8c9d0e1f2a",
+  "Global/PODS":                                  "13b224f0-2c3d-4e5f-8a9b-0c1d2e3f4a5b",
+  "Global/PODS/POD 0":                            "f3e4a5b6-7c8d-9e0f-1a2b-3c4d5e6f7a8b",
+  "Global/PODS/POD 0/Building P0":                "2acb84d4-3d4e-5f6a-7b8c-9d0e1f2a3b4c",
+  "Global/PODS/POD 0/Building P0/Floor 1":        "5b689937-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+}
+```
+
+Each new site created in Phase B immediately updates this map via `set_fact`, making its UUID available to the very next depth-sorted iteration — this is only possible because the loop uses `include_tasks` (not `loop`), which executes each sub-task synchronously in the same variable scope.
+
 ---
 
 ## Running the Playbook
