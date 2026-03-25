@@ -16,6 +16,11 @@
   vars:
     DEBUG: "{{ lookup('env', 'DEBUG') | default(false) | bool }}"
 
+  # NOTE: The deploy step uses ansible.builtin.uri (direct REST API call)
+  # instead of cisco.dnac.configuration_template_deploy_v2 because the module
+  # cannot send 'copyingConfig: true' — a field required for CatC to actually
+  # push config to devices.  The module_defaults below are retained for any
+  # future tasks that may use cisco.dnac modules (e.g., for querying).
   module_defaults:
     cisco.dnac.configuration_template_deploy_v2:
       dnac_host: "{{ dnac_host }}"

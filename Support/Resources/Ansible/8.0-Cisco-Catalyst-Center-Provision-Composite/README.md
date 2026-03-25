@@ -2,10 +2,10 @@
 
 > **Playbook:** `deploy_composite_template.yml`  
 > **Included tasks:** `tasks/deploy_entry.yml`  
-> **Modules:** `cisco.dnac.configuration_template_deploy_v2` (deploy composite template), `ansible.builtin.uri` (auth token + template query + device lookup + task polling)  
+> **Modules:** `ansible.builtin.uri` (all REST calls: auth, template query, device lookup, **deploy**, task polling)  
 > **API Endpoints:**  
 > &nbsp;&nbsp;`POST /dna/system/api/v1/auth/token` — obtain short-lived JWT  
-> &nbsp;&nbsp;`POST /dna/intent/api/v2/template-programmer/template/deploy` — deploy composite template (via collection module)  
+> &nbsp;&nbsp;`POST /dna/intent/api/v2/template-programmer/template/deploy` — deploy composite template (direct REST via `ansible.builtin.uri` — see [Why not the Ansible module?](#why-not-the-ansible-module))  
 > &nbsp;&nbsp;`GET  /dna/intent/api/v1/template-programmer/template?projectNames={name}` — list all templates in project (resolve latest version UUID)  
 > &nbsp;&nbsp;`GET  /dna/intent/api/v1/template-programmer/template/{templateId}` — fetch composite template detail (extract member templates)  
 > &nbsp;&nbsp;`GET  /dna/intent/api/v1/network-device?managementIpAddress={ip}` — resolve device UUID and hostname per target IP  
@@ -45,7 +45,7 @@
      - [Step B: Template Detail Fetch (containingTemplates)](#step-b-template-detail-fetch-containingtemplates)
      - [Step C: Device UUID Resolution](#step-c-device-uuid-resolution)
      - [Step D: Build `memberTemplateDeploymentInfo`](#step-d-build-membertemplatedeploymentinfo)
-     - [Step E: Deploy via `configuration_template_deploy_v2`](#step-e-deploy-via-configuration_template_deploy_v2)
+     - [Step E: Deploy via REST API (`ansible.builtin.uri`)](#step-e-deploy-via-rest-api-ansiblebuiltinuri)
      - [Step F: Poll Async Task Status](#step-f-poll-async-task-status)
      - [Step G: Summary and Error Propagation](#step-g-summary-and-error-propagation)
 8. [Composite Deploy Payload Reference](#composite-deploy-payload-reference)
@@ -75,7 +75,7 @@ The playbook is data-driven: it reads the same `devices.json` file used across t
 | Resolves template version UUIDs and member lists | `GET /v1/template-programmer/template?projectNames=<p>` + `GET /v1/template-programmer/template/<id>` |
 | Resolves device UUIDs from management IPs | `GET /v1/network-device?managementIpAddress=<ip>` |
 | Builds composite deploy payload | `set_fact` — constructs `memberTemplateDeploymentInfo` |
-| Deploys composite template | `cisco.dnac.configuration_template_deploy_v2` |
+| Deploys composite template | `ansible.builtin.uri` — direct `POST /v2/template-programmer/template/deploy` with `copyingConfig: true` |
 | Polls async task to completion | `ansible.builtin.uri` with `until` + `retries` |
 
 ### What makes composite deployment different
@@ -366,8 +366,9 @@ In this example, one deployment is submitted: composite template `BGP-EVPN-BUILD
 │  Step D ─ Build memberTemplateDeploymentInfo[]                             │
 │           └─ One entry per member template × all device UUIDs             │
 │                                                                             │
-│  Step E ─ cisco.dnac.configuration_template_deploy_v2 (loop per device)   │
+│  Step E ─ ansible.builtin.uri (loop per device)                           │
 │           └─ POST /v2/template-programmer/template/deploy                  │
+│              with copyingConfig: true (required to push config to devices) │
 │              → _deploy_task_ids[] (one taskId per device)                  │
 │                                                                             │
 │  Step F ─ Poll GET /v1/task/<taskId>  (loop per device taskId)             │
@@ -598,7 +599,7 @@ _member_deployment_info:
           - { type: "MANAGED_DEVICE_HOSTNAME", value: "Leaf02" }
 ```
 
-> **`copyingConfig: true`** is a raw dict field that must appear inside each `memberTemplateDeploymentInfo` entry. The `cisco.dnac.configuration_template_deploy_v2` module passes raw dict fields through to the SDK unchanged. Setting `copyingConfig` at the module parameter level (outside the dict) is not supported and is rejected.
+> **`copyingConfig: true`** must appear at **both** the top level of the deploy payload **and** inside each `memberTemplateDeploymentInfo` entry. This is why the playbook uses `ansible.builtin.uri` instead of the `cisco.dnac.configuration_template_deploy_v2` module — the module cannot send `copyingConfig` at the top level (it silently drops unknown fields). Without this flag, CatC accepts the deploy but **does not push configuration to devices** — it only records the intent.
 
 > **`resourceParams` structure** must match the three-entry format observed in working CatC UX payloads: `MANAGED_DEVICE_UUID` (with value), `MANAGED_DEVICE_IP` (value `null`), `MANAGED_DEVICE_HOSTNAME` (with value). An empty `resourceParams: []` is rejected by the API with a `NCTP10028` error.
 
@@ -619,11 +620,17 @@ member_template_params:
 
 Because `containingTemplates` from Step B holds only root UUIDs, the member's version UUID must come from `_template_version_map[member.name].versionId`. If a member template name is not found in the map (unlikely — all templates in the project should be in it), the root UUID is used as a safe fallback.
 
-#### Step E: Deploy via `configuration_template_deploy_v2` (per-device loop)
+#### Step E: Deploy via REST API (`ansible.builtin.uri`)
 
-**Purpose:** Submit the fully-assembled composite deploy payload to Catalyst Center using the `cisco.dnac.configuration_template_deploy_v2` module. The playbook sends **one API call per target device**, mirroring the behavior of the CatC UI. Each call carries a single-device `targetInfo` entry.
+**Purpose:** Submit the fully-assembled composite deploy payload to Catalyst Center via a direct `POST /dna/intent/api/v2/template-programmer/template/deploy` REST call. The playbook sends **one API call per target device**, mirroring the behavior of the CatC UI. Each call carries a single-device `targetInfo` entry.
+
+> **Why `ansible.builtin.uri` instead of the Ansible module?**<a name="why-not-the-ansible-module"></a>
+>
+> The `cisco.dnac.configuration_template_deploy_v2` module **cannot send `copyingConfig: true`** in the POST body. The module's action plugin maps only six fields (`templateId`, `mainTemplateId`, `isComposite`, `forcePushTemplate`, `targetInfo`, `memberTemplateDeploymentInfo`); `copyingConfig` is silently dropped and never reaches the API. Without `copyingConfig: true`, Catalyst Center accepts the deploy task and records the intent, but **does not actually push configuration to devices**. The direct REST call ensures the full payload — including `copyingConfig` — is sent exactly as required.
 
 > **Why one call per device?** Analysis of a working payload captured from the CatC UX reveals that the UI sends one `POST /v2/.../deploy` request per device, with `targetInfo` containing exactly one entry. Sending all devices in a single call is accepted by the API but results in `NCTP10028` errors when top-level `targetInfo` is misused. The per-device loop is the correct pattern.
+
+> **What does `copyingConfig: true` do?** This field tells Catalyst Center to actually push the rendered configuration to the device via its provisioning workflow (NETCONF/SSH). Without it (or with `copyingConfig: false`), CatC treats the deploy as a **preview / intent-only** operation — the template is rendered and the deployment is recorded, but no configuration is sent to the device. The field must be present at **both** the top level of the payload **and** inside each entry in `memberTemplateDeploymentInfo`.
 
 ```yaml
 - name: Deploy composite template to <hostname> (<ip>)
@@ -637,13 +644,23 @@ Because `containingTemplates` from Step B holds only root UUIDs, the member's ve
           - { type: "MANAGED_DEVICE_UUID",     value: "{{ item.value.uuid }}" }
           - { type: "MANAGED_DEVICE_IP",       value: null }
           - { type: "MANAGED_DEVICE_HOSTNAME", value: "{{ item.value.hostname }}" }
-  cisco.dnac.configuration_template_deploy_v2:
-    templateId:                   "{{ _composite_template_id }}"   # version UUID
-    mainTemplateId:               "{{ _composite_main_id }}"       # root UUID
-    isComposite:                  true
-    forcePushTemplate:            "{{ force_push_template | bool }}"
-    targetInfo:                   "{{ _single_target }}"           # one device per call
-    memberTemplateDeploymentInfo: "{{ _single_member_info }}"      # filtered to this device
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v2/template-programmer/template/deploy"
+    method: POST
+    headers:
+      X-Auth-Token: "{{ _catc_token }}"
+      Content-Type: "application/json"
+    validate_certs: "{{ dnac_verify }}"
+    body_format: json
+    body:
+      templateId:                   "{{ _composite_template_id }}"   # version UUID
+      mainTemplateId:               "{{ _composite_main_id }}"       # root UUID
+      isComposite:                  true
+      forcePushTemplate:            true
+      copyingConfig:                true                              # CRITICAL — triggers actual config push
+      targetInfo:                   "{{ _single_target }}"           # one device per call
+      memberTemplateDeploymentInfo: "{{ _single_member_info }}"      # filtered to this device
+    status_code: [200, 202]
   loop: "{{ _device_uuid_map | dict2items }}"
   loop_control:
     label: "{{ item.key }}"
@@ -659,10 +676,11 @@ Because `containingTemplates` from Step B holds only root UUIDs, the member's ve
 | `mainTemplateId` | Composite root UUID from `_template_version_map` | CatC internal parent reference. Always the root UUID. |
 | `isComposite` | `true` | Signals to CatC that this is a composite deployment |
 | `forcePushTemplate` | From `force_push_template` inventory var | When `true`, bypasses CatC's in-sync check and always pushes config to device |
+| `copyingConfig` | `true` | **Critical.** Tells CatC to actually push rendered config to the device. Without this, the deploy is intent-only (no config pushed). Must also appear in each `memberTemplateDeploymentInfo` entry. |
 | `targetInfo` | List with exactly one device entry per API call | Non-empty top-level `targetInfo` is required by CatC v2 composite deploy (empty list causes NCTP10028) |
 | `memberTemplateDeploymentInfo` | Built in Step D, sliced per device | Per-member deployment spec; each member carries `targetInfo`, params, `copyingConfig: true` |
 
-The module call uses `ignore_errors: true` because transient SDK exceptions are checked precisely in Steps F and G rather than relying on Ansible's default failure handling.
+The URI call uses `ignore_errors: true` because transient HTTP errors are checked precisely in Steps F and G rather than relying on Ansible's default failure handling.
 
 #### Step F: Poll Async Task Status (per device)
 
@@ -739,6 +757,7 @@ The structure submitted to `POST /dna/intent/api/v2/template-programmer/template
   "mainTemplateId":    "<composite_root_uuid>",
   "isComposite":       true,
   "forcePushTemplate": false,
+  "copyingConfig":     true,
   "targetInfo": [
     {
       "id":       "<device_uuid>",
@@ -747,7 +766,7 @@ The structure submitted to `POST /dna/intent/api/v2/template-programmer/template
       "params":   {},
       "resourceParams": [
         { "type": "MANAGED_DEVICE_UUID",     "value": "<device_uuid>" },
-        { "type": "MANAGED_DEVICE_IP",       "value": null },
+        { "type": "MANAGED_DEVICE_IP",       "value": "<device_mgmt_ip>" },
         { "type": "MANAGED_DEVICE_HOSTNAME", "value": "<device_hostname>" }
       ]
     }
@@ -767,7 +786,7 @@ The structure submitted to `POST /dna/intent/api/v2/template-programmer/template
           "params":   { "<param_name>": "<param_value>" },
           "resourceParams": [
             { "type": "MANAGED_DEVICE_UUID",     "value": "<device_uuid>" },
-            { "type": "MANAGED_DEVICE_IP",       "value": null },
+            { "type": "MANAGED_DEVICE_IP",       "value": "<device_mgmt_ip>" },
             { "type": "MANAGED_DEVICE_HOSTNAME", "value": "<device_hostname>" }
           ]
         }
@@ -787,7 +806,7 @@ The structure submitted to `POST /dna/intent/api/v2/template-programmer/template
           "params":   {},
           "resourceParams": [
             { "type": "MANAGED_DEVICE_UUID",     "value": "<device_uuid>" },
-            { "type": "MANAGED_DEVICE_IP",       "value": null },
+            { "type": "MANAGED_DEVICE_IP",       "value": "<device_mgmt_ip>" },
             { "type": "MANAGED_DEVICE_HOSTNAME", "value": "<device_hostname>" }
           ]
         }
@@ -804,12 +823,13 @@ The structure submitted to `POST /dna/intent/api/v2/template-programmer/template
 | `templateId` | string | Composite version UUID | From `versionsInfo[0].id` via `_template_version_map`. NOT the root UUID. |
 | `mainTemplateId` | string | Composite root UUID | Permanent template ID. From `templateId` field in the template list response. |
 | `isComposite` | bool | `true` | Required for composite deploys |
+| `copyingConfig` | bool | `true` | **Critical — top level.** Tells CatC to push rendered config to the device. Without this, deploy is intent-only. |
 | `targetInfo[].id` | string | Device UUID | From `GET /network-device?managementIpAddress=`. NOT the management IP. |
 | `targetInfo[].type` | string | `"MANAGED_DEVICE_UUID"` | Must be exactly this string |
-| `targetInfo[].resourceParams` | array | 3-entry list | `MANAGED_DEVICE_UUID` (value), `MANAGED_DEVICE_IP` (null), `MANAGED_DEVICE_HOSTNAME` (value) |
+| `targetInfo[].resourceParams` | array | 3-entry list | `MANAGED_DEVICE_UUID` (UUID value), `MANAGED_DEVICE_IP` (management IP), `MANAGED_DEVICE_HOSTNAME` (hostname) |
 | `memberTemplateDeploymentInfo[].templateId` | string | Member version UUID | From `_template_version_map[member.name].versionId` |
 | `memberTemplateDeploymentInfo[].mainTemplateId` | string | Member root UUID | From `_template_version_map[member.name].rootId` |
-| `memberTemplateDeploymentInfo[].copyingConfig` | bool | `true` | Required per-member field; NOT a module-level parameter |
+| `memberTemplateDeploymentInfo[].copyingConfig` | bool | `true` | Required per-member field. Combined with the top-level `copyingConfig`, ensures CatC pushes config to devices. |
 
 ---
 
@@ -1087,5 +1107,7 @@ This playbook sits at the end of the automation chain. All upstream steps must c
 | `401 Unauthorized` from REST calls | Vault credentials incorrect or expired | Verify `dnac_username` / `dnac_password` in `vault.yml`. Re-encrypt if recently changed. |
 | `SSL: CERTIFICATE_VERIFY_FAILED` | TLS verification enabled against self-signed cert | Set `dnac_verify: false` in inventory for lab environments, or add the CatC CA cert to the system trust store for production. |
 | Deploy succeeds but stale config is pushed to device | `templateId` is the root UUID instead of the version UUID | The template list endpoint (`?projectNames=`) must be used — not the project endpoint — to obtain `versionsInfo[0].id`. The playbook already uses this endpoint; this symptom appears if the endpoint was reverted. |
-| `copyingConfig` parameter rejected by module | `copyingConfig` was placed as a top-level module parameter | `copyingConfig` is not a recognized module parameter. It must be placed as a field inside each entry of `memberTemplateDeploymentInfo` (a raw dict field passed through by the module to the SDK). |
+| Deploy succeeds but no config pushed to device | `copyingConfig: true` missing from payload | `copyingConfig` must be present at **both** the top level and inside each `memberTemplateDeploymentInfo` entry. The `cisco.dnac.configuration_template_deploy_v2` module silently drops this field — this is why the playbook uses `ansible.builtin.uri` for the deploy step instead. |
+| CatC Audit Log: "Error while deploying provisioning workflow" | Device unreachable during deploy | CatC wraps template pushes in a provisioning workflow. This audit log error means CatC could not reach the device to push config. Verify the device shows as Reachable in CatC Inventory (`Provision → Inventory`) and retry. |
+| `NCDP10000: Configuration failed on device … due to unreachability` | Target device not reachable from CatC at deploy time | The device was in CatC inventory but could not be reached via NETCONF/SSH. Check that the device is fully booted, management interface is up, and CatC has a route to the management IP. |
 | `resourceParams` error / NCTP payload validation failure | `resourceParams: []` (empty list) in `targetInfo` or member `targetInfo` | Populate `resourceParams` with the three required entries: `MANAGED_DEVICE_UUID` (with UUID value), `MANAGED_DEVICE_IP` (value `null`), `MANAGED_DEVICE_HOSTNAME` (with hostname value). |

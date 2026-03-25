@@ -30,10 +30,16 @@
 #   templateId          → root/parent UUID      (used as mainTemplateId in deploy)
 #
 # This is important because the CatC v2 deploy API requires:
-#   top-level templateId     = version UUID  (NOT root UUID)
+#   top-level templateId     = version UUID  (latest committed snapshot)
 #   top-level mainTemplateId = root UUID
 #   member templateId        = member version UUID
 #   member mainTemplateId    = member root UUID
+#
+# NOTE: The newer CatC API spec defines a separate versionedTemplateId field,
+# but the TemplateDeploymentInfo DTO on this server version does NOT support it
+# (only 8 known fields: templateId, mainTemplateId, targetInfo, isComposite,
+# memberTemplateDeploymentInfo, forcePushTemplate, copyingConfig, responseMsg).
+# Sending versionedTemplateId results in HTTP 400 BAD_REQUEST.
 #
 - name: "[{{ deploy_entry.template_name }}] Fetch all project templates with versionsInfo"
   ansible.builtin.uri:
@@ -179,12 +185,16 @@
 #   params         — template parameter key/value dict (empty {} for top-level)
 #   resourceParams — three entries matching the CatC v2 deploy API schema
 #
-# resourceParams structure matches the CatC v2 deploy API as observed from a
-# working payload captured via the UI:
-#   [{type: MANAGED_DEVICE_UUID,     value: <uuid>},
-#    {type: MANAGED_DEVICE_IP,       value: null},
-#    {type: MANAGED_DEVICE_HOSTNAME, value: <hostname>}]
+# resourceParams entries per CatC Template Deploy API spec (ResourceParam object):
+#   type  — enum: MANAGED_DEVICE_UUID | MANAGED_DEVICE_IP | MANAGED_DEVICE_HOSTNAME | ...
+#   value — actual value for the param type
+#   scope — RUNTIME (provided at deploy time, may differ per deployment)
 #
+#   [{type: MANAGED_DEVICE_UUID,     value: <uuid>,     scope: RUNTIME},
+#    {type: MANAGED_DEVICE_IP,       value: <mgmt_ip>,  scope: RUNTIME},
+#    {type: MANAGED_DEVICE_HOSTNAME, value: <hostname>, scope: RUNTIME}]
+#
+# Note: MANAGED_DEVICE_IP value must be the actual management IP of the device.
 - name: "[{{ deploy_entry.template_name }}] Build top-level targetInfo"
   set_fact:
     _target_info: >-
@@ -198,9 +208,9 @@
               'type':     'MANAGED_DEVICE_UUID',
               'params':   {},
               'resourceParams': [
-                {'type': 'MANAGED_DEVICE_UUID',     'value': d.uuid},
-                {'type': 'MANAGED_DEVICE_IP',       'value': None},
-                {'type': 'MANAGED_DEVICE_HOSTNAME', 'value': d.hostname}
+                {'type': 'MANAGED_DEVICE_UUID',     'value': d.uuid,     'scope': 'RUNTIME'},
+                {'type': 'MANAGED_DEVICE_IP',       'value': ip,         'scope': 'RUNTIME'},
+                {'type': 'MANAGED_DEVICE_HOSTNAME', 'value': d.hostname, 'scope': 'RUNTIME'}
               ]
           }] -%}
         {%- endif -%}
@@ -245,20 +255,20 @@
                 'type':     'MANAGED_DEVICE_UUID',
                 'params':   params,
                 'resourceParams': [
-                  {'type': 'MANAGED_DEVICE_UUID',     'value': d.uuid},
-                  {'type': 'MANAGED_DEVICE_IP',       'value': None},
-                  {'type': 'MANAGED_DEVICE_HOSTNAME', 'value': d.hostname}
+                  {'type': 'MANAGED_DEVICE_UUID',     'value': d.uuid,     'scope': 'RUNTIME'},
+                  {'type': 'MANAGED_DEVICE_IP',       'value': ip,         'scope': 'RUNTIME'},
+                  {'type': 'MANAGED_DEVICE_HOSTNAME', 'value': d.hostname, 'scope': 'RUNTIME'}
                 ]
             }] -%}
           {%- endif -%}
         {%- endfor -%}
         {%- set ns.result = ns.result + [{
-          'templateId':      member_id,
-          'mainTemplateId':  member_main_id,
-          'targetInfo':      tns.targets,
+          'templateId':        member_id,
+          'mainTemplateId':    member_main_id,
+          'targetInfo':        tns.targets,
           'forcePushTemplate': force_push_template | bool,
-          'copyingConfig':   true,
-          'isComposite':     false
+          'copyingConfig':     true,
+          'isComposite':       false
         }] -%}
       {%- endfor -%}
       {{ ns.result }}
@@ -268,19 +278,50 @@
   debug:
     var: _member_deployment_info
 
-# ── Step E: Deploy composite template via configuration_template_deploy_v2 ──
+- name: "[{{ deploy_entry.template_name }}] --DEBUG-- Full deploy payload (first device)"
+  when: DEBUG and (_device_uuid_map | dict2items | length > 0)
+  vars:
+    _first_dev: "{{ (_device_uuid_map | dict2items | first).value }}"
+  debug:
+    msg: "{{ {
+      'templateId': _composite_template_id,
+      'mainTemplateId': _composite_main_id,
+      'isComposite': true,
+      'forcePushTemplate': true,
+      'copyingConfig': true,
+      'targetInfo': [{
+        'id': _first_dev.uuid,
+        'hostName': _first_dev.hostname,
+        'type': 'MANAGED_DEVICE_UUID',
+        'params': {},
+        'resourceParams': [
+          {'type': 'MANAGED_DEVICE_UUID', 'value': _first_dev.uuid, 'scope': 'RUNTIME'},
+          {'type': 'MANAGED_DEVICE_IP', 'value': (_device_uuid_map | dict2items | first).key, 'scope': 'RUNTIME'},
+          {'type': 'MANAGED_DEVICE_HOSTNAME', 'value': _first_dev.hostname, 'scope': 'RUNTIME'}
+        ]
+      }],
+      'memberTemplateDeploymentInfo': _member_deployment_info
+    } | to_nice_json }}"
+
+# ── Step E: Deploy composite template via direct REST API call ───────────────
 #
-# The payload mirrors the CatC v2 deploy API body:
-#   POST /dna/intent/api/v2/template-programmer/template/deploy
+# POST /dna/intent/api/v2/template-programmer/template/deploy
 #
-# KEY FINDINGS (from UX payload analysis):
-# 1. CatC v2 deploy requires non-empty top-level targetInfo (NCTP10028 if []).
-# 2. templateId must be the VERSION UUID, not root UUID.
-# 3. The UX sends ONE call per device — targetInfo has exactly one entry each.
-# 4. copyingConfig is not a module-level parameter; it is passed inside each
-#    memberTemplateDeploymentInfo dict (raw dict field passed through by the module).
+# CRITICAL: The cisco.dnac.configuration_template_deploy_v2 Ansible module
+# CANNOT send 'copyingConfig: true' at the top level — that field is not
+# exposed as a module parameter and the SDK silently drops it.  Without
+# copyingConfig=true CatC accepts the deploy request but never pushes config
+# to the device (the task completes with no actual device config change).
 #
-# We loop over each resolved device UUID, sending a separate API call per device.
+# Additionally, the module declares memberTemplateDeploymentInfo as
+# 'elements: str' which may mangle the list-of-dicts payload.
+#
+# The fix: call the API directly via ansible.builtin.uri so we have full
+# control over every field, matching the known-good UX payload structure:
+#   - copyingConfig: true (top level AND each member)
+#   - isComposite: true (top level)
+#   - isComposite: false (each member)
+#   - One API call per device (single-element targetInfo)
 #
 - name: "[{{ deploy_entry.template_name }}] Deploy composite template"
   vars:
@@ -292,10 +333,13 @@
         resourceParams:
           - type:  "MANAGED_DEVICE_UUID"
             value: "{{ item.value.uuid }}"
+            scope: "RUNTIME"
           - type:  "MANAGED_DEVICE_IP"
-            value:
+            value: "{{ item.key }}"
+            scope: "RUNTIME"
           - type:  "MANAGED_DEVICE_HOSTNAME"
             value: "{{ item.value.hostname }}"
+            scope: "RUNTIME"
     _single_member_info: >-
       {%- set ns = namespace(result=[]) -%}
       {%- for m in _member_deployment_info -%}
@@ -305,13 +349,23 @@
         {%- set ns.result = ns.result + [entry] -%}
       {%- endfor -%}
       {{ ns.result }}
-  cisco.dnac.configuration_template_deploy_v2:
-    templateId:                   "{{ _composite_template_id }}"
-    mainTemplateId:               "{{ _composite_main_id }}"
-    isComposite:                  true
-    forcePushTemplate:            "{{ force_push_template | bool }}"
-    targetInfo:                   "{{ _single_target }}"
-    memberTemplateDeploymentInfo: "{{ _single_member_info }}"
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v2/template-programmer/template/deploy"
+    method: POST
+    headers:
+      X-Auth-Token: "{{ _catc_token }}"
+      Content-Type: "application/json"
+    validate_certs: "{{ dnac_verify }}"
+    body_format: json
+    body:
+      templateId:                   "{{ _composite_template_id }}"
+      mainTemplateId:               "{{ _composite_main_id }}"
+      isComposite:                  true
+      forcePushTemplate:            true
+      copyingConfig:                true
+      targetInfo:                   "{{ _single_target }}"
+      memberTemplateDeploymentInfo: "{{ _single_member_info }}"
+    status_code: [200, 202]
   loop: "{{ _device_uuid_map | dict2items }}"
   loop_control:
     label: "{{ item.key }}"
@@ -325,13 +379,12 @@
 
 - name: "[{{ deploy_entry.template_name }}] Extract async task IDs from deploy responses"
   # The v2 deploy API returns { "response": { "taskId": "...", "url": "..." } }.
-  # The cisco.dnac module surfaces this under dnac_response.
+  # With ansible.builtin.uri the response is under .json (not .dnac_response).
   set_fact:
     _deploy_task_ids: >-
       {%- set ns = namespace(ids=[]) -%}
       {%- for r in (_deploy_results.results | default([])) -%}
-        {%- set tid = (r.dnac_response.response | default({})).taskId
-                      | default((r.dnac_response | default({})).taskId | default('')) -%}
+        {%- set tid = (r.json.response | default({})).taskId | default('') -%}
         {%- if tid -%}
           {%- set ns.ids = ns.ids + [{'ip': r.item.key, 'taskId': tid}] -%}
         {%- endif -%}
@@ -346,7 +399,9 @@
 # ── Step F: Poll async task status per device ────────────────────────────────
 #
 # Each device got its own deploy call and taskId — poll each independently.
-# /dna/intent/api/v1/task/<taskId> is the correct endpoint (NOT deploy-status).
+# The task `progress` field contains the Template Deployment ID once CatC has
+# registered the deployment, allowing Step F2 to poll actual push success/failure.
+# Note: CatC's own field name has a typo — "Template Deployemnt Id" (not "Deployment").
 #
 - name: "[{{ deploy_entry.template_name }}] Poll async task status"
   ansible.builtin.uri:
@@ -367,6 +422,67 @@
   delay:   "{{ task_poll_delay   | int }}"
   ignore_errors: true
 
+- name: "[{{ deploy_entry.template_name }}] --DEBUG-- Task poll responses (progress/isError/endTime)"
+  when: DEBUG
+  debug:
+    msg: >-
+      {%- set ns = namespace(out=[]) -%}
+      {%- for r in (_task_poll_results.results | default([])) -%}
+        {%- set resp = r.json.response | default({}) -%}
+        {%- set ns.out = ns.out + [
+          'Device: ' + r.item.ip +
+          ' | taskId: ' + r.item.taskId +
+          ' | isError: ' + (resp.isError | default('n/a') | string) +
+          ' | endTime: ' + (resp.endTime | default('n/a') | string) +
+          ' | progress: ' + (resp.progress | default('n/a') | string) +
+          ' | failureReason: ' + (resp.failureReason | default('') | string)
+        ] -%}
+      {%- endfor -%}
+      {{ ns.out }}
+
+- name: "[{{ deploy_entry.template_name }}] Extract Template Deployment IDs and failure reasons from task progress"
+  # ── Step F2: Extract deployment result from task progress ─────────────────
+  #
+  # The CatC v2 Deploy Template API (2.3.7.9) is specified to return deploymentId
+  # directly in the POST response body.  On this server the response only includes
+  # taskId, so we read the authoritative push result from the task progress field
+  # which always ends with:
+  #   "Template Deployemnt Id: <id> | failureReason: <reason>"
+  # (CatC's own typo: "Deployemnt").  An empty failureReason means SUCCESS.
+  #
+  # NOTE: On this CatC version the deployment ID last UUID segment is 9 hex chars
+  # (RFC 4122 requires 12), making GET /deploy/status/{deploymentId} return 404.
+  # We therefore determine success/failure from failureReason here instead of
+  # polling the status endpoint.
+  set_fact:
+    _deployment_status_ids: >-
+      {%- set ns = namespace(result=[]) -%}
+      {%- for r in (_task_poll_results.results | default([])) -%}
+        {%- set progress = (r.json.response | default({})).progress | default('') -%}
+        {%- set id_match = progress | regex_search('Template Deploy[a-z]+ Id: ([a-zA-Z0-9-]+)', '\\1') -%}
+        {%- set fr_match = progress | regex_search('\| failureReason: (.*)$', '\\1') -%}
+        {%- set did = (id_match | first) if (id_match is not none and id_match | length > 0) else '' -%}
+        {%- set fr  = ((fr_match | first) | trim) if (fr_match is not none and fr_match | length > 0) else '' -%}
+        {%- set ns.result = ns.result + [{'ip': r.item.ip, 'deploymentId': did, 'failureReason': fr}] -%}
+      {%- endfor -%}
+      {{ ns.result }}
+
+- name: "[{{ deploy_entry.template_name }}] --DEBUG-- Template Deployment IDs and push results"
+  when: DEBUG
+  debug:
+    msg: >-
+      {%- set ns = namespace(out=[]) -%}
+      {%- for d in (_deployment_status_ids | default([])) -%}
+        {%- set result = 'SUCCESS' if d.failureReason | default('') | length == 0 else 'FAILURE' -%}
+        {%- set ns.out = ns.out + [
+          'Device: ' + d.ip +
+          ' | deploymentId: ' + d.deploymentId +
+          ' | result: ' + result +
+          ' | failureReason: ' + (d.failureReason | default('') | string)
+        ] -%}
+      {%- endfor -%}
+      {{ ns.out }}
+
 # ── Step G: Summary and error propagation ───────────────────────────────────
 - name: "[{{ deploy_entry.template_name }}] Deployment summary"
   debug:
@@ -375,14 +491,17 @@
       - "Project       : {{ deploy_entry.project_name }}"
       - "Site          : {{ deploy_entry.site }}"
       - "Target devices: {{ deploy_entry.template_target | join(', ') }}"
-      - "Tasks submitted: {{ _deploy_task_ids | map(attribute='taskId') | list }}"
-      - "Any module error: {{ _deploy_results.results | selectattr('failed','equalto',true) | list | length > 0 }}"
+      - "Tasks submitted   : {{ _deploy_task_ids | map(attribute='taskId') | list }}"
+      - "Deployment IDs    : {{ _deployment_status_ids | map(attribute='deploymentId') | list }}"
+      - "Any API error     : {{ _deploy_results.results | selectattr('failed','equalto',true) | list | length > 0 }}"
+      - "Deployment results: {{ _deployment_status_ids | map(attribute='failureReason') | map('default', '') | map('ternary', 'FAILURE', 'SUCCESS') | list }}"
 
-- name: "[{{ deploy_entry.template_name }}] Fail if any deploy module reported an error"
+- name: "[{{ deploy_entry.template_name }}] Fail if any deploy API call returned an error"
   ansible.builtin.fail:
     msg:
-      - "cisco.dnac.configuration_template_deploy_v2 returned an error for {{ item.item.key }}"
-      - "Error: {{ item.msg | default(item | string) }}"
+      - "Deploy REST API returned an error for {{ item.item.key }}"
+      - "Status: {{ item.status | default('unknown') }}"
+      - "Body: {{ item.json | default(item.msg) | default(item | string) }}"
   loop: "{{ _deploy_results.results | default([]) }}"
   loop_control:
     label: "{{ item.item.key }}"
@@ -399,3 +518,16 @@
   loop_control:
     label: "{{ item.item.ip }}"
   when: (item.json.response | default({})).isError | default(false) | bool
+
+- name: "[{{ deploy_entry.template_name }}] Fail if any Template Deployment push reported failure"
+  # Checks failureReason parsed from the task progress field (Step F2).
+  # An empty failureReason means SUCCESS; any non-empty value means the device
+  # config push failed and the reason is included in the error message.
+  ansible.builtin.fail:
+    msg:
+      - "Template Deployment {{ item.deploymentId }} did NOT succeed for {{ item.ip }}."
+      - "Failure reason: {{ item.failureReason }}"
+  loop: "{{ _deployment_status_ids | default([]) }}"
+  loop_control:
+    label: "{{ item.ip }}"
+  when: item.failureReason | default('') | length > 0
