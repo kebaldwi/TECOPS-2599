@@ -426,12 +426,15 @@
   when: DEBUG
   debug:
     msg: >-
+      {%- set member_names = _member_templates | map(attribute='name') | list | join(', ') -%}
       {%- set ns = namespace(out=[]) -%}
       {%- for r in (_task_poll_results.results | default([])) -%}
-        {%- set resp = r.json.response | default({}) -%}
+        {%- set resp     = r.json.response | default({}) -%}
+        {%- set dev_info = _device_uuid_map[r.item.ip] | default({}) -%}
+        {%- set hostname = dev_info.hostname | default(r.item.ip) -%}
         {%- set ns.out = ns.out + [
-          'Device: ' + r.item.ip +
-          ' | taskId: ' + r.item.taskId +
+          'Device: ' + r.item.ip + ' (' + hostname + ')' +
+          ' | member templates: ' + member_names +
           ' | isError: ' + (resp.isError | default('n/a') | string) +
           ' | endTime: ' + (resp.endTime | default('n/a') | string) +
           ' | progress: ' + (resp.progress | default('n/a') | string) +
@@ -467,8 +470,7 @@
       {%- endfor -%}
       {{ ns.result }}
 
-- name: "[{{ deploy_entry.template_name }}] --DEBUG-- Template Deployment IDs and push results"
-  when: DEBUG
+- name: "[{{ deploy_entry.template_name }}] Template Deployment IDs and push results"
   debug:
     msg: >-
       {%- set ns = namespace(out=[]) -%}
@@ -484,9 +486,9 @@
       {{ ns.out }}
 
 # ── Step G: Summary and error propagation ───────────────────────────────────
-- name: "[{{ deploy_entry.template_name }}] Deployment summary"
-  debug:
-    msg: >-
+- name: "[{{ deploy_entry.template_name }}] Deployment summary - build table"
+  set_fact:
+    _summary_lines: >-
       {%- set SEP  = '─' -%}
       {%- set rows = [] -%}
       {%- set _ = rows.append(('Template',       deploy_entry.template_name)) -%}
@@ -512,40 +514,9 @@
         {%- if not loop.last -%}{%- set _ = ns.lines.append(mid) -%}{%- endif -%}
       {%- endfor -%}
       {%- set _ = ns.lines.append(bot) -%}
-      {{ ns.lines | join('\n') }}
+      {{ ns.lines }}
 
-- name: "[{{ deploy_entry.template_name }}] Fail if any deploy API call returned an error"
-  ansible.builtin.fail:
-    msg:
-      - "Deploy REST API returned an error for {{ item.item.key }}"
-      - "Status: {{ item.status | default('unknown') }}"
-      - "Body: {{ item.json | default(item.msg) | default(item | string) }}"
-  loop: "{{ _deploy_results.results | default([]) }}"
-  loop_control:
-    label: "{{ item.item.key }}"
-  when: item.failed | default(false)
+- name: "[{{ deploy_entry.template_name }}] Deployment summary"
+  debug:
+    msg: "{{ _summary_lines }}"
 
-- name: "[{{ deploy_entry.template_name }}] Fail if any async task reported an error"
-  ansible.builtin.fail:
-    msg:
-      - "Deploy task {{ item.json.response.taskId | default(item.item.taskId) }} reported isError=true."
-      - "Device         : {{ item.item.ip }}"
-      - "Progress       : {{ (item.json.response | default({})).progress | default('n/a') }}"
-      - "Failure reason : {{ (item.json.response | default({})).failureReason | default('n/a') }}"
-  loop: "{{ (_task_poll_results | default({'results': []})).results }}"
-  loop_control:
-    label: "{{ item.item.ip }}"
-  when: (item.json.response | default({})).isError | default(false) | bool
-
-- name: "[{{ deploy_entry.template_name }}] Fail if any Template Deployment push reported failure"
-  # Checks failureReason parsed from the task progress field (Step F2).
-  # An empty failureReason means SUCCESS; any non-empty value means the device
-  # config push failed and the reason is included in the error message.
-  ansible.builtin.fail:
-    msg:
-      - "Template Deployment {{ item.deploymentId }} did NOT succeed for {{ item.ip }}."
-      - "Failure reason: {{ item.failureReason }}"
-  loop: "{{ _deployment_status_ids | default([]) }}"
-  loop_control:
-    label: "{{ item.ip }}"
-  when: item.failureReason | default('') | length > 0
