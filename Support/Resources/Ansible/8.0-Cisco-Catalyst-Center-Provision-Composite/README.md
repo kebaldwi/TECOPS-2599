@@ -459,7 +459,9 @@ Each iteration of the main loop executes all steps in this file for one composit
 
 #### Step A: Fetch All Project Templates with Version IDs
 
-**Purpose:** Retrieve the complete flat template list for the project using the template-programmer template endpoint, which — unlike the project endpoint — includes `versionsInfo` per template. `versionsInfo[0].id` is the **latest committed version UUID**, which is required by the CatC v2 deploy API.
+**Purpose:** Retrieve the complete flat template list for the project using the template-programmer template endpoint, which — unlike the project endpoint — includes `versionsInfo` per template. The entry with the highest `versionTime` in `versionsInfo` is the **latest committed version UUID**, which is required by the CatC v2 deploy API.
+
+> **⚠️ CatC returns `versionsInfo` in random order — not chronological.** The playbook sorts the array by `versionTime` (Unix milliseconds) descending and selects the highest value as the latest version. Using `versionsInfo[0]` directly would select an arbitrary — often stale — snapshot.
 
 > **Why not the project endpoint?** `GET /template-programmer/project?name=` returns a `templates[]` array with only root `templateId` values and no `versionsInfo`. The v2 deploy API requires version-level UUIDs (`templateId` = version UUID, `mainTemplateId` = root UUID). Using root UUIDs as `templateId` causes the deploy to be accepted silently but may push stale configurations.
 
@@ -475,27 +477,27 @@ GET /dna/intent/api/v1/template-programmer/template?projectNames=<project_name>
     "name":         "BGP-EVPN-BUILD.j2",
     "templateId":   "2cbdc2f3-3a44-44bc-a8df-b3d76a410c60",
     "versionsInfo": [
-      { "id": "5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665", "version": "2" },
-      { "id": "a1b2c3d4-...",                          "version": "1" }
+      { "id": "a1b2c3d4-...",                          "versionTime": 1774400000000 },
+      { "id": "5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665", "versionTime": 1774409236083 }
     ]
   },
   {
     "name":         "FABRIC-VRF.j2",
     "templateId":   "faa53970-0521-44c1-ab49-9a2d92609c61",
     "versionsInfo": [
-      { "id": "38d90128-e9dc-4c10-aee0-fb00c0c3e60b", "version": "3" }
+      { "id": "38d90128-e9dc-4c10-aee0-fb00c0c3e60b", "versionTime": 1774409172589 }
     ]
   }
 ]
 ```
 
-The first element of `versionsInfo` is always the **most recently committed** version. The playbook builds a lookup map from every template name to its two key UUIDs:
+`versionsInfo` is returned in **random order** by CatC. The playbook sorts it by `versionTime` descending and selects the entry with the highest timestamp as the latest committed version. The result is stored in a lookup map:
 
 ```yaml
 _template_version_map:
   "BGP-EVPN-BUILD.j2":
     rootId:    "2cbdc2f3-3a44-44bc-a8df-b3d76a410c60"   # tpl.templateId
-    versionId: "5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665"   # versionsInfo[0].id
+    versionId: "5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665"   # max(versionsInfo, key=versionTime).id
   "FABRIC-VRF.j2":
     rootId:    "faa53970-0521-44c1-ab49-9a2d92609c61"
     versionId: "38d90128-e9dc-4c10-aee0-fb00c0c3e60b"
@@ -509,7 +511,7 @@ If a template has no `versionsInfo` (i.e., has never been committed to CatC), `v
 | ID type | Source field | Description |
 |---------|-------------|-------------|
 | Root UUID | `templateId` | Permanent identifier assigned when the template is first created. Never changes across commits. |
-| Version UUID | `versionsInfo[0].id` | UUID of the latest committed snapshot of the template. Changes each time you commit a new version. **This is what the v2 deploy API requires as `templateId`.** |
+| Version UUID | `max(versionsInfo, key=versionTime).id` | UUID of the latest committed snapshot. `versionsInfo` is returned in random order — sort by `versionTime` descending and take the first element. Changes each time you commit a new version. **This is what the v2 deploy API requires as `templateId`.** |
 | Main template ID | Root UUID | The `mainTemplateId` field in the deploy payload. CatC uses it for internal version tracking. |
 
 #### Step B: Template Detail Fetch (containingTemplates)
@@ -870,7 +872,7 @@ The structure submitted to `POST /dna/intent/api/v2/template-programmer/template
 
 | Field | Type | Value | Notes |
 |-------|------|-------|-------|
-| `templateId` | string | Composite version UUID | From `versionsInfo[0].id` via `_template_version_map`. NOT the root UUID. |
+| `templateId` | string | Composite version UUID | From `max(versionsInfo, key=versionTime).id` via `_template_version_map`. NOT the root UUID. |
 | `mainTemplateId` | string | Composite root UUID | Permanent template ID. From `templateId` field in the template list response. |
 | `isComposite` | bool | `true` | Required for composite deploys |
 | `copyingConfig` | bool | `true` | **Critical — top level.** Tells CatC to push rendered config to the device. Without this, deploy is intent-only. |
@@ -891,17 +893,19 @@ This section explains a key concept that confused even experienced users: the di
 
 Every template in Catalyst Center is assigned a permanent **root UUID** when it is first created. This ID is visible in the Template Editor URL and in the project/template list API response as `templateId`. It never changes, even as the template is edited and committed multiple times.
 
-Every time you commit a new version of the template in CatC, a new **version UUID** is created and attached to that snapshot. The template list endpoint (`/template-programmer/template?projectNames=`) exposes these as the `versionsInfo` array. `versionsInfo[0].id` is always the **most recently committed version**.
+Every time you commit a new version of the template in CatC, a new **version UUID** is created and attached to that snapshot. The template list endpoint (`/template-programmer/template?projectNames=`) exposes these as the `versionsInfo` array.
+
+> **⚠️ `versionsInfo` is returned in random order by CatC — not newest-first.** This was confirmed by live API inspection: for a template with 8 versions, the newest (max `versionTime`) was at array index [2], not [0]. The playbook sorts by `versionTime` descending and takes the first result.
 
 ```
 BGP-EVPN-BUILD.j2
 │
 ├── rootId (permanent):     2cbdc2f3-3a44-44bc-a8df-b3d76a410c60   ← mainTemplateId
 │
-└── Versions:
-    ├── version 1 UUID:  a1b2c3d4-e5f6-7890-abcd-ef1234567890
-    └── version 2 UUID:  5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665   ← templateId (latest)
-                                                                    (versionsInfo[0].id)
+└── versionsInfo (random order — must sort by versionTime):
+    ├── versionTime 1774400000000:  a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    └── versionTime 1774409236083:  5d4f4fa7-b6fa-4d2a-b4ff-f00d08419665   ← templateId (latest)
+                                                                               max(versionTime)
 ```
 
 ### Why Both Are Required
@@ -910,7 +914,7 @@ The v2 composite deploy API requires:
 
 | Payload field | UUID type | Source |
 |---------------|-----------|--------|
-| `templateId` | **Version UUID** (latest committed) | `versionsInfo[0].id` from `GET /template-programmer/template?projectNames=` |
+| `templateId` | **Version UUID** (latest committed) | `max(versionsInfo, key=versionTime).id` from `GET /template-programmer/template?projectNames=` |
 | `mainTemplateId` | **Root UUID** (permanent) | `templateId` field from same response |
 
 Sending the root UUID as `templateId` is accepted without error but may result in CatC deploying an older or unexpected version of the template configuration.
@@ -1175,7 +1179,7 @@ This playbook sits at the end of the automation chain. All upstream steps must c
 | `assert` fails: no deploy entries found | No `DayNTemplateNames` entries with `DeployTemplate: true` in `settings.json` | Verify at least one entry in `settings.json` has `DeployTemplate: true` and a non-null `TemplateName` and `Project` under `network_profile.DayNTemplateNames`. |
 | `401 Unauthorized` from REST calls | Vault credentials incorrect or expired | Verify `dnac_username` / `dnac_password` in `vault.yml`. Re-encrypt if recently changed. |
 | `SSL: CERTIFICATE_VERIFY_FAILED` | TLS verification enabled against self-signed cert | Set `dnac_verify: false` in inventory for lab environments, or add the CatC CA cert to the system trust store for production. |
-| Deploy succeeds but stale config is pushed to device | `templateId` is the root UUID instead of the version UUID | The template list endpoint (`?projectNames=`) must be used — not the project endpoint — to obtain `versionsInfo[0].id`. The playbook already uses this endpoint; this symptom appears if the endpoint was reverted. |
+| Deploy succeeds but stale config is pushed to device | A non-latest `versionsInfo` entry (or the root UUID) was used as `templateId` | The playbook sorts `versionsInfo` by `versionTime` descending to select the latest version. This symptom can also appear if the template list endpoint was accidentally reverted to the project endpoint (which returns no `versionsInfo`). Ensure `deploy_entry.yml` uses `sort(attribute='versionTime', reverse=true) \| first` on `versionsInfo`. |
 | Deploy succeeds but no config pushed to device | `copyingConfig: true` missing from payload | `copyingConfig` must be present at **both** the top level and inside each `memberTemplateDeploymentInfo` entry. The `cisco.dnac.configuration_template_deploy_v2` module silently drops this field — this is why the playbook uses `ansible.builtin.uri` for the deploy step instead. |
 | CatC Audit Log: "Error while deploying provisioning workflow" | Device unreachable during deploy | CatC wraps template pushes in a provisioning workflow. This audit log error means CatC could not reach the device to push config. Verify the device shows as Reachable in CatC Inventory (`Provision → Inventory`) and retry. |
 | `NCDP10000: Configuration failed on device … due to unreachability` | Target device not reachable from CatC at deploy time | The device was in CatC inventory but could not be reached via NETCONF/SSH. Check that the device is fully booted, management interface is up, and CatC has a route to the management IP. |

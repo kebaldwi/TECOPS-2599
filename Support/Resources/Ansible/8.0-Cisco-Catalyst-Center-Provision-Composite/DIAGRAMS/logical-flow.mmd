@@ -12,7 +12,7 @@ flowchart TD
     D(["For each template entry"])
     D --> E
 
-    E["Step A - Template list<br/>GET .../template<br/>?projectNames=project<br/>builds _template_version_map"]
+    E["Step A - Template list<br/>GET .../template<br/>?projectNames=project<br/>sort versionsInfo by versionTime DESC<br/>→ builds _template_version_map"]
     E --> F{Template<br/>found in map?}
     F -->|No| FAIL_B([Fail: template<br/>not found in project])
     F -->|Yes| G
