@@ -1,0 +1,42 @@
+{## CATC: productFamily=Switches and Hubs, softwareType=IOS-XE, productSeries=Cisco Catalyst 9000 Series Virtual Switches ##}
+{# ======================================== #}
+{# Client Port Utility Macros (Library)     #}
+{# ======================================== #}
+{# render_port_config: emits IOS-XE CLI     #}
+{# for a single port_entry dict, expanding  #}
+{# port ranges (e.g., Gi0/0/1-5) inline.   #}
+{# Called from FABRIC-CLIENT-PORTS.j2       #}
+
+{% macro switchport_access(port_entry) %}
+{% if '-' in port_entry.port %}
+  {# Port range: parse prefix and start/end numbers #}
+  {% set parts = port_entry.port.split('-') %}
+  {% if parts | length == 2 %}
+    {% set last_slash = parts[0].rfind('/') %}
+    {% set prefix = parts[0][:last_slash + 1] %}
+    {% set start_num = parts[0][last_slash + 1:] | int %}
+    {% set end_num = parts[1] | int %}
+    {% for i in range(start_num, end_num + 1) %}
+interface {{ prefix }}{{ i }}
+ description {{ port_entry.description }}
+ switchport mode access
+ switchport access vlan {{ port_entry.vlan }}
+      {% if port_entry.portfast is defined and port_entry.portfast %}
+ spanning-tree portfast
+      {% endif %}
+!
+    {% endfor %}
+  {% endif %}
+{% else %}
+  {# Single port #}
+interface {{ port_entry.port }}
+ description {{ port_entry.description }}
+ switchport mode access
+ switchport access vlan {{ port_entry.vlan }}
+  {% if port_entry.portfast is defined and port_entry.portfast %}
+ spanning-tree portfast
+  {% endif %}
+!
+{% endif %}
+{% endmacro %}
+
