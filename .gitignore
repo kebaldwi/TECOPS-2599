@@ -12,5 +12,9 @@ vault.yml
 
 # Ansible / DNAC runtime logs
 dnac.log
+
+# Python bytecode cache directories
+__pycache__/
+**/__pycache__/
 **/dnac.log
 *.log
