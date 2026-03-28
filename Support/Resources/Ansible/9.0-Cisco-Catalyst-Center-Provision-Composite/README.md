@@ -1,4 +1,4 @@
-# 8.0 — Cisco Catalyst Center: Composite Template Deployment
+# 9.0 — Cisco Catalyst Center: Composite Template Deployment
 
 > **Playbook:** `deploy_composite_template.yml`  
 > **Included tasks:** `tasks/deploy_entry.yml`  
@@ -119,7 +119,7 @@ The diagram below shows every decision point and state transition from startup t
 ## Directory Structure
 
 ```
-8.0-Cisco-Catalyst-Center-Provision-Composite/
+9.0-Cisco-Catalyst-Center-Provision-Composite/
 ├── ansible.cfg                         # Ansible defaults (inventory path)
 ├── inventory.yml                       # CatC connection + deploy variables
 ├── deploy_composite_template.yml       # Main playbook
@@ -1261,10 +1261,13 @@ This playbook sits at the end of the automation chain. All upstream steps must c
 6.0 Template GitOps Sync ──→ Templates must exist in CatC as composite
         │                     with member templates attached
         ▼
-7.0 Network Profile (optional — for profile-based template binding)
+7.0 Network Profile
         │
         ▼
-8.0 Composite Template Deployment (this playbook)
+8.0 Provision Devices  ← site-level settings pushed; SDA provisioning record created
+        │
+        ▼
+9.0 Composite Template Deployment (this playbook)
 ```
 
 | Dependency | Reason |
@@ -1272,6 +1275,7 @@ This playbook sits at the end of the automation chain. All upstream steps must c
 | 4.0 Discovery | Devices must be in CatC inventory before UUIDs can be resolved |
 | 5.0 Assign to Site | Devices must be at a known site for template scoping |
 | 6.0 Template Sync | The composite template and all its member templates must exist in CatC before the project lookup in Step A can succeed |
+| 8.0 Provision Devices | Devices must be provisioned to their site before CatC can push Day-N templates onto them |
 
 ---
 

@@ -20,7 +20,7 @@ This document describes the end-to-end Ansible automation suite for provisioning
    - [5.0 — Assign to Site](#50--assign-to-site)
    - [6.0 — Template GitOps](#60--template-gitops)
    - [7.0 — Network Profile](#70--network-profile)
-   - [8.0 — Composite Template Deployment](#80--composite-template-deployment)
+   - [9.0 — Composite Template Deployment](#90--composite-template-deployment)
 4. [Ansible Module Reference](#ansible-module-reference)
 5. [Input Data Sources](#input-data-sources)
 6. [Compatibility Matrix](#compatibility-matrix)
@@ -39,13 +39,14 @@ This document describes the end-to-end Ansible automation suite for provisioning
 | 5.0 | [Assign to Site](5.0-Cisco-Catalyst-Center-Assign-To-Site/) | `assign_to_site.yml` | Devices placed under their designated site in the hierarchy |
 | 6.0 | [Template GitOps](6.0-Cisco-Catalyst-Center-Templates-Github-integration/) | `ansible-git-catc.yml` | Jinja2 and composite templates synced from GitHub into a CatC template project |
 | 7.0 | [Network Profile](7.0-Cisco-Catalyst-Center-Network-Profile/) | `network_profile.yml` | Switching Network Profile created and assigned to sites with Day-N templates bound |
-| 8.0 | [Composite Deployment](8.0-Cisco-Catalyst-Center-Provision-Composite/) | `deploy_composite_template.yml` | Composite Day-N templates deployed to managed devices; verification via async task poll |
+| 8.0 | [Provision Devices](8.0-Cisco-Catalyst-Center-Provision-Devices/) | `provision_devices.yml` | Devices provisioned to their site via SDA provisionDevices API; site-level settings pushed; idempotent skip for already-provisioned devices |
+| 9.0 | [Composite Deployment](9.0-Cisco-Catalyst-Center-Provision-Composite/) | `deploy_composite_template.yml` | Composite Day-N templates deployed to managed devices; verification via async task poll |
 
 ---
 
 ## Provisioning Workflow
 
-The following diagram shows the complete end-to-end data flow across all eight playbooks — input sources, playbook execution order, intermediate Catalyst Center resources produced, and hard dependencies between stages.
+The following diagram shows the complete end-to-end data flow across all nine playbooks — input sources, playbook execution order, intermediate Catalyst Center resources produced, and hard dependencies between stages.
 
 ![Provisioning Workflow](DIAGRAMS/provisioning-workflow.png)
 
@@ -57,7 +58,7 @@ The following diagram shows the complete end-to-end data flow across all eight p
 |--------|---------|
 | Blue | Infrastructure playbook — reads `settings.json` or `devices.json` |
 | Purple | GitHub-sourced playbook — fetches templates from a git repository (6.0) |
-| Teal | Deployment playbook — pushes configuration onto managed devices (8.0) |
+| Teal | Deployment playbooks — push configuration onto managed devices (8.0, 9.0) |
 | Dark grey | Input data source (`settings.json`, `devices.json`, GitHub repo) |
 | Orange | Catalyst Center resource produced by a playbook |
 | Green | Final deployed state — devices with Day-N configuration applied |
@@ -188,7 +189,7 @@ Assigns discovered devices to their designated sites in the Catalyst Center hier
 
 - Devices appear under their correct site in **Provision → Inventory** (site column populated)
 - Devices are eligible for site-scoped provisioning, template deployment, and network profile binding
-- Site assignment is a prerequisite for composite template deployment (playbook 8.0)
+- Site assignment is a prerequisite for device provisioning (playbook 8.0) and composite template deployment (playbook 9.0)
 
 | Action | Module / Mechanism |
 |--------|-------------------|
@@ -238,7 +239,7 @@ Creates Switching Network Profiles in Catalyst Center and assigns them to one or
 
 - Named Switching Network Profile visible under **Design → Network Profiles**
 - Profile bound to the specified sites with the configured Day-N template(s) listed
-- Profile ready to be selected during device provisioning or referenced by the composite deployment playbook (8.0)
+- Profile ready to be selected during device provisioning (playbook 8.0) and referenced by the composite deployment playbook (9.0)
 
 | Action | Module / Mechanism |
 |--------|-------------------|
@@ -246,10 +247,40 @@ Creates Switching Network Profiles in Catalyst Center and assigns them to one or
 
 ---
 
-### 8.0 — Composite Template Deployment
+### 8.0 — Provision Devices
 
-**Playbook:** [`deploy_composite_template.yml`](8.0-Cisco-Catalyst-Center-Provision-Composite/deploy_composite_template.yml)
-**Full README:** [8.0-Cisco-Catalyst-Center-Provision-Composite/README.md](8.0-Cisco-Catalyst-Center-Provision-Composite/README.md)
+**Playbook:** [`provision_devices.yml`](8.0-Cisco-Catalyst-Center-Provision-Devices/provision_devices.yml)
+**Full README:** [8.0-Cisco-Catalyst-Center-Provision-Devices/README.md](8.0-Cisco-Catalyst-Center-Provision-Devices/README.md)
+**Minimum CatC:** 2.3.7.6 | **Collection:** `cisco.dnac 6.46.0`
+
+#### Function
+
+Provisions managed network devices to their designated sites in Catalyst Center using the SDA `provisionDevices` REST API (`POST /dna/intent/api/v1/sda/provisionDevices`). Provisioning is the step that pushes site-level network settings (DNS, NTP, SNMP, syslog, netflow, AAA) configured in playbook 2.0 onto the physical devices, and creates the CatC-internal provisioning record that links each `networkDeviceId` to its `siteId`. This record is required by the composite template deployment pipeline (playbook 9.0).
+
+The playbook reads `settings.json`, groups devices by site path, authenticates once to get a JWT, then for each site: resolves the site UUID, resolves device UUIDs per management IP, checks which devices are already provisioned at the site (idempotency), and submits a batched `POST` for the remaining devices. The async task returned by CatC is polled to completion per site, and a structured per-site summary is printed.
+
+#### Outcome in Catalyst Center
+
+- Devices appear in **Provision → Inventory** with a provisioning status of `Success`
+- Site-level network settings (DNS, NTP, SNMP, AAA, syslog) applied to device running configuration
+- SDA provisioning record created — required for composite template deployment
+- Already-provisioned devices are skipped (idempotent); use `force_reprovision=true` to re-trigger
+
+| Action | Module / Mechanism |
+|--------|-------------------|
+| Authenticate | `ansible.builtin.uri` → `POST /dna/system/api/v1/auth/token` |
+| Resolve site UUID | `ansible.builtin.uri` → `GET /dna/intent/api/v1/site?name={path}` |
+| Resolve device UUID | `ansible.builtin.uri` → `GET /dna/intent/api/v1/network-device?managementIpAddress={ip}` |
+| Check provisioned state | `ansible.builtin.uri` → `GET /dna/intent/api/v1/sda/provisionDevices?siteId={uuid}&limit=500` |
+| Provision devices (batch) | `ansible.builtin.uri` → `POST /dna/intent/api/v1/sda/provisionDevices` |
+| Poll async task | `ansible.builtin.uri` → `GET /dna/intent/api/v1/task/{taskId}` (until `endTime` set) |
+
+---
+
+### 9.0 — Composite Template Deployment
+
+**Playbook:** [`deploy_composite_template.yml`](9.0-Cisco-Catalyst-Center-Provision-Composite/deploy_composite_template.yml)
+**Full README:** [9.0-Cisco-Catalyst-Center-Provision-Composite/README.md](9.0-Cisco-Catalyst-Center-Provision-Composite/README.md)
 **Minimum CatC:** 2.3.7.6 | **Collection:** `cisco.dnac 6.46.0`
 
 #### Function
@@ -293,8 +324,8 @@ The following table lists every Ansible module used across the suite, the collec
 | `assign_device_to_site` | `cisco.dnac` | 5.0 Assign to Site | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/assign_device_to_site/) |
 | `template_workflow_manager` | `cisco.dnac` | 6.0 Template GitOps | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/template_workflow_manager/) |
 | `network_profile_switching_workflow_manager` | `cisco.dnac` | 7.0 Network Profile | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/network_profile_switching_workflow_manager/) |
-| `configuration_template_deploy_v2` | `cisco.dnac` | 8.0 Composite Deployment | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/configuration_template_deploy_v2/) |
-| `ansible.builtin.uri` | Ansible Core | 2.0, 6.0, 8.0 | [docs](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/uri_module.html) |
+| `configuration_template_deploy_v2` | `cisco.dnac` | 9.0 Composite Deployment | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/configuration_template_deploy_v2/) |
+| `ansible.builtin.uri` | Ansible Core | 2.0, 6.0, 8.0, 9.0 | [docs](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/uri_module.html) |
 
 ### Collection Installation
 
@@ -335,7 +366,7 @@ Projects/
 
 ### `devices.json`
 
-Used by: **4.0, 5.0, 8.0**
+Used by: **4.0, 5.0, 9.0**
 
 Defines the device inventory: management IP lists per site, and Day-N template deployment targets. One `project[]` entry per site or grouping, with `DeviceList` (comma-separated IPs) and `DayNTemplateNames[]` (template + target config).
 
@@ -399,7 +430,7 @@ The playbooks must be executed in the order shown. Each playbook depends on reso
       │   7.0 Network Profile
       │         │  Requires sites (1.0) and templates (6.0)
       │         │
-      └─────────┴────────────▶  8.0 Composite Deployment
+      └─────────┴────────────▶  9.0 Composite Deployment
                                      Requires: assigned devices (5.0)
                                                templates in CatC (6.0)
                                                profile bound to sites (7.0)
