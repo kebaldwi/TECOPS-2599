@@ -81,6 +81,10 @@ The playbook is data-driven: it reads the same `devices.json` file used across t
 | Polls async task to completion | `ansible.builtin.uri` with `until` + `retries` |
 | Extracts deployment push result from task progress | `set_fact` — regex-parses `failureReason` from task `progress` field (empty = SUCCESS) |
 
+> [!IMPORTANT]
+> **Why this step is necessary after 8.0 (Provision Devices):**
+> The SDA `provisionDevices` API (Step 8.0) pushes site-level network settings (NTP, DNS, SNMP, AAA, etc.) and creates the internal CatC provisioning record — but it does **not** apply any CLI templates. Day-N Jinja2/CLI templates (VRFs, loopbacks, overlay, NVE, multicast, etc.) are only pushed to the device through the template deployment API. This playbook is the step that actually applies that full CLI configuration stack to each managed device.
+
 ### What makes composite deployment different
 
 Unlike a regular (non-composite) template deployment — where a single template and a flat set of parameters are pushed — a composite deployment requires that each **member template** inside the composite carry its own `targetInfo` and parameter set. This is reflected in the `memberTemplateDeploymentInfo` structure of the v2 API payload.

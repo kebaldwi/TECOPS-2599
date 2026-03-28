@@ -83,6 +83,10 @@ Device provisioning in Catalyst Center is more than just "putting a device on a 
 2. **Establishes the SDA provisioning record** — creates a CatC-internal record that links the `networkDeviceId` to a `siteId`. This record is required by the Day-N composite template deployment pipeline (Step 9.0) to validate device ownership.
 3. **Enables template association** — the Network Profile (Step 7.0) attached Day-N templates to the site; provisioning is what causes CatC to associate those templates with the physical devices.
 
+> [!IMPORTANT]
+> **Provisioning via the SDA API does NOT apply CLI templates to devices.**
+> This step pushes site-level network settings (NTP, DNS, SNMP, AAA, etc.) and creates the internal CatC provisioning record — but it does **not** render or push any Jinja2/CLI templates. CLI template configuration is applied in the next step: **9.0 — Composite Template Deployment**. If you skip Step 9.0, devices will have site settings but will be missing their full Day-N configuration (VRFs, loopbacks, overlay, NVE, multicast, etc.).
+
 > **Ordering is critical.** This playbook must run **after** Step 7.0 (Network Profile) and **before** Step 9.0 (Composite Template Deployment). See [Playbook Ordering Dependency](#playbook-ordering-dependency).
 
 ### Idempotency
