@@ -1,4 +1,4 @@
-# 8.0 - Cisco Catalyst Center Provision Deploy Composite
+# 9.0 - Cisco Catalyst Center Provision Deploy Composite
 
 This example deploys the committed composite template to a managed device.
 
