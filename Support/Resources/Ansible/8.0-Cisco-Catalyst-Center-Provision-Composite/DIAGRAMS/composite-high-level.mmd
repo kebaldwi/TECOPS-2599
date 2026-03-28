@@ -1,0 +1,53 @@
+					flowchart TD
+    subgraph REQUEST["📤  Single API Request to Catalyst Center"]
+        direction TB
+
+        subgraph FLAGS["⚙️  Deployment Flags  (apply to every template in the bundle)"]
+            F1["copyingConfig = true\nPush rendered config to device immediately"]
+            F2["forcePushTemplate = true\nRe-deploy even if already up to date"]
+            F3["isComposite = true\nThis is a bundle — deploy all sub-templates together"]
+        end
+
+        subgraph IDS["🔑  Template Identifiers"]
+            ID1["mainTemplateId\nPermanent CatC ID of the composite template\n5cbd7b3f-…"]
+            ID2["templateId\nSpecific committed version being deployed\n316d1eb5-…"]
+        end
+
+        subgraph DEVICE["🖥️  Target Device  (same for every sub-template)"]
+            D1["Spine-02.dcloud.cisco.com"]
+            D2["Management IP:  198.19.1.2"]
+            D3["Device UUID:  0c1b45cc-…"]
+        end
+    end
+
+    subgraph COMPOSITE["📦  BGP-EVPN-BUILD.j2  —  Composite Template  (8 sub-templates applied in order)"]
+        direction TB
+        T1["① FABRIC-VRF.j2\nDefine VRFs (routing domains) on the device"]
+        T2["② FABRIC-LOOPBACKS.j2\nCreate loopback interfaces used as router IDs & tunnel sources"]
+        T3["③ FABRIC-L3OUT.j2\nExternal Layer 3 hand-off — uplink sub-interfaces to core"]
+        T4["④ FABRIC-NVE.j2\nVXLAN tunnel interface — the FABRIC overlay encapsulation engine"]
+        T5["⑤ FABRIC-MCAST.j2\nMulticast routing — BUM traffic replication across the fabric"]
+        T6["⑥ FABRIC-EVPN.j2\nBGP EVPN control plane — advertise MAC & IP routes"]
+        T7["⑦ FABRIC-OVERLAY.j2\nOverlay VLANs, SVIs, DHCP relay — tenant network endpoints"]
+        T8["⑧ FABRIC-NAC.j2\n802.1X / RADIUS access policy on end-user ports"]
+
+        T1 --> T2 --> T3 --> T4 --> T5 --> T6 --> T7 --> T8
+    end
+
+    REQUEST -->|"deploys"| COMPOSITE
+    DEVICE -->|"receives config from each sub-template"| COMPOSITE
+
+    style REQUEST fill:#1a1a2e,stroke:#4a90d9,color:#ffffff
+    style FLAGS fill:#0f3460,stroke:#4a90d9,color:#e0e0e0
+    style IDS fill:#0f3460,stroke:#4a90d9,color:#e0e0e0
+    style DEVICE fill:#16213e,stroke:#e94560,color:#ffffff
+    style COMPOSITE fill:#0a2440,stroke:#2ecc71,color:#ffffff
+    style T1 fill:#1a4731,stroke:#2ecc71,color:#ffffff
+    style T2 fill:#1a4731,stroke:#2ecc71,color:#ffffff
+    style T3 fill:#1a4731,stroke:#2ecc71,color:#ffffff
+    style T4 fill:#1a4731,stroke:#2ecc71,color:#ffffff
+    style T5 fill:#1a4731,stroke:#2ecc71,color:#ffffff
+    style T6 fill:#1a4731,stroke:#2ecc71,color:#ffffff
+    style T7 fill:#1a4731,stroke:#2ecc71,color:#ffffff
+    style T8 fill:#1a4731,stroke:#2ecc71,color:#ffffff
+				

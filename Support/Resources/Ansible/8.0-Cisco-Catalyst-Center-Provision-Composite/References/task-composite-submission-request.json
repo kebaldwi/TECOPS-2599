@@ -1,0 +1,290 @@
+{
+  "copyingConfig": true,
+  "forcePushTemplate": true,
+  "isComposite": true,
+  "mainTemplateId": "5cbd7b3f-584e-4371-adb2-8c71967f08e8",
+  "templateId": "316d1eb5-49b7-4b0c-b6e4-b0ed8a483b52",
+  "targetInfo": [
+    {
+      "hostName": "Spine-02.dcloud.cisco.com",
+      "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+      "params": {},
+      "resourceParams": [
+        {
+          "scope": "RUNTIME",
+          "type": "MANAGED_DEVICE_UUID",
+          "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+        },
+        {
+          "scope": "RUNTIME",
+          "type": "MANAGED_DEVICE_IP",
+          "value": "198.19.1.2"
+        },
+        {
+          "scope": "RUNTIME",
+          "type": "MANAGED_DEVICE_HOSTNAME",
+          "value": "Spine-02.dcloud.cisco.com"
+        }
+      ],
+      "type": "MANAGED_DEVICE_UUID"
+    }
+  ],
+  "memberTemplateDeploymentInfo": [
+    {
+      "copyingConfig": true,
+      "forcePushTemplate": true,
+      "isComposite": false,
+      "mainTemplateId": "f3a79c64-130a-428c-be22-5a35f01fc70d",
+      "templateId": "aaeb44a9-9308-4267-aa46-36b79e82dc64",
+      "targetInfo": [
+        {
+          "hostName": "Spine-02.dcloud.cisco.com",
+          "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+          "params": {},
+          "resourceParams": [
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_UUID",
+              "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_IP",
+              "value": "198.19.1.2"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_HOSTNAME",
+              "value": "Spine-02.dcloud.cisco.com"
+            }
+          ],
+          "type": "MANAGED_DEVICE_UUID"
+        }
+      ]
+    },
+    {
+      "copyingConfig": true,
+      "forcePushTemplate": true,
+      "isComposite": false,
+      "mainTemplateId": "7f5c9678-4297-43ff-82f5-67660d78dbec",
+      "templateId": "7acc2b8b-073b-44e0-aca4-5699317543b1",
+      "targetInfo": [
+        {
+          "hostName": "Spine-02.dcloud.cisco.com",
+          "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+          "params": {},
+          "resourceParams": [
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_UUID",
+              "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_IP",
+              "value": "198.19.1.2"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_HOSTNAME",
+              "value": "Spine-02.dcloud.cisco.com"
+            }
+          ],
+          "type": "MANAGED_DEVICE_UUID"
+        }
+      ]
+    },
+    {
+      "copyingConfig": true,
+      "forcePushTemplate": true,
+      "isComposite": false,
+      "mainTemplateId": "4ef4574c-0c99-4fbe-ad9e-b0e742766b8d",
+      "templateId": "4278b773-9092-43ae-a027-b12ca6fc6edb",
+      "targetInfo": [
+        {
+          "hostName": "Spine-02.dcloud.cisco.com",
+          "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+          "params": {},
+          "resourceParams": [
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_UUID",
+              "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_IP",
+              "value": "198.19.1.2"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_HOSTNAME",
+              "value": "Spine-02.dcloud.cisco.com"
+            }
+          ],
+          "type": "MANAGED_DEVICE_UUID"
+        }
+      ]
+    },
+    {
+      "copyingConfig": true,
+      "forcePushTemplate": true,
+      "isComposite": false,
+      "mainTemplateId": "a9008ba7-f297-43ab-94e4-0ec2c3b5585c",
+      "templateId": "a1528762-a36d-4217-a31b-c5ba6217872a",
+      "targetInfo": [
+        {
+          "hostName": "Spine-02.dcloud.cisco.com",
+          "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+          "params": {},
+          "resourceParams": [
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_UUID",
+              "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_IP",
+              "value": "198.19.1.2"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_HOSTNAME",
+              "value": "Spine-02.dcloud.cisco.com"
+            }
+          ],
+          "type": "MANAGED_DEVICE_UUID"
+        }
+      ]
+    },
+    {
+      "copyingConfig": true,
+      "forcePushTemplate": true,
+      "isComposite": false,
+      "mainTemplateId": "83438271-0b0e-420c-b22c-6ad5fd1d305e",
+      "templateId": "82223ec7-e22b-4e84-9aaf-b13781553e69",
+      "targetInfo": [
+        {
+          "hostName": "Spine-02.dcloud.cisco.com",
+          "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+          "params": {},
+          "resourceParams": [
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_UUID",
+              "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_IP",
+              "value": "198.19.1.2"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_HOSTNAME",
+              "value": "Spine-02.dcloud.cisco.com"
+            }
+          ],
+          "type": "MANAGED_DEVICE_UUID"
+        }
+      ]
+    },
+    {
+      "copyingConfig": true,
+      "forcePushTemplate": true,
+      "isComposite": false,
+      "mainTemplateId": "5c56a8bd-f04b-4386-b3a1-69ef48f0d501",
+      "templateId": "0cebfdd1-77e8-434d-97d6-7b67b2dc4ada",
+      "targetInfo": [
+        {
+          "hostName": "Spine-02.dcloud.cisco.com",
+          "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+          "params": {},
+          "resourceParams": [
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_UUID",
+              "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_IP",
+              "value": "198.19.1.2"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_HOSTNAME",
+              "value": "Spine-02.dcloud.cisco.com"
+            }
+          ],
+          "type": "MANAGED_DEVICE_UUID"
+        }
+      ]
+    },
+    {
+      "copyingConfig": true,
+      "forcePushTemplate": true,
+      "isComposite": false,
+      "mainTemplateId": "c5f1601e-ec31-41db-963f-20d490e29e53",
+      "templateId": "28bd8ac4-6bf2-41bc-ab36-400a37f2f94e",
+      "targetInfo": [
+        {
+          "hostName": "Spine-02.dcloud.cisco.com",
+          "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+          "params": {},
+          "resourceParams": [
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_UUID",
+              "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_IP",
+              "value": "198.19.1.2"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_HOSTNAME",
+              "value": "Spine-02.dcloud.cisco.com"
+            }
+          ],
+          "type": "MANAGED_DEVICE_UUID"
+        }
+      ]
+    },
+    {
+      "copyingConfig": true,
+      "forcePushTemplate": true,
+      "isComposite": false,
+      "mainTemplateId": "9dc2799c-73bd-4299-b02d-ea695c2f7e48",
+      "templateId": "382e7ab3-6b85-4320-b750-730b7ff3e08a",
+      "targetInfo": [
+        {
+          "hostName": "Spine-02.dcloud.cisco.com",
+          "id": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b",
+          "params": {},
+          "resourceParams": [
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_UUID",
+              "value": "0c1b45cc-a208-4dd1-8cf9-a29c36e2ae2b"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_IP",
+              "value": "198.19.1.2"
+            },
+            {
+              "scope": "RUNTIME",
+              "type": "MANAGED_DEVICE_HOSTNAME",
+              "value": "Spine-02.dcloud.cisco.com"
+            }
+          ],
+          "type": "MANAGED_DEVICE_UUID"
+        }
+      ]
+    }
+  ]
+}
