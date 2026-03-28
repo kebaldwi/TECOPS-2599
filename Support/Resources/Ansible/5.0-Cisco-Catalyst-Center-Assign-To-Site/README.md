@@ -71,7 +71,7 @@ The diagram below shows every decision point and state transition from startup t
                                                                       ↓
                                            6.0 Templates  →  7.0 Network Profile
                                                                       ↓
-                                                       8.0 Composite Deployment
+                                                       9.0 Composite Deployment
 ```
 
 Devices must exist in the CatC inventory (discovered by 4.0) before they can be assigned. Sites must exist (created by 1.0) before they can receive devices.
