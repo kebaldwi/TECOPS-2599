@@ -426,15 +426,42 @@ Output site_names[0]: "Global/PODS/POD 0/Building P0"
 
 This replaces the legacy `GET /dna/intent/api/v1/site?limit=500` raw URI call with a properly paginating collection module call.
 
-**Example output:**
+**Before — raw `_all_sites_info.catalyst_response.response[]`:**
+
+```json
+[
+  {
+    "id": "a4208f2a-1b3c-4d5e-9f6a-7b8c9d0e1f2a",
+    "name": "Global",
+    "siteHierarchy": "a4208f2a-1b3c-4d5e-9f6a-7b8c9d0e1f2a"
+  },
+  {
+    "id": "13b224f0-2c3d-4e5f-8a9b-0c1d2e3f4a5b",
+    "name": "PODS",
+    "nameHierarchy": "Global/PODS",
+    "siteHierarchy": "a4208f2a-.../13b224f0-..."
+  },
+  {
+    "id": "2acb84d4-3d4e-5f6a-7b8c-9d0e1f2a3b4c",
+    "name": "Building P0",
+    "nameHierarchy": "Global/PODS/POD 0/Building P0",
+    "siteHierarchy": "a4208f2a-.../13b224f0-.../2acb84d4-..."
+  }
+]
+```
+
+> Note: The Global root entry has **no `nameHierarchy` key** — this is what the `selectattr('nameHierarchy', 'defined')` filter removes before building the map.
+
+**After — resulting site ID map:**
 
 ```json
 {
-  "Global": "a4208f2a-...",
-  "Global/PODS": "13b224f0-...",
-  "Global/PODS/POD 0/Building P0": "2acb84d4-..."
+  "Global/PODS": "13b224f0-2c3d-4e5f-8a9b-0c1d2e3f4a5b",
+  "Global/PODS/POD 0/Building P0": "2acb84d4-3d4e-5f6a-7b8c-9d0e1f2a3b4c"
 }
 ```
+
+This map is then used to resolve each `network_settings[].site` path to its UUID when constructing the API payload in the next step.
 
 ### Step 4: Build v1 Network Settings Payload
 

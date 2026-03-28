@@ -518,6 +518,53 @@ settings.json
         NOT exists → skip silently
 ```
 
+**Before — `settings.json` entry (`device_credentials` + `assign_credentials`):**
+
+```json
+{
+  "device_credentials": {
+    "cli_credential":     [{ "description": "CLI-net-admin", "username": "net-admin", "password": "cisco", "enable_password": "cisco" }],
+    "snmp_v2c_read":      [{ "description": "RO", "read_community": "RO" }],
+    "snmp_v2c_write":     [{ "description": "RW", "write_community": "RO" }],
+    "netconf_credential": [{ "description": "NETCONF-netadmin", "netconf_port": "830" }]
+  },
+  "assign_credentials": {
+    "site_name":      ["Global/PODS/POD 0/Building P0"],
+    "cli_credential": { "description": "CLI-net-admin", "username": "net-admin" },
+    "snmp_v2c_read":  { "description": "RO" },
+    "snmp_v2c_write": { "description": "RW" }
+  }
+}
+```
+
+> `netconf_credential` is extracted separately — `device_credential_workflow_manager` does **not** support NETCONF. It is processed in a dedicated Phase B/C loop using raw URI calls instead.
+
+**After — `wfm_config[0]`** (submitted to `device_credential_workflow_manager`):
+
+```json
+{
+  "global_credential_details": {
+    "cli_credential":  [{ "description": "CLI-net-admin", "username": "net-admin", "password": "cisco", "enable_password": "cisco" }],
+    "snmp_v2c_read":   [{ "description": "RO", "read_community": "RO" }],
+    "snmp_v2c_write":  [{ "description": "RW", "write_community": "RO" }]
+  },
+  "assign_credentials_to_site": {
+    "site_name":      ["Global/PODS/POD 0/Building P0"],
+    "cli_credential": { "description": "CLI-net-admin", "username": "net-admin" },
+    "snmp_v2c_read":  { "description": "RO" },
+    "snmp_v2c_write": { "description": "RW" }
+  }
+}
+```
+
+**After — `netconf_list`** (handled separately in Phase B/C):
+
+```json
+[{ "description": "NETCONF-netadmin", "netconf_port": "830" }]
+```
+
+Duplicate credential blocks across multiple `project[]` entries are de-duplicated by their `type:description` composite key before submission — only the first occurrence of `"cli:CLI-net-admin"`, `"snmp_v2c_read:RO"`, etc. is kept.
+
 ---
 
 ## Running the Playbook
