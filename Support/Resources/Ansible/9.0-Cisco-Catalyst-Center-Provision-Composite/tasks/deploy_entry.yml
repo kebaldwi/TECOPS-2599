@@ -466,11 +466,18 @@
     _deployment_status_ids: >-
       {%- set ns = namespace(result=[]) -%}
       {%- for r in (_task_poll_results.results | default([])) -%}
-        {%- set progress = (r.json.response | default({})).progress | default('') -%}
+        {%- set resp     = r.json.response | default({}) -%}
+        {%- set progress = resp.progress | default('') -%}
         {%- set id_match = progress | regex_search('Template Deploy[a-z]+ Id: ([a-zA-Z0-9-]+)', '\\1') -%}
         {%- set fr_match = progress | regex_search('\| failureReason: (.*)$', '\\1') -%}
         {%- set did = (id_match | first) if (id_match is not none and id_match | length > 0) else '' -%}
-        {%- set fr  = ((fr_match | first) | trim) if (fr_match is not none and fr_match | length > 0) else '' -%}
+        {%- set fr_progress = ((fr_match | first) | trim) if (fr_match is not none and fr_match | length > 0) else '' -%}
+        {# Fall back to top-level task response fields when progress has no embedded failureReason #}
+        {%- set is_error     = resp.isError | default(false) | bool -%}
+        {%- set fr_task      = resp.failureReason | default('') | string -%}
+        {%- set fr = fr_progress if fr_progress | length > 0
+                     else (fr_task if is_error
+                     else '') -%}
         {%- set ns.result = ns.result + [{'ip': r.item.ip, 'deploymentId': did, 'failureReason': fr}] -%}
       {%- endfor -%}
       {{ ns.result }}
@@ -524,4 +531,23 @@
 - name: "[{{ deploy_entry.template_name }}] Deployment summary"
   debug:
     msg: "{{ _summary_lines }}"
+
+- name: "[{{ deploy_entry.template_name }}] Fail if any device deployment reported an error"
+  vars:
+    _failed_devices: >-
+      {{ _deployment_status_ids | default([])
+         | selectattr('failureReason', 'defined')
+         | selectattr('failureReason', 'ne', '')
+         | list }}
+  fail:
+    msg: >-
+      Template deployment failed for {{ _failed_devices | length }} device(s):
+      {% for d in _failed_devices %}
+      - {{ d.ip }}: {{ d.failureReason }}
+      {% endfor %}
+  when: >-
+    (_deployment_status_ids | default([])
+     | selectattr('failureReason', 'defined')
+     | selectattr('failureReason', 'ne', '')
+     | list | length) > 0
 
