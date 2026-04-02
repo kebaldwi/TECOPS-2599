@@ -174,7 +174,7 @@ def main():
     token = helpers.get_token()
     maybe_apply_profiles(token, profiles)
 
-    print("\n  Next step -> 8.0-Cisco-Catalyst-Center-Provision-Deploy-Composite/")
+    print("\n  Next step -> 8.0-Cisco-Catalyst-Center-Provision-Devices/")
     print()
 
 
