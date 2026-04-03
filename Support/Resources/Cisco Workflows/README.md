@@ -25,6 +25,7 @@ This document describes the complete Cisco Catalyst Center GitOps workflow suite
 6. [Installation Options](#installation-options)
 7. [Meraki Free Account Setup (Optional Lab On-Ramp)](#meraki-free-account-setup-optional-lab-on-ramp)
 8. [Ordering and Dependencies](#ordering-and-dependencies)
+9. [Appendix — Workflow and API Reference](#appendix--workflow-and-api-reference)
 
 ---
 
@@ -308,3 +309,142 @@ The workflows are designed to run in strict order.
 ```
 
 Recommended rollback/deletion order is reverse execution order to preserve dependency integrity.
+
+---
+
+## Appendix — Workflow and API Reference
+
+This appendix provides a complete technical reference for all workflows, embedded subworkflows, and Catalyst Center and GitHub API endpoints used across the seven `-v3.json` workflow definition files in this suite.
+
+---
+
+### A.1 Main Workflows
+
+| # | Workflow Name | JSON File | Description |
+|---|---|---|---|
+| 1 | `GitOps-BuildHierarchy-v3` | `GitOps-BuildHierarchy-v3.json` | Reads site hierarchy JSON from GitHub and creates Areas, Buildings, and Floors in Catalyst Center |
+| 2 | `GitOps-BuildSettings-v3` | `GitOps-BuildSettings-v3.json` | Reads `settings.json` from GitHub and applies network settings and credentials per site |
+| 3 | `GitOps-DeviceDiscovery-v3` | `GitOps-DeviceDiscovery-v3.json` | Reads settings from GitHub, runs device discovery jobs, and assigns discovered devices to sites |
+| 4 | `GitOps-BuildTemplates-v3` | `GitOps-BuildTemplates-v3.json` | Reads Jinja2 templates from GitHub and creates or updates them in the Catalyst Center Template Hub |
+| 5 | `GitOps-BuildCompositeTemplate-v3` | `GitOps-BuildCompositeTemplate-v3.json` | Reads YAML composite definitions from GitHub and builds composite templates in Catalyst Center |
+| 6 | `GitOps-BuildNetworkProfile-v3` | `GitOps-BuildNetworkProfile-v3.json` | Reads template lists from GitHub and assigns them to a site switching network profile |
+| 7 | `GitOps-Provisioning-v3` | `GitOps-Provisioning-v3.json` | Provisions devices using the SDA fabric workflow and deploys the composite template |
+
+---
+
+### A.2 Subworkflows
+
+Each main workflow bundles its subworkflow definitions inline within the JSON. The distinct named subworkflows are listed below.
+
+#### GitHub Utility Subworkflows
+
+Shared across all seven workflows.
+
+| Subworkflow | Purpose |
+|---|---|
+| `Get-GitHub-Directory-v2` | URL-encodes the repository path and calls the GitHub Contents API to list a directory |
+| `Get-GitHub-File-v2` | URL-encodes path and filename and calls the GitHub Contents API to retrieve and decode file content |
+
+#### Catalyst Center (CATC) Subworkflows
+
+| Subworkflow | Purpose | Used By |
+|---|---|---|
+| `CATC-BuildHierarchy-v3` | Creates Area, Building, and Floor site objects and polls execution status | 1.0 BuildHierarchy |
+| `CATC-AssignSettings-v2` | Assigns DNS, DHCP, NTP, SNMP, syslog, banner, and AAA network settings to a site | 2.0 BuildSettings |
+| `CATC-DeviceDiscovery-v3` | Resolves credential UUIDs, runs a discovery job, polls task status, and assigns devices to a site | 3.0 DeviceDiscovery |
+| `CATC-DependencyMapping-v1` | Resolves template include dependencies before creation to ensure correct ordering | 4.0 BuildTemplates |
+| `CATC-CreateTemplate-v3` | Creates or updates a Day-N Jinja2 member template in a Catalyst Center project | 4.0 BuildTemplates |
+| `CATC-GetProjectTemplateIDs-v2` | Retrieves all template IDs within a named project | 4.0 BuildTemplates |
+| `CATC-CommitTemplate-v2` | Commits and versions a template in the Template Hub | 4.0 BuildTemplates, 5.0 BuildCompositeTemplate |
+| `CATC-GetTemplates-v2` | Queries the Template Hub for existing template IDs by project name | 4.0 BuildTemplates, 5.0 BuildCompositeTemplate, 6.0 BuildNetworkProfile |
+| `CATC-ProductFamily-v1` | Resolves device product family and series metadata for template targeting | 4.0 BuildTemplates, 5.0 BuildCompositeTemplate |
+| `CATC-CreateCompositeTemplate-v3` | Creates or updates a composite template from a YAML-defined member list | 5.0 BuildCompositeTemplate |
+| `CATC-CreateSiteProfile-v3` | Creates or updates a switching network profile and binds template IDs | 6.0 BuildNetworkProfile |
+
+#### Utility Subworkflows (SecureX/XDR Catalog)
+
+Referenced by name from the Cisco workflow platform catalog.
+
+| Subworkflow | Purpose |
+|---|---|
+| `Wait For Catalyst Center Task` | Polls `/dna/intent/api/v1/task/{taskId}` until the task reaches a terminal state |
+| `Catalyst Center - Poll Execution Status by ID` | Polls bulk execution status for site-creation operations |
+
+---
+
+### A.3 API Endpoint Reference
+
+#### GitHub API (`api.github.com`)
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/repos/{owner}/{repo}/contents/{path}` | List files in a GitHub directory |
+| `GET` | `/repos/{owner}/{repo}/contents/{path}/{file}` | Retrieve and Base64-decode a specific file |
+
+#### Catalyst Center — Site and Hierarchy
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` / `POST` | `/dna/intent/api/v1/site` | Get existing sites or create Area, Building, Floor |
+| `GET` | `/dna/intent/api/v2/site?groupNameHierarchy=...&id=...&type=...` | Query site by hierarchy name or UUID |
+| `GET` | `/dna/intent/api/v1/sites?name=...&nameHierarchy=...&type=...` | Query sites by name or type filter |
+
+#### Catalyst Center — Template Hub
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` / `POST` | `/dna/intent/api/v1/template-programmer/project` | List all projects or create a new project |
+| `GET` | `/dna/intent/api/v2/template-programmer/project?name=...` | Get project by name (URL-encoded) |
+| `POST` | `/dna/intent/api/v1/template-programmer/project/{projectId}/template` | Create a new member template in a project |
+| `PUT` | `/dna/intent/api/v1/template-programmer/template/` | Update an existing template |
+| `GET` | `/dna/intent/api/v2/template-programmer/template?projectId=...&name=...` | List templates with filters |
+| `POST` | `/dna/intent/api/v1/templates/{templateId}/versions/commit` | Commit and version a template |
+| `POST` | `/api/v1/template-programmer/template/version` | Commit a template (legacy endpoint) |
+| `GET` | `/api/v1/template-programmer/template` | List templates (legacy endpoint) |
+| `POST` | `/dna/intent/api/v2/template-programmer/template/deploy` | Deploy a template to target devices |
+
+#### Catalyst Center — Network Profiles
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` / `POST` | `api/v1/siteprofile` | Get or create a switching site profile |
+| `PUT` | `api/v1/siteprofile/{siteProfileUuid}` | Update an existing site profile |
+| `POST` | `/dna/intent/api/v1/networkProfilesForSites/{profileId}/siteAssignments` | Assign a network profile to a site |
+
+#### Catalyst Center — Network Settings
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` / `POST` | `/dna/intent/api/v2/network/{siteId}` | Get or update site-level network settings |
+| `GET` | `/dna/intent/api/v2/network?siteId=...` | Get network settings filtered by site ID |
+| `POST` | `/dna/intent/api/v1/sites/{siteId}/aaaSettings` | Assign AAA settings to a site |
+| `GET` / `POST` | `/dna/intent/api/v1/device-credential` | Manage device credential objects |
+| `GET` | `/dna/intent/api/v1/device-credential?siteId=...` | Get credentials assigned to a specific site |
+| `POST` | `/dna/intent/api/v1/credential-to-site/{siteId}` | Assign a credential profile to a site |
+| `GET` | `/dna/intent/api/v2/global-credential` | List all global credential objects |
+| `POST` | `/dna/intent/api/v2/global-credential` | Create a new global credential object |
+
+#### Catalyst Center — Device Discovery
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/dna/intent/api/v1/dnac-release` | Determine the installed Catalyst Center version |
+| `GET` | `/api/v1/discovery/1/100` | List existing discovery jobs (paginated) |
+| `POST` | `/dna/intent/api/v1/discovery` | Start a new discovery job |
+| `DELETE` | `/dna/intent/api/v1/discovery/{id}` | Delete an existing discovery by ID |
+| `GET` | `/dna/intent/api/v1/discovery/{id}/network-device` | Get devices found by a specific discovery |
+| `GET` | `/dna/intent/api/v1/network-device?...` | Get managed network devices with filter parameters |
+| `POST` | `/dna/intent/api/v1/networkDevices/assignToSite/apply` | Assign discovered devices to a site |
+
+#### Catalyst Center — SDA Provisioning
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/dna/intent/api/v1/sda/provisionDevices?networkDeviceId=...&siteId=...` | Check current SDA provisioning state for a device |
+| `POST` | `/dna/intent/api/v1/sda/provisionDevices` | Provision or re-provision devices in the SDA fabric |
+
+#### Catalyst Center — Task Polling
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/dna/intent/api/v1/task/{taskId}` | Poll an asynchronous task until it reaches a terminal state |
