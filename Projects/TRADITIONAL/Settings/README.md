@@ -1,10 +1,10 @@
-# BGP\_EVPN Project — Settings Reference
+# TRADITIONAL Project — Settings Reference
 
 > **As-Built Documentation**
 > **Authors:** Keith Baldwin — Solutions Engineer — Automation HyperSpecialist (kebaldwi@cisco.com)
 > **Copyright © 2024–2026 Cisco Systems, Inc. All rights reserved.**
 
-This document describes the structure and purpose of [`settings.json`](settings.json) — the single source of truth that drives the entire BGP EVPN automation lifecycle across Cisco Workflows, Ansible, and Python tooling paths.
+This document describes the structure and purpose of [`settings.json`](settings.json) — the single source of truth that drives the entire Traditional switching automation lifecycle across Cisco Workflows, Ansible, and Python tooling paths.
 
 ---
 
@@ -28,13 +28,13 @@ This document describes the structure and purpose of [`settings.json`](settings.
 
 ## Purpose
 
-`settings.json` is the declarative configuration intent file for the BGP\_EVPN project. It defines every site-specific parameter that the automation tooling needs to:
+`settings.json` is the declarative configuration intent file for the TRADITIONAL project. It defines every site-specific parameter that the automation tooling needs to:
 
 1. **Build the site hierarchy** in Catalyst Center (Area → Building → Floor)
 2. **Apply network settings** per site (DNS, DHCP, NTP, SNMP, Syslog, NetFlow, AAA, banner)
 3. **Create and assign device credentials** (CLI, SNMP v2c R/W, NETCONF)
-4. **Run device discovery** against a defined IP range or list
-5. **Bind templates to sites** via a named network profile, controlling which Day-N and Day-0 templates are associated with which devices at which sites
+4. **Run device discovery** against a defined IP list
+5. **Bind templates to sites** via a named network profile, controlling which Day-N and Day-0 PnP templates are associated with which devices at which sites
 
 All three tooling paths — Cisco Workflows, Ansible, and Python — read this file from GitHub and use it as their sole source of configuration intent, ensuring consistency regardless of which automation path is used.
 
@@ -47,9 +47,9 @@ The `project` key is a **JSON array**. Each element in the array represents **on
 ```json
 {
     "project": [
-        { /* Site 1 — POD 0, Building P0, Floor 1 */ },
-        { /* Site 2 — POD 1, Building P1, Floor 1 */ },
-        { /* Site 3 — POD 2, Building P2, Floor 2 */ }
+        { /* Site 1 — POD 1, Building P1, Floor 1 */ },
+        { /* Site 2 — POD 2, Building P2, Floor 1 */ },
+        { /* Site 3 — POD 3, Building P3, Floor 2 */ }
     ]
 }
 ```
@@ -62,7 +62,7 @@ This design enables **finite, per-site control** over every configurable dimensi
 | Network settings | DNS, DHCP, NTP, SNMP, Syslog, NetFlow, AAA, and banner can differ per site |
 | Device credentials | Each site can use different CLI usernames, SNMP communities, or NETCONF ports |
 | Discovery scope | `device_list` is scoped to the devices at that site only |
-| Template binding | `network_profile` independently controls which Day-N and Day-0 templates are bound to which devices at that site |
+| Template binding | `network_profile` independently controls which Day-N and Day-0 PnP templates are bound to which devices at that site |
 
 The automation tooling iterates over every element in the `project` array and applies each definition independently, in order. Adding a new site requires only appending a new object to the array. No changes to the tooling are needed.
 
@@ -112,10 +112,10 @@ These five fields define where this site element lives in the Catalyst Center hi
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
 | `HierarchyParent` | string | Full path to the parent node in Catalyst Center. Must already exist or be created by a prior site entry. | `"Global/PODS"` |
-| `HierarchyArea` | string | Area name to create or reference under the parent. | `"POD 0"` |
-| `HierarchyBldg` | string | Building name to create or reference under the area. | `"Building P0"` |
+| `HierarchyArea` | string | Area name to create or reference under the parent. | `"POD 1"` |
+| `HierarchyBldg` | string | Building name to create or reference under the area. | `"Building P1"` |
 | `HierarchyFloor` | string | Floor name to create or reference under the building. | `"Floor 1"` |
-| `HierarchyBldgAddress` | string | Physical street address for the building. Used by Catalyst Center to set geographic location metadata. | `"300 E Tasman Dr, Bldg 10, San Jose, CA 95134"` |
+| `HierarchyBldgAddress` | string | Physical street address for the building. Used by Catalyst Center to set geographic location metadata. | `"400 E Tasman Dr, Bldg 12, San Jose, CA 95134"` |
 
 The hierarchy is created in parent-before-child order. If multiple project entries share the same `HierarchyArea` or `HierarchyBldg`, the tooling is idempotent — it skips creation of objects that already exist and resolves their existing UUIDs for downstream use.
 
@@ -243,7 +243,7 @@ SNMP v2c read-only community string.
 | Field | Description |
 |-------|-------------|
 | `description` | Label used to identify this credential in Catalyst Center |
-| `read_community` | SNMPv2c read community string |
+| `read_community` | SNMPv2c read community string (e.g., `"ro"`) |
 
 #### `snmp_v2c_write`
 
@@ -252,7 +252,7 @@ SNMP v2c read-write community string.
 | Field | Description |
 |-------|-------------|
 | `description` | Label used to identify this credential in Catalyst Center |
-| `write_community` | SNMPv2c write community string |
+| `write_community` | SNMPv2c write community string (e.g., `"rw"`) |
 
 #### `netconf_credential`
 
@@ -272,12 +272,12 @@ NETCONF over SSH credential.
 `device_list` is a comma-separated string of management IP addresses for all devices at this site. It is used by the discovery and provisioning stages of the tooling.
 
 ```json
-"device_list": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6"
+"device_list": "198.18.130.1,198.18.10.2,198.18.20.2"
 ```
 
 - **Discovery:** The tooling splits this string and builds one or more Catalyst Center discovery jobs targeting these IPs.
 - **Provisioning:** The Cisco Workflow provisioning path uses this list to determine which device UUIDs to provision and deploy templates to.
-- **Network profile:** The `TemplateTarget` arrays in `network_profile` should be a subset of, or equal to, this list.
+- **Network profile:** The `TemplateTarget` arrays in `network_profile` can be a subset of this list. In the TRADITIONAL project, the core/distribution switch (`198.18.130.1`) is included in `device_list` for discovery but excluded from `TemplateTarget` — only the access layer switches receive the Day-N build template.
 
 Separate site entries with non-overlapping `device_list` values ensure each device is discovered in the context of its correct site.
 
@@ -292,12 +292,12 @@ The `network_profile` object binds the Catalyst Center **switching network profi
 The name of the switching network profile in Catalyst Center. If a profile with this name already exists, the tooling updates it. If it does not exist, the tooling creates it.
 
 ```json
-"profile_name": "BGP-EVPN-Switching"
+"profile_name": "Traditional-Switching"
 ```
 
 #### `DayNTemplateNames`
 
-Array of Day-N template binding objects. Each element defines one template that should be bound to the network profile and optionally deployed to a set of devices.
+Array of Day-N template binding objects. Each element defines one template that should be bound to the network profile and optionally deployed to a set of devices. In the TRADITIONAL project, `BUILD-MasterBuild.j2` is a **composite orchestration template** that calls the individual `BUILD-*.j2` sub-templates in sequence to build a complete device configuration.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -309,23 +309,43 @@ Array of Day-N template binding objects. Each element defines one template that 
 
 Multiple Day-N template objects can be listed in the array to bind and optionally deploy more than one template to devices at this site.
 
+Available Day-N templates in this project:
+
+| Template | Role |
+|----------|------|
+| `BUILD-MasterBuild.j2` | Composite orchestrator — calls all `BUILD-*.j2` sub-templates in sequence |
+| `BUILD-SystemConfiguration.j2` | Hostname, domain, logging, and base system settings |
+| `BUILD-VlanConfiguration.j2` | VLAN database configuration |
+| `BUILD-AccessConfiguration.j2` | Access port configuration (uses `DEFN-PortInfo.j2`) |
+| `BUILD-InterfaceMacros.j2` | SmartPort macro definitions |
+| `BUILD-AutoconfConfiguration.j2` | Auto-configuration for device classification |
+| `BUILD-AutoDescriptionConfiguration.j2` | Automatic interface description generation |
+| `BUILD-IbnsConfiguration.j2` | Identity-Based Networking Services (802.1X / MAB) |
+| `BUILD-AaaConfiguration.j2` | AAA policy configuration |
+| `BUILD-AclConfiguration.j2` | Access control list configuration |
+| `BUILD-SecurityConfiguration.j2` | Security hardening configuration |
+| `BUILD-AppHostingConfiguration.j2` | Application hosting (IOx) configuration |
+| `BUILD-StackingConfiguration.j2` | Switch stacking configuration |
+
 #### `Day0TemplateNames`
 
 Array of Day-0 (PnP onboarding) template binding objects. Follows the same structure as `DayNTemplateNames`. Used to bind PnP claim templates to the network profile for zero-touch device onboarding.
 
-Set individual fields to `null` and `TemplateTarget` to `[]` when no Day-0 template is required for a site entry.
+The TRADITIONAL project actively uses Day-0 templates — `Titanium-L2-PnP-Jinja-Template.j2` is the default Layer 2 PnP claim template used to onboard new access switches via Plug-and-Play without any manual console connection.
 
-```json
-"Day0TemplateNames": [
-    {
-        "TemplateName":   null,
-        "TemplateTag":    null,
-        "Project":        null,
-        "TemplateTarget": [],
-        "DeployTemplate": null
-    }
-]
-```
+Available Day-0 templates in this project:
+
+| Template | Use Case |
+|----------|----------|
+| `Titanium-L2-PnP-Jinja-Template.j2` | Layer 2 access switch PnP onboarding (default) |
+| `Titanium-L3-PnP-Template.j2` | Layer 3 distribution/routed switch PnP onboarding |
+| `Titanium-L3-EIGRP-PnP-Template.j2` | Layer 3 with EIGRP routing PnP onboarding |
+| `Titanium-L3-OSPF-PnP-Template.j2` | Layer 3 with OSPF routing PnP onboarding |
+| `Automation-Seed.j2` | Automation seed configuration for discovered devices |
+| `Automation-Edge.j2` | Edge device automation seed configuration |
+| `Titanium-L3-PnP-Automation-Seed.j2` | Combined L3 PnP + automation seed |
+
+Set individual fields to `null` and `TemplateTarget` to `[]` when no Day-0 template is required for a site entry.
 
 ---
 
@@ -340,7 +360,7 @@ All three automation paths read `settings.json` from GitHub and iterate over eve
 | Device Credentials | `GitOps-BuildSettings-v3` | `credentials.yml` | `credentials.py` | `device_credentials.*` |
 | Device Discovery | `GitOps-DeviceDiscovery-v3` | `device_discovery.yml` | `device_discovery.py` | `device_list`, `device_credentials.*` |
 | Network Profile | `GitOps-BuildNetworkProfile-v3` | `network_profile.yml` | `network_profile.py` | `network_profile.*` |
-| Provisioning | `GitOps-Provisioning-v3` | `provision_devices.yml` + `deploy_composite_template.yml` | `deploy_composite.py` | `device_list`, `network_profile.DayNTemplateNames` |
+| Provisioning | `GitOps-Provisioning-v3` | `provision_devices.yml` + `deploy_composite_template.yml` | `deploy_composite.py` | `device_list`, `network_profile.DayNTemplateNames`, `network_profile.Day0TemplateNames` |
 
 Each tooling path processes one project array element per loop iteration, applying all relevant fields for that site before moving to the next element.
 
@@ -355,21 +375,43 @@ To commission a new site, append a new object to the `project` array. Copy an ex
     "project": [
         { /* existing site 1 */ },
         {
-            "HierarchyArea": "POD 1",
-            "HierarchyBldg": "Building P1",
+            "HierarchyArea": "POD 2",
+            "HierarchyBldg": "Building P2",
             "HierarchyFloor": "Floor 1",
             "HierarchyParent": "Global/PODS",
-            "HierarchyBldgAddress": "300 E Tasman Dr, Bldg 11, San Jose, CA 95134",
+            "HierarchyBldgAddress": "400 E Tasman Dr, Bldg 13, San Jose, CA 95134",
             "network_settings": { },
             "device_credentials": { },
-            "device_list": "198.19.2.1,198.19.2.2",
-            "network_profile": { }
+            "device_list": "198.18.131.1,198.18.11.2,198.18.21.2",
+            "network_profile": {
+                "profile_name": "Traditional-Switching",
+                "DayNTemplateNames": [
+                    {
+                        "TemplateName": "BUILD-MasterBuild.j2",
+                        "TemplateTag": "DEMO",
+                        "Project": "Building P2",
+                        "TemplateTarget": ["198.18.11.2","198.18.21.2"],
+                        "DeployTemplate": true
+                    }
+                ],
+                "Day0TemplateNames": [
+                    {
+                        "TemplateName": "Titanium-L2-PnP-Jinja-Template.j2",
+                        "TemplateTag": "DEMO",
+                        "Project": "Building P2",
+                        "TemplateTarget": ["198.18.11.2","198.18.21.2"],
+                        "DeployTemplate": true
+                    }
+                ]
+            }
         }
     ]
 }
 ```
 
-No changes to the automation tooling are required. The next run will process the new entry, create the new hierarchy path, apply settings, run discovery against the new IP range, and bind the specified templates to the new site profile.
+No changes to the automation tooling are required. The next run will process the new entry, create the new hierarchy path, apply settings, run discovery against the new IP list, and bind the specified templates to the new site profile.
+
+> **Note on TemplateTarget vs device_list:** Include the core/distribution switch in `device_list` so it is discovered and added to inventory, but omit it from `TemplateTarget` if you do not want the access-layer build template deployed to it. This allows selective template deployment within a single site.
 
 ---
 
@@ -396,10 +438,10 @@ The following is a complete, annotated single-site `settings.json` entry:
     "project": [
         {
             "HierarchyParent": "Global/PODS",
-            "HierarchyArea":   "POD 0",
-            "HierarchyBldg":   "Building P0",
+            "HierarchyArea":   "POD 1",
+            "HierarchyBldg":   "Building P1",
             "HierarchyFloor":  "Floor 1",
-            "HierarchyBldgAddress": "300 E Tasman Dr, Bldg 10, San Jose, CA 95134",
+            "HierarchyBldgAddress": "400 E Tasman Dr, Bldg 12, San Jose, CA 95134",
 
             "network_settings": {
                 "dhcp_server":  ["198.18.133.1"],
@@ -411,7 +453,7 @@ The following is a complete, annotated single-site `settings.json` entry:
                 "ntp_server":  ["198.18.133.1"],
                 "timezone":    "America/Toronto",
                 "message_of_the_day": {
-                    "banner_message":         "DNAC Template Lab P0!",
+                    "banner_message":         "DNAC Template Lab P1!",
                     "retain_existing_banner": false
                 },
                 "snmp_server": {
@@ -441,17 +483,17 @@ The following is a complete, annotated single-site `settings.json` entry:
             "device_credentials": {
                 "cli_credential": {
                     "description":     "CLI-net-admin",
-                    "username":        "net-admin",
+                    "username":        "netadmin",
                     "password":        "C1sco12345",
                     "enable_password": "C1sco12345"
                 },
                 "snmp_v2c_read": {
                     "description":    "RO",
-                    "read_community": "RO"
+                    "read_community": "ro"
                 },
                 "snmp_v2c_write": {
                     "description":     "RW",
-                    "write_community": "RW"
+                    "write_community": "rw"
                 },
                 "netconf_credential": {
                     "description":  "NETCONF-netadmin",
@@ -459,29 +501,26 @@ The following is a complete, annotated single-site `settings.json` entry:
                 }
             },
 
-            "device_list": "198.19.1.1,198.19.1.2,198.19.1.3,198.19.1.4,198.19.1.5,198.19.1.6",
+            "device_list": "198.18.130.1,198.18.10.2,198.18.20.2",
 
             "network_profile": {
-                "profile_name": "BGP-EVPN-Switching",
+                "profile_name": "Traditional-Switching",
                 "DayNTemplateNames": [
                     {
-                        "TemplateName":   "BGP-EVPN-BUILD.j2",
+                        "TemplateName":   "BUILD-MasterBuild.j2",
                         "TemplateTag":    "DEMO",
-                        "Project":        "Building P0",
-                        "TemplateTarget": [
-                            "198.19.1.1","198.19.1.2","198.19.1.3",
-                            "198.19.1.4","198.19.1.5","198.19.1.6"
-                        ],
+                        "Project":        "Building P1",
+                        "TemplateTarget": ["198.18.10.2","198.18.20.2"],
                         "DeployTemplate": true
                     }
                 ],
                 "Day0TemplateNames": [
                     {
-                        "TemplateName":   null,
-                        "TemplateTag":    null,
-                        "Project":        null,
-                        "TemplateTarget": [],
-                        "DeployTemplate": null
+                        "TemplateName":   "Titanium-L2-PnP-Jinja-Template.j2",
+                        "TemplateTag":    "DEMO",
+                        "Project":        "Building P1",
+                        "TemplateTarget": ["198.18.10.2","198.18.20.2"],
+                        "DeployTemplate": true
                     }
                 ]
             }
