@@ -46,8 +46,8 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 720.0
-    y1: 520.0
+    x1: 560.0
+    y1: 640.0
     z_index: 22
   - border_color: '#00000000'
     border_style: ''
@@ -65,7 +65,7 @@ annotations:
     thickness: 1
     type: text
     x1: 160.0
-    y1: 520.0
+    y1: 640.0
     z_index: 23
   - border_color: '#00000000'
     border_style: ''
@@ -97,7 +97,7 @@ annotations:
     thickness: 1
     type: text
     x1: 200.0
-    y1: 480.0
+    y1: 600.0
     z_index: 29
   - border_color: '#00000000'
     border_style: ''
@@ -168,12 +168,12 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 760.0
-    y1: 480.0
+    x1: 600.0
+    y1: 600.0
     z_index: 35
   - border_color: '#00000000'
     border_style: ''
-    color: '#808080FF'
+    color: '#005896'
     rotation: 0
     text_bold: false
     text_content: '.10'
@@ -183,22 +183,22 @@ annotations:
     text_unit: pt
     thickness: 1
     type: text
-    x1: 200.0
+    x1: 80.0
     y1: 400.0
     z_index: 36
   - border_color: '#00000000'
     border_style: ''
-    color: '#808080FF'
+    color: '#08C000'
     rotation: 0
     text_bold: false
-    text_content: '.20'
+    text_content: '.10'
     text_font: monospace
     text_italic: false
     text_size: 12
     text_unit: pt
     thickness: 1
     type: text
-    x1: 760.0
+    x1: 480.0
     y1: 400.0
     z_index: 37
   - border_color: '#00000000'
@@ -462,6 +462,81 @@ annotations:
     x1: 428.80252219314104
     y1: -387.4782377846176
     z_index: 74
+  - border_color: '#00000000'
+    border_style: ''
+    color: '#1602FF'
+    rotation: 0
+    text_bold: false
+    text_content: 'DHCP: 198.18.144.100'
+    text_font: monospace
+    text_italic: false
+    text_size: 12
+    text_unit: pt
+    thickness: 1
+    type: text
+    x1: -680.0
+    y1: -200.0
+    z_index: 75
+  - border_color: '#00000000'
+    border_style: ''
+    color: '#00C036'
+    rotation: 0
+    text_bold: false
+    text_content: 'DHCP: 198.18.143.100'
+    text_font: monospace
+    text_italic: false
+    text_size: 12
+    text_unit: pt
+    thickness: 1
+    type: text
+    x1: -680.0
+    y1: -160.0
+    z_index: 76
+  - border_color: '#00000000'
+    border_style: ''
+    color: '#CF0000'
+    rotation: 0
+    text_bold: false
+    text_content: 'DHCP: 198.19.2.78'
+    text_font: monospace
+    text_italic: false
+    text_size: 12
+    text_unit: pt
+    thickness: 1
+    type: text
+    x1: -680.0
+    y1: -240.0
+    z_index: 77
+  - border_color: '#00000000'
+    border_style: ''
+    color: '#08C000'
+    rotation: 0
+    text_bold: false
+    text_content: '.20'
+    text_font: monospace
+    text_italic: false
+    text_size: 12
+    text_unit: pt
+    thickness: 1
+    type: text
+    x1: 800.0
+    y1: 400.0
+    z_index: 78
+  - border_color: '#00000000'
+    border_style: ''
+    color: '#14619C'
+    rotation: 0
+    text_bold: false
+    text_content: '.20'
+    text_font: monospace
+    text_italic: false
+    text_size: 12
+    text_unit: pt
+    thickness: 1
+    type: text
+    x1: 400.0
+    y1: 440.0
+    z_index: 79
 smart_annotations:
   - tag: blue-201
     is_on: true
@@ -2872,8 +2947,8 @@ nodes:
         content: |2-
 
           !Command: show running-config
-          !Running configuration last done at: Fri Mar 13 16:54:48 2026
-          !Time: Fri Mar 13 16:54:49 2026
+          !Running configuration last done at: Wed Mar 25 20:49:20 2026
+          !Time: Wed Mar 25 20:49:20 2026
 
           version 10.5(3) Bios:version
           hostname core1
@@ -2893,7 +2968,8 @@ nodes:
           username admin password 5 $5$KHODLK$EykfFL5opVyI/8EhK3WzsYL9djgBCuHwP2oGtG6dYR4  role network-admin
           username cisco password 5 $5$AEAAJB$IGXd9RG4GcNKnLW/8NP7qIFfqNCOeKc0p2GRGcfBqPB  role network-admin
           username cisco passphrase  lifetime 99999 warntime 14 gracetime 3
-          username net-admin password 0 C1sco12345
+          username net-admin password 5 $5$PFHBCB$VU2cDo6273zhZZQ9oosMeUr4PMevFf/3m2c5BwLdV.3  role network-operator
+          username net-admin role network-admin
           username net-admin passphrase  lifetime 99999 warntime 14 gracetime 3
           ip domain-lookup
           ip domain-name dcloud.cisco.com
@@ -2901,7 +2977,8 @@ nodes:
           copp profile strict
           snmp-server user admin network-admin auth md5 532007C6AC4AEBDC29076BEFEB7D56023538 priv aes-128 004575ABD72B8DA1490946CE79FACB8B1803 localizedV2key
           snmp-server user cisco network-admin auth md5 320CE342FF45E59BA144C2AF5B673C761C26 priv aes-128 056F8675EC70E9A68070F48F74B4F99BA713 localizedV2key
-          snmp-server user net-admin network-admin auth md5 207ACF12A3E8F38D0B8B5754701ECE616E4D priv aes-128 207B9213FCE7A09A1E8908047D17E00C6C0A localizedV2key
+          snmp-server user net-admin network-operator auth md5 207ACF12A3E8F38D0B8B5754701ECE616E4D priv aes-128 207B9213FCE7A09A1E8908047D17E00C6C0A localizedV2key
+          snmp-server user net-admin network-admin
           rmon event 1 log trap public description FATAL(1) owner PMON@FATAL
           rmon event 2 log trap public description CRITICAL(2) owner PMON@CRITICAL
           rmon event 3 log trap public description ERROR(3) owner PMON@ERROR
@@ -3156,6 +3233,7 @@ nodes:
             neighbor 198.19.2.66
               remote-as 65003
               address-family ipv4 unicast
+                soft-reconfiguration inbound always
 
           no logging console
     cpu_limit: null
@@ -3213,8 +3291,8 @@ nodes:
         content: |2-
 
           !Command: show running-config
-          !Running configuration last done at: Fri Mar 13 16:54:57 2026
-          !Time: Fri Mar 13 16:54:58 2026
+          !Running configuration last done at: Wed Mar 25 20:49:20 2026
+          !Time: Wed Mar 25 20:49:20 2026
 
           version 10.5(3) Bios:version
           hostname core2
@@ -3234,13 +3312,16 @@ nodes:
           username admin password 5 $5$KALFHA$lBBpWQ1gfsEB7bpJu8gsmasDDi599STYqKr0AKY94Q2  role network-admin
           username cisco password 5 $5$MFDHNL$QS.VbGeUOvwJKKsfpKvQYcBXRjxWJhp1ZR8vjEuLC6B  role network-admin
           username cisco passphrase  lifetime 99999 warntime 14 gracetime 3
-          username net-admin password 0 C1sco12345
+          username net-admin password 5 $5$FHPGCA$HyS4ot9Iodi7sHmLJZjPBSVNdYtFEqYRdfhaCAh/weA  role network-operator
+          username net-admin role network-admin
           username net-admin passphrase  lifetime 99999 warntime 14 gracetime 3
           ip domain-lookup
           ip domain-name dcloud.cisco.com
           crypto key generate rsa label core2 modulus 2048
           copp profile strict
           snmp-server user admin network-admin auth md5 043B01C1C082D4127892929DE92747C381CB priv aes-128 331D5E98D1FD83167D8EB4C1EC2B00CEBFA3 localizedV2key
+          snmp-server user net-admin network-operator auth md5 214107CC78B94DB203E5814564BFCFDBD92E priv aes-128 333964AB48E201EB4A869E1974A0C197B40B localizedV2key
+          snmp-server user net-admin network-admin
           rmon event 1 log trap public description FATAL(1) owner PMON@FATAL
           rmon event 2 log trap public description CRITICAL(2) owner PMON@CRITICAL
           rmon event 3 log trap public description ERROR(3) owner PMON@ERROR
@@ -3499,6 +3580,7 @@ nodes:
             neighbor 198.19.2.70
               remote-as 65003
               address-family ipv4 unicast
+                soft-reconfiguration inbound always
 
           no logging console
     cpu_limit: null
@@ -3648,7 +3730,7 @@ nodes:
     ram: null
     tags:
       - green-202
-    x: 720
+    x: 560
     y: 400
     interfaces:
       - id: i0
@@ -3659,8 +3741,8 @@ nodes:
   - boot_disk_size: null
     configuration:
       - name: iosxe_config.txt
-        content: "Building configuration...\n\nCurrent configuration : 19283 bytes\n\
-          !\n! Last configuration change at 15:36:36 UTC Tue Mar 24 2026 by net-admin\n\
+        content: "Building configuration...\n\nCurrent configuration : 19407 bytes\n\
+          !\n! Last configuration change at 13:17:29 UTC Thu Mar 26 2026 by net-admin\n\
           !\nversion 17.15\nservice timestamps debug datetime msec\nservice timestamps\
           \ log datetime msec\n!\nhostname dmz1\n!\n!\nvrf definition Mgmt-vrf\n !\n\
           \ address-family ipv4\n exit-address-family\n !\n address-family ipv6\n\
@@ -3724,33 +3806,33 @@ nodes:
           \ certificate self-signed 01\n  3082032E 30820216 A0030201 02020101 300D0609\
           \ 2A864886 F70D0101 0D050030\n  30312E30 2C060355 04030C25 494F532D 53656C66\
           \ 2D536967 6E65642D 43657274\n  69666963 6174652D 36353932 31303632 33301E17\
-          \ 0D323630 33313731 35303130\n  315A170D 33363033 31363135 30313031 5A303031\
+          \ 0D323630 33323431 36353032\n  365A170D 33363033 32333136 35303236 5A303031\
           \ 2E302C06 03550403 0C25494F\n  532D5365 6C662D53 69676E65 642D4365 72746966\
           \ 69636174 652D3635 39323130\n  36323330 82012230 0D06092A 864886F7 0D010101\
-          \ 05000382 010F0030 82010A02\n  82010100 B278CFE5 0005B4D7 6C9A1CAC F828BF93\
-          \ F6362365 3FAC0551 2C190A7F\n  544366CA CF7730F5 4190AE7D 3070EE5D 05946000\
-          \ 6266BBC8 EE463706 B2AE69D8\n  9C62293A 00D51795 C07A6E06 0BBB57DA D853AF0F\
-          \ 6D01D3A4 5CFB8294 D2A5B97D\n  9503EA2F 0A4994DF 14E5F270 96161928 1A9B24AA\
-          \ C8770A5E 639F559D 09F74BBF\n  590EB644 96E2C8C8 1D4322FF 75BB3D33 A1090448\
-          \ 5553672B 41C93F63 E6B8BD4B\n  CCE62A67 01D9D9A3 CD66065C ACD59FEE 7509250D\
-          \ 0B49FAF5 14E4CF8E 259BBCA8\n  0F2FC551 1CF8A8CE E0F17A28 6E4621FD D48B865E\
-          \ AF68AC71 4C51A965 286BD12E\n  F4199DE9 0C14BF1A B5C56342 F8A0577A 7E4D9923\
-          \ C5211E09 574FD1D3 63FB1BE2\n  1EFC73BD 02030100 01A35330 51301D06 03551D0E\
-          \ 04160414 4085147C 5E695D93\n  D7F97EAA 7396468F 78535F6C 301F0603 551D2304\
-          \ 18301680 14408514 7C5E695D\n  93D7F97E AA739646 8F78535F 6C300F06 03551D13\
-          \ 0101FF04 05300301 01FF300D\n  06092A86 4886F70D 01010D05 00038201 010024A3\
-          \ 0AB47758 FE17E326 305E533B\n  AF7FCBDB D7AE8009 6CFC1AAA 641D0101 DD3B95B7\
-          \ 999D40B4 9B430E6E 9D04707D\n  83201F05 010D2D6C 21F9178D DAC7910A F9023822\
-          \ D9EEF2F2 A0E60C06 91ECB2FE\n  95889ACC 43409B61 1EF53497 F0311312 740E53D8\
-          \ 97FE4935 EFF12644 E8A44BB9\n  3E0CE95B 95CFFC9B A5F1C09C 40978269 9B32A226\
-          \ D89E162F 0B8726E8 F48890CE\n  139AC3E3 9863F234 99BC42EC 200B2D55 9882C06A\
-          \ 85C13E81 3EA0AF94 A362CA2A\n  2BB64730 97489232 CFEAA2E1 69388840 30A06FDE\
-          \ E6BB9F3A 50A79084 BBE93EF5\n  481594A5 5AFFBB35 7434F55F 12D59659 D8C5894C\
-          \ 9C7ABE2A 8B38A012 EB20ED46\n  85E25D5D 1CAC152A 662E7E61 A063EB58 A70C\n\
+          \ 05000382 010F0030 82010A02\n  82010100 D9ABEC8C FA34DCB7 7919C2A3 762F8364\
+          \ 07187C6B 4DFB3E0D 9031EB6B\n  F51877F0 D29DCA7E BE9C186B CAAE2B35 8A934B34\
+          \ 33E9E92A 09AD9562 EC6A7944\n  37E2112D D875D186 017EA8D4 24FA4E6E 91404FE5\
+          \ B3709B64 20536BFE A92E4E98\n  EDDB9B52 1159EB9F C2201818 B080B43E E88C7ACA\
+          \ 1AEE0FDE 43199057 6FA297D8\n  1A2482AA DF7DEA2F 170C8451 D9815AEC 712F3684\
+          \ 9A4AB85D 69726C8E C99C074A\n  D41F75F6 8B6A951A CAD12379 F314F4C9 FF4DCB6A\
+          \ 4479B7B2 7334FCC5 3128F41D\n  91FC589D 8C2298C0 F1B2CD29 77BE98AB 56A8DA75\
+          \ F3840723 B361E422 D5D73838\n  C87D030C A010AA8A DB578767 C8BDE7D3 C9FCB2A9\
+          \ 892C5F17 940F3426 5E0BDEB6\n  F21E280D 02030100 01A35330 51301D06 03551D0E\
+          \ 04160414 ECB6346D 213A9C66\n  C4F1EFFD F1B2B76C E6E3E5DE 301F0603 551D2304\
+          \ 18301680 14ECB634 6D213A9C\n  66C4F1EF FDF1B2B7 6CE6E3E5 DE300F06 03551D13\
+          \ 0101FF04 05300301 01FF300D\n  06092A86 4886F70D 01010D05 00038201 01009AA1\
+          \ 9D5475A0 90C303F2 C0A22B29\n  C233ADDE DC6FF3F0 133BDAD7 C6AEBE4E 0F16577F\
+          \ 6E5CE20E C5B73550 97ABEF2B\n  E10AD8D3 F7E11301 3FD364D6 FC0A6A29 CFCC17E3\
+          \ B856A630 EA88C207 51CFA0CA\n  B5EEDE5C 23566F87 7E254CA6 52A8F135 09158CA4\
+          \ E1E35094 227B5149 1D7CB0F6\n  E01C1518 547BBA0F 7B55DF4C 902E21A8 95CC3B9F\
+          \ B8D76E4F 8F24B1D7 1BDC49EB\n  5824B5AE 358654FD F361E3D8 DBE94171 E4D08403\
+          \ C6BF4905 B6817DBA D674C2C7\n  FE163B23 3B7BE820 E64270F1 D834BA61 C7355377\
+          \ 0D97A954 27BFBD6B 925CB151\n  BF161C7A 0FDF987B BC968EFC 3D10CE90 34745157\
+          \ 71DBC002 0FBD1827 7933CEE4\n  1004F725 4EA86766 C920D44E 7351FAE4 79B0\n\
           \  \tquit\n!\n!\nlicense boot level network-advantage addon dna-advantage\n\
           memory free low-watermark processor 74467\n!\ndiagnostic bootup level minimal\n\
           !\nspanning-tree mode rapid-pvst\nspanning-tree extend system-id\n!\n!\n\
-          !\nenable password 0 C1sco12345\n!\nusername net-admin privilege 15 password\
+          !\nenable password C1sco12345\n!\nusername net-admin privilege 15 password\
           \ 0 C1sco12345\nusername cisco privilege 15 secret 9 $9$iQXTSkor44bQJE$tIsWB8DmXSSoZcZnQjL8fiV.iKInRnAm59B.3o3ksQ6\n\
           !\nredundancy\n mode sso\ncrypto engine compliance shield disable\n!\n!\n\
           !\n!\n!\nvlan configuration 902\n member evpn-instance 902 vni 50902\nvlan\
@@ -3801,21 +3883,22 @@ nodes:
           \ device-tracking attach-policy IPDT_POLICY\n!\ninterface GigabitEthernet1/0/8\n\
           \ device-tracking attach-policy IPDT_POLICY\n!\ninterface Vlan1\n no ip\
           \ address\n shutdown\n!\ninterface Vlan100\n vrf forwarding green\n ip address\
-          \ 198.18.143.1 255.255.255.0\n!\ninterface Vlan110\n vrf forwarding blue\n\
-          \ ip address 198.18.144.1 255.255.255.0\n!\ninterface Vlan120\n description\
-          \ CORP-RED-UNDERLAY-DHCP\n ip address 198.19.2.77 255.255.255.252\n ip pim\
-          \ sparse-mode\n!\ninterface Vlan902\n description ** SVI for blue L3VNI\
-          \ **\n vrf forwarding blue\n ip unnumbered Loopback0\n no ip redirects\n\
-          \ no ip unreachables\n ip pim sparse-mode\n no autostate\n!\ninterface Vlan903\n\
-          \ description ** SVI for green L3VNI **\n vrf forwarding green\n ip unnumbered\
+          \ 198.18.143.1 255.255.255.0\n no autostate\n!\ninterface Vlan110\n vrf\
+          \ forwarding blue\n ip address 198.18.144.1 255.255.255.0\n no autostate\n\
+          !\ninterface Vlan120\n description CORP-RED-UNDERLAY-DHCP\n ip address 198.19.2.77\
+          \ 255.255.255.252\n ip pim sparse-mode\n no autostate\n!\ninterface Vlan902\n\
+          \ description ** SVI for blue L3VNI **\n vrf forwarding blue\n ip unnumbered\
           \ Loopback0\n no ip redirects\n no ip unreachables\n ip pim sparse-mode\n\
-          \ no autostate\n!\ninterface nve1\n no ip address\n source-interface Loopback0\n\
-          \ host-reachability protocol bgp\n member vni 50902 vrf blue\n member vni\
-          \ 50903 vrf green\n!\nrouter bgp 65003\n template peer-policy PEER-POLICY\n\
-          \  soft-reconfiguration inbound\n exit-peer-policy\n !\n template peer-policy\
-          \ OVERLAY-Border-EVPN-PEER-POLICY\n  soft-reconfiguration inbound\n  send-community\
-          \ both\n exit-peer-policy\n !\n template peer-session OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n\
-          \  remote-as 65001\n  description VXLAN-GW-2-LEAF-EVPN-PEER\n  log-neighbor-changes\n\
+          \ no autostate\n!\ninterface Vlan903\n description ** SVI for green L3VNI\
+          \ **\n vrf forwarding green\n ip unnumbered Loopback0\n no ip redirects\n\
+          \ no ip unreachables\n ip pim sparse-mode\n no autostate\n!\ninterface nve1\n\
+          \ no ip address\n source-interface Loopback0\n host-reachability protocol\
+          \ bgp\n member vni 50902 vrf blue\n member vni 50903 vrf green\n!\nrouter\
+          \ bgp 65003\n template peer-policy PEER-POLICY\n  soft-reconfiguration inbound\n\
+          \ exit-peer-policy\n !\n template peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n\
+          \  soft-reconfiguration inbound\n  send-community both\n exit-peer-policy\n\
+          \ !\n template peer-session OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n  remote-as\
+          \ 65001\n  description VXLAN-GW-2-LEAF-EVPN-PEER\n  log-neighbor-changes\n\
           \  ebgp-multihop 255\n  update-source Loopback0\n exit-peer-session\n !\n\
           \ bgp router-id interface Loopback0\n bgp log-neighbor-changes\n neighbor\
           \ 198.19.1.5 inherit peer-session OVERLAY-Border-EVPN-PEER-SESSION-POLICY\n\
@@ -3823,29 +3906,31 @@ nodes:
           \ neighbor 198.19.2.65 remote-as 65002\n neighbor 198.19.2.69 remote-as\
           \ 65002\n !\n address-family ipv4\n  redistribute connected route-map TO-BGP\n\
           \  no neighbor 198.19.1.5 activate\n  no neighbor 198.19.1.6 activate\n\
-          \  neighbor 198.19.2.65 activate\n  neighbor 198.19.2.69 activate\n  maximum-paths\
-          \ 2\n exit-address-family\n !\n address-family l2vpn evpn\n  bgp additional-paths\
-          \ select all\n  bgp additional-paths send receive\n  rewrite-evpn-rt-asn\n\
-          \  neighbor 198.19.1.5 activate\n  neighbor 198.19.1.5 send-community both\n\
-          \  neighbor 198.19.1.5 inherit peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n\
-          \  neighbor 198.19.1.5 route-map EVPN-TYPE5-ONLY in\n  neighbor 198.19.1.5\
-          \ route-map DMZ-policy-out out\n  neighbor 198.19.1.6 activate\n  neighbor\
-          \ 198.19.1.6 send-community both\n  neighbor 198.19.1.6 inherit peer-policy\
-          \ OVERLAY-Border-EVPN-PEER-POLICY\n  neighbor 198.19.1.6 route-map EVPN-TYPE5-ONLY\
-          \ in\n  neighbor 198.19.1.6 route-map DMZ-policy-out out\n exit-address-family\n\
-          \ !\n address-family ipv4 vrf blue\n  advertise l2vpn evpn\n  import path\
-          \ selection all\n  redistribute static\n  redistribute connected\n  maximum-paths\
-          \ 2\n  default-information originate\n exit-address-family\n !\n address-family\
-          \ ipv4 vrf green\n  advertise l2vpn evpn\n  import path selection all\n\
-          \  redistribute static\n  redistribute connected\n  maximum-paths ibgp 2\n\
-          \  default-information originate\n exit-address-family\n !\n address-family\
-          \ ipv4 vrf shared\n  advertise l2vpn evpn\n  network 0.0.0.0\n  redistribute\
-          \ connected\n  default-information originate\n exit-address-family\n!\n\
-          ip forward-protocol nd\nip tcp mss 1280\nip tcp window-size 212000\nip http\
-          \ server\nip http authentication local\nip http secure-server\nip http client\
-          \ source-interface Loopback0\nip pim rp-address 198.19.1.254\nip pim spt-threshold\
-          \ 0\nip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 198.18.128.1\nip route vrf blue\
-          \ 0.0.0.0 0.0.0.0 198.18.130.74\nip route vrf blue 0.0.0.0 0.0.0.0 198.19.2.74\n\
+          \  neighbor 198.19.2.65 activate\n  neighbor 198.19.2.65 soft-reconfiguration\
+          \ inbound\n  neighbor 198.19.2.69 activate\n  neighbor 198.19.2.69 soft-reconfiguration\
+          \ inbound\n  maximum-paths 2\n exit-address-family\n !\n address-family\
+          \ l2vpn evpn\n  bgp additional-paths select all\n  bgp additional-paths\
+          \ send receive\n  rewrite-evpn-rt-asn\n  neighbor 198.19.1.5 activate\n\
+          \  neighbor 198.19.1.5 send-community both\n  neighbor 198.19.1.5 inherit\
+          \ peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n  neighbor 198.19.1.5 route-map\
+          \ EVPN-TYPE5-ONLY in\n  neighbor 198.19.1.5 route-map DMZ-policy-out out\n\
+          \  neighbor 198.19.1.6 activate\n  neighbor 198.19.1.6 send-community both\n\
+          \  neighbor 198.19.1.6 inherit peer-policy OVERLAY-Border-EVPN-PEER-POLICY\n\
+          \  neighbor 198.19.1.6 route-map EVPN-TYPE5-ONLY in\n  neighbor 198.19.1.6\
+          \ route-map DMZ-policy-out out\n exit-address-family\n !\n address-family\
+          \ ipv4 vrf blue\n  advertise l2vpn evpn\n  import path selection all\n \
+          \ redistribute static\n  redistribute connected\n  maximum-paths 2\n  default-information\
+          \ originate\n exit-address-family\n !\n address-family ipv4 vrf green\n\
+          \  advertise l2vpn evpn\n  import path selection all\n  redistribute static\n\
+          \  redistribute connected\n  maximum-paths ibgp 2\n  default-information\
+          \ originate\n exit-address-family\n !\n address-family ipv4 vrf shared\n\
+          \  advertise l2vpn evpn\n  network 0.0.0.0\n  redistribute connected\n \
+          \ default-information originate\n exit-address-family\n!\nip forward-protocol\
+          \ nd\nip tcp mss 1280\nip tcp window-size 212000\nip http server\nip http\
+          \ authentication local\nip http secure-server\nip http client source-interface\
+          \ Loopback0\nip pim rp-address 198.19.1.254\nip pim spt-threshold 0\nip\
+          \ route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 198.18.128.1\nip route vrf blue 0.0.0.0\
+          \ 0.0.0.0 198.18.130.74\nip route vrf blue 0.0.0.0 0.0.0.0 198.19.2.74\n\
           ip route vrf green 0.0.0.0 0.0.0.0 198.18.130.74\nip route vrf green 0.0.0.0\
           \ 0.0.0.0 198.19.2.74\nip route vrf shared 0.0.0.0 0.0.0.0 198.19.2.74\n\
           ip ssh bulk-mode 131072\nip ssh source-interface Loopback0\n!\nip as-path\
@@ -3918,13 +4003,15 @@ nodes:
           \ enable traps rf\nsnmp-server enable traps mpls vpn\nsnmp-server enable\
           \ traps mpls rfc vpn\n!\n!\n!\n!\ncontrol-plane\n service-policy input system-cpp-policy\n\
           !\n!\n!\nline con 0\n exec-timeout 0 0\n stopbits 1\nline vty 0 4\n exec-timeout\
-          \ 0 0\n transport input ssh\nline vty 5 15\n transport input ssh\n!\nevent\
-          \ manager applet POST_STARTUP authorization bypass\nevent timer countdown\
-          \ time 60\naction 1.0 cli command \"enable\"\naction 1.1 cli command \"\
-          crypto key generate rsa usage-keys modulus 2048\"\naction 2.0 cli command\
-          \ \"config t\"\naction 2.1 cli command \"no event manager applet POST_STARTUP\"\
-          \naction 2.2 cli command \"end\"\naction 2.3 cli command \"wr\"\naction\
-          \ 2.4 cli command \"exit\"\nexit\n!\nnetconf-yang\nend"
+          \ 0 0\n transport input ssh\nline vty 5 15\n transport input ssh\n!\n!\n\
+          vlan 100\n name green-dhcp-server\n!\nvlan 110\n name blue-dhcp-server\n\
+          !\nvlan 120\n name red-dhcp-server-underlay\n!\nevent manager applet POST_STARTUP\
+          \ authorization bypass\nevent timer countdown time 60\naction 1.0 cli command\
+          \ \"enable\"\naction 1.1 cli command \"crypto key generate rsa usage-keys\
+          \ modulus 2048\"\naction 2.0 cli command \"config t\"\naction 2.1 cli command\
+          \ \"no event manager applet POST_STARTUP\"\naction 2.2 cli command \"end\"\
+          \naction 2.3 cli command \"wr\"\naction 2.4 cli command \"exit\"\nexit\n\
+          !\n!\nnetconf-yang\nend"
       - name: conf/vswitch.xml
         content: |-
           <?xml version="1.0"?>
@@ -4318,7 +4405,17 @@ nodes:
           USERNAME=cisco
           PASSWORD=cisco
           ip link set dev eth0 address 00:00:00:02:21:02
-          udhcpc -i eth0
+
+          # Bring interface up before starting DHCP
+          ip link set eth0 up
+
+          # Start DHCP client in background with timeout and retries
+          # -t 3   = 3 attempts before giving up
+          # -T 1   = 1 sec initial timeout
+          # -A 1   = 1 sec retry timeout
+          # -b     = background if no lease obtained
+          # -R     = release old lease on restart
+          udhcpc -i eth0 -t 3 -T 1 -A 1 -b -R &
     cpu_limit: null
     cpus: null
     data_volume: null
@@ -4332,8 +4429,8 @@ nodes:
     tags:
       - green-202
       - dhcp-client
-    x: 920
-    y: 400
+    x: 560
+    y: 520
     interfaces:
       - id: i0
         label: eth0
@@ -4349,8 +4446,20 @@ nodes:
           # configurable user account
           USERNAME=cisco
           PASSWORD=cisco
+
+          # Set MAC address
           ip link set dev eth0 address 00:00:00:01:02:03
-          udhcpc -i eth0
+
+          # Bring interface up before starting DHCP
+          ip link set eth0 up
+
+          # Start DHCP client in background with timeout and retries
+          # -t 3   = 3 attempts before giving up
+          # -T 1   = 1 sec initial timeout
+          # -A 1   = 1 sec retry timeout
+          # -b     = background if no lease obtained
+          # -R     = release old lease on restart
+          udhcpc -i eth0 -t 3 -T 1 -A 1 -b -R &
     cpu_limit: null
     cpus: null
     data_volume: null
@@ -4506,6 +4615,84 @@ nodes:
         mac_address: null
         type: physical
         slot: 3
+  - boot_disk_size: null
+    configuration:
+      - name: node.cfg
+        content: |-
+          # this is a shell script which will be sourced at boot
+          hostname blue-03
+          # configurable user account
+          USERNAME=cisco
+          PASSWORD=cisco
+
+          # Set MAC address
+          ip link set dev eth0 address 00:00:00:02:01:03
+
+          # Bring interface up before starting DHCP
+          ip link set eth0 up
+
+          # Start DHCP client in background with timeout and retries
+          # -t 3   = 3 attempts before giving up
+          # -T 1   = 1 sec initial timeout
+          # -A 1   = 1 sec retry timeout
+          # -b     = background if no lease obtained
+          # -R     = release old lease on restart
+          udhcpc -i eth0 -t 3 -T 1 -A 1 -b -R &
+    cpu_limit: null
+    cpus: null
+    data_volume: null
+    hide_links: false
+    id: n21
+    image_definition: null
+    label: blue03(dhcp)
+    node_definition: alpine
+    parameters: {}
+    ram: null
+    tags:
+      - blue-201
+    x: 160
+    y: 520
+    interfaces:
+      - id: i0
+        label: eth0
+        mac_address: null
+        type: physical
+        slot: 0
+  - boot_disk_size: null
+    configuration:
+      - name: node.cfg
+        content: |-
+          # this is a shell script which will be sourced at boot
+          hostname green03
+          # configurable user account
+          USERNAME=cisco
+          PASSWORD=cisco
+
+          kill $(cat /var/run/udhcpc.eth0.pid 2>/dev/null) 2>/dev/null
+          ip addr flush dev eth0
+          ip link set dev eth0 address 00:00:00:02:21:03
+          ip addr add 10.1.221.20/24 dev eth0
+          ip route add default via 10.1.221.1
+    cpu_limit: null
+    cpus: null
+    data_volume: null
+    hide_links: false
+    id: n22
+    image_definition: null
+    label: green-03
+    node_definition: alpine
+    parameters: {}
+    ram: null
+    tags:
+      - green-202
+    x: 760
+    y: 400
+    interfaces:
+      - id: i0
+        label: eth0
+        mac_address: null
+        type: physical
+        slot: 0
 links:
   - id: l0
     n1: n4
@@ -4557,229 +4744,243 @@ links:
     conditioning: {}
     label: spine2-GigabitEthernet0/0<->iol-l2-0-Ethernet1/0
   - id: l7
-    n1: n6
-    n2: n3
-    i1: i0
-    i2: i4
-    conditioning: {}
-    label: red01-eth0<->leaf1-GigabitEthernet1/0/3
-  - id: l8
-    n1: n5
-    n2: n2
-    i1: i0
-    i2: i4
-    conditioning: {}
-    label: red02-eth0<->leaf2-GigabitEthernet1/0/3
-  - id: l9
     n1: n8
     n2: n4
     i1: i1
     i2: i6
     conditioning: {}
     label: border1-GigabitEthernet0/0<->iol-l2-0-Ethernet1/1
-  - id: l10
+  - id: l8
     n1: n9
     n2: n4
     i1: i1
     i2: i7
     conditioning: {}
     label: border2-GigabitEthernet0/0<->iol-l2-0-Ethernet1/2
-  - id: l11
+  - id: l9
     n1: n8
     n2: n1
     i1: i2
     i2: i4
     conditioning: {}
     label: border1-GigabitEthernet1/0/1<->spine1-GigabitEthernet1/0/3
-  - id: l12
+  - id: l10
     n1: n8
     n2: n7
     i1: i3
     i2: i4
     conditioning: {}
     label: border1-GigabitEthernet1/0/2<->spine2-GigabitEthernet1/0/3
-  - id: l13
+  - id: l11
     n1: n9
     n2: n1
     i1: i2
     i2: i5
     conditioning: {}
     label: border2-GigabitEthernet1/0/1<->spine1-GigabitEthernet1/0/4
-  - id: l14
+  - id: l12
     n1: n9
     n2: n7
     i1: i3
     i2: i5
     conditioning: {}
     label: border2-GigabitEthernet1/0/2<->spine2-GigabitEthernet1/0/4
-  - id: l15
+  - id: l13
     n1: n3
     n2: n7
     i1: i3
     i2: i2
     conditioning: {}
     label: leaf1-GigabitEthernet1/0/2<->spine2-GigabitEthernet1/0/1
-  - id: l16
+  - id: l14
     n1: n2
     n2: n7
     i1: i3
     i2: i3
     conditioning: {}
     label: leaf2-GigabitEthernet1/0/2<->spine2-GigabitEthernet1/0/2
-  - id: l17
+  - id: l15
     n1: n10
     n2: n4
     i1: i1
     i2: i8
     conditioning: {}
     label: core1-mgmt0<->iol-l2-0-Ethernet1/3
-  - id: l18
+  - id: l16
     n1: n11
     n2: n4
     i1: i1
     i2: i9
     conditioning: {}
     label: core2-mgmt0<->iol-l2-0-Ethernet2/0
-  - id: l19
+  - id: l17
     n1: n1
     n2: n10
     i1: i6
     i2: i2
     conditioning: {}
     label: spine1-GigabitEthernet1/0/5<->core1-Ethernet1/1
-  - id: l20
+  - id: l18
     n1: n1
     n2: n11
     i1: i7
     i2: i2
     conditioning: {}
     label: spine1-GigabitEthernet1/0/6<->core2-Ethernet1/1
-  - id: l21
+  - id: l19
     n1: n7
     n2: n10
     i1: i6
     i2: i3
     conditioning: {}
     label: spine2-GigabitEthernet1/0/5<->core1-Ethernet1/2
-  - id: l22
+  - id: l20
     n1: n7
     n2: n11
     i1: i7
     i2: i3
     conditioning: {}
     label: spine2-GigabitEthernet1/0/6<->core2-Ethernet1/2
-  - id: l23
-    n1: n12
-    n2: n2
-    i1: i0
-    i2: i5
-    conditioning: {}
-    label: red04-eth0<->leaf2-GigabitEthernet1/0/4
-  - id: l24
-    n1: n13
-    n2: n2
-    i1: i0
-    i2: i6
-    conditioning: {}
-    label: blue01-eth0<->leaf2-GigabitEthernet1/0/5
-  - id: l25
-    n1: n14
-    n2: n3
-    i1: i0
-    i2: i6
-    conditioning: {}
-    label: green01-eth0<->leaf1-GigabitEthernet1/0/5
-  - id: l26
+  - id: l21
     n1: n15
     n2: n4
     i1: i1
     i2: i10
     conditioning: {}
     label: dmz1-GigabitEthernet0/0<->iol-l2-0-Ethernet2/1
-  - id: l27
+  - id: l22
     n1: n10
     n2: n15
     i1: i4
     i2: i2
     conditioning: {}
     label: core1-Ethernet1/3<->dmz1-GigabitEthernet1/0/1
-  - id: l28
+  - id: l23
     n1: n11
     n2: n15
     i1: i4
     i2: i3
     conditioning: {}
     label: core2-Ethernet1/3<->dmz1-GigabitEthernet1/0/2
-  - id: l29
-    n1: n16
-    n2: n3
-    i1: i0
-    i2: i7
-    conditioning: {}
-    label: blue02-eth0<->leaf1-GigabitEthernet1/0/6
-  - id: l30
+  - id: l24
     n1: n17
     n2: n4
     i1: i1
     i2: i11
     conditioning: {}
     label: dhcp-server-GigabitEthernet1<->iol-l2-0-Ethernet2/2
-  - id: l31
+  - id: l25
     n1: n17
     n2: n15
     i1: i2
     i2: i6
     conditioning: {}
     label: dhcp-server-GigabitEthernet2<->dmz1-GigabitEthernet1/0/5
-  - id: l32
-    n1: n19
-    n2: n2
-    i1: i0
-    i2: i7
-    conditioning: {}
-    label: red03(dhcp)-eth0<->leaf2-GigabitEthernet1/0/6
-  - id: l33
-    n1: n18
-    n2: n2
-    i1: i0
-    i2: i8
-    conditioning: {}
-    label: green02(dhcp)-eth0<->leaf2-GigabitEthernet1/0/7
-  - id: l34
+  - id: l26
     n1: n15
     n2: n20
     i1: i4
     i2: i1
     conditioning: {}
     label: dmz1-GigabitEthernet1/0/3<->FW-SHARED-SERVICES-GigabitEthernet1
-  - id: l35
+  - id: l27
     n1: n20
     n2: n4
     i1: i2
     i2: i12
     conditioning: {}
     label: FW-SHARED-SERVICES-GigabitEthernet2<->iol-l2-0-Ethernet2/3
-  - id: l36
+  - id: l28
     n1: n11
     n2: n4
     i1: i5
     i2: i13
     conditioning: {}
     label: core2-Ethernet1/4<->iol-l2-0-Ethernet3/0
-  - id: l37
+  - id: l29
     n1: n10
     n2: n4
     i1: i5
     i2: i14
     conditioning: {}
     label: core1-Ethernet1/4<->iol-l2-0-Ethernet3/1
-  - id: l38
+  - id: l30
     n1: n10
     n2: n11
     i1: i6
     i2: i6
     conditioning: {}
     label: core1-Ethernet1/5<->core2-Ethernet1/5
+  - id: l31
+    n1: n6
+    n2: n3
+    i1: i0
+    i2: i4
+    conditioning: {}
+    label: red01-eth0<->leaf1-GigabitEthernet1/0/3
+  - id: l32
+    n1: n5
+    n2: n2
+    i1: i0
+    i2: i4
+    conditioning: {}
+    label: red02-eth0<->leaf2-GigabitEthernet1/0/3
+  - id: l33
+    n1: n19
+    n2: n3
+    i1: i0
+    i2: i5
+    conditioning: {}
+    label: red03(dhcp)-eth0<->leaf1-GigabitEthernet1/0/4
+  - id: l34
+    n1: n12
+    n2: n2
+    i1: i0
+    i2: i5
+    conditioning: {}
+    label: red04-eth0<->leaf2-GigabitEthernet1/0/4
+  - id: l35
+    n1: n13
+    n2: n3
+    i1: i0
+    i2: i6
+    conditioning: {}
+    label: blue01-eth0<->leaf1-GigabitEthernet1/0/5
+  - id: l36
+    n1: n16
+    n2: n2
+    i1: i0
+    i2: i6
+    conditioning: {}
+    label: blue02-eth0<->leaf2-GigabitEthernet1/0/5
+  - id: l37
+    n1: n14
+    n2: n3
+    i1: i0
+    i2: i7
+    conditioning: {}
+    label: green01-eth0<->leaf1-GigabitEthernet1/0/6
+  - id: l38
+    n1: n18
+    n2: n2
+    i1: i0
+    i2: i7
+    conditioning: {}
+    label: green02(dhcp)-eth0<->leaf2-GigabitEthernet1/0/6
+  - id: l39
+    n1: n21
+    n2: n3
+    i1: i0
+    i2: i8
+    conditioning: {}
+    label: blue03(dhcp)-eth0<->leaf1-GigabitEthernet1/0/7
+  - id: l40
+    n1: n22
+    n2: n2
+    i1: i0
+    i2: i8
+    conditioning: {}
+    label: alpine-0-eth0<->leaf2-GigabitEthernet1/0/7
 lab:
   description: To be used for BGP EVPN Fabric Builds with GitOps via Ansible and or
     Cisco Workflows

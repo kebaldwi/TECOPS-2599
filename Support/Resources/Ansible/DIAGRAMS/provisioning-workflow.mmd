@@ -32,13 +32,18 @@ flowchart TD
     R7(["CatC Network Profile\nBGP-EVPN-Switching\nBound to site · Day-N templates attached"]):::resource
 
     %% ── Playbook 8.0 ───────────────────────────────────────────────────────
-    P8["8.0 — Deploy Composite\ndeploy_composite_template.yml"]:::deploy
+    P_prov["8.0 — Provision Devices\nprovision_devices.yml"]:::deploy
+    R_prov(["CatC Provisioned State\nSite settings pushed · SDA record created\n6 fabric nodes provisioned"]):::resource
+
+    %% ── Playbook 9.0 ───────────────────────────────────────────────────────
+    P8["9.0 — Deploy Composite\ndeploy_composite_template.yml"]:::deploy
     FINAL(["✓ Day-N Config Applied\nAll 6 fabric nodes\nBGP EVPN · VRF · Loopbacks\nL3OUT · NVE · NAC · Overlay"]):::done
 
     %% ── Must-run-before annotations ────────────────────────────────────────
     DEP45["Sites must exist\nbefore assigning devices"]:::constraint
     DEP56["Devices must be in\ninventory before assigning"]:::constraint
-    DEP78["Profile must exist\nbefore deployment"]:::constraint
+    DEP78["Profile must exist\nbefore provisioning"]:::constraint
+    DEP89["Devices must be\nprovisioned before deployment"]:::constraint
     DEP68["Templates must be\nsynced before deployment"]:::constraint
 
     %% ── Wiring ─────────────────────────────────────────────────────────────
@@ -55,7 +60,9 @@ flowchart TD
     GH --> P6 --> R6
     R5 --> P7
     SJ --> P7 --> R7
-    R7 --> DEP78 --> P8
+    R7 --> DEP78 --> P_prov
+    SJ --> P_prov --> R_prov
+    R_prov --> DEP89 --> P8
     R6 --> DEP68 --> P8
     SJ --> P8 --> FINAL
 
