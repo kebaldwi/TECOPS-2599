@@ -451,7 +451,7 @@ The following is a complete, annotated single-site `settings.json` entry:
                 },
                 "snmp_v2c_write": {
                     "description":     "RW",
-                    "write_community": "RO"
+                    "write_community": "RW"
                 },
                 "netconf_credential": {
                     "description":  "NETCONF-netadmin",
