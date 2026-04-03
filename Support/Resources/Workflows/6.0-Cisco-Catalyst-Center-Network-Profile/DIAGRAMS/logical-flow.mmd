@@ -1,0 +1,41 @@
+flowchart TD
+    START([Start]) --> A
+
+    A["Step 1 - Get-GitHub-File-v2\nGET api.github.com/repos/{owner}/{repo}/contents/{path}/{file}\nAccept: application/vnd.github.raw+json"] --> B
+    B["Step 2 - JSONPath extraction\nParent/Area/Bldg/Floor\nprofile_name, Day0TemplateNames, DayNTemplateNames"] --> C
+
+    subgraph STEP5B["Step 3 - Prepare Profile Inputs"]
+        direction TB
+        C1["Join Day0 template array -> comma string"] --> C2
+        C2["Join DayN template array -> comma string"] --> C3
+        C3["Compose full hierarchy path\nParent/Area/Bldg/Floor"]
+    end
+
+    C --> C1
+    C3 --> D
+
+    D["Step 4 - Get site by hierarchy\nGET /dna/intent/api/v2/site?groupNameHierarchy=...\nExtract siteId"] --> E
+
+    subgraph STEP5C["Step 5 - Resolve Template IDs"]
+        direction TB
+        E1["Day0 branch\nIf comma present -> split and loop\nElse single lookup"] --> E2
+        E2["CATC-GetTemplates-v2\nGET /dna/intent/api/v2/template-programmer/project?name=...\nExtract Day0 template ID(s)"] --> E3
+        E3["Build Day0TemplateIDs string"] --> E4
+        E4["DayN branch\nIf comma present -> split and loop\nElse single lookup"] --> E5
+        E5["CATC-GetTemplates-v2\nGET /dna/intent/api/v2/template-programmer/project?name=...\nExtract DayN template ID(s)"] --> E6
+        E6["Build DayNTemplateIDs string"]
+    end
+
+    D --> E1
+    E6 --> F
+
+    F["Step 6 - CATC-CreateSiteProfile-v3\nCreate/assign profileType=switching\nBind Day0/DayN template IDs to siteId"] --> G
+    G{Profile creation\nand assignment OK?}
+    G -->|No| FAIL_A([Fail: network profile\nassignment error])
+    G -->|Yes| H
+
+    H["Step 7 - Sleep 30 seconds"] --> DONE([Done])
+
+    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    style DONE fill:#27ae60,color:#fff,stroke:#1e8449
+    style START fill:#2980b9,color:#fff,stroke:#1a5276

@@ -1,0 +1,61 @@
+flowchart TD
+    START([Start]) --> A
+
+    A["Step 1 - Retrieve settings.json from GitHub<br/>GET /repos/{owner}/{repo}/contents/{path}/{file}"]
+    A --> B
+
+    B["Extract site &amp; template targets<br/>HierarchyParent / Area / Building / Floor<br/>templateTarget, templateName"]
+    B --> C
+
+    C(["Parallel — get Site ID · Template ID · Device IDs"])
+    C --> D1 & D2 & D3
+
+    D1["Get Site ID<br/>GET .../sites?name=&amp;nameHierarchy="]
+    D2["Get Template Project<br/>GET .../template-programmer/project"]
+    D3["Get Device List<br/>GET .../network-device<br/>map IPs → deviceIdArray"]
+
+    D1 --> E
+    D2 --> E
+    D3 --> E
+
+    E["Step 2 - Get Composite Template Details<br/>GET .../template?id={templateId}<br/>→ containingTemplateIds, mainTemplateId"]
+    E --> F{Template<br/>found?}
+    F -->|No| FAIL_A([Fail: template<br/>not found])
+    F -->|Yes| H
+
+    H(["For each member template"])
+    H --> I
+
+    I["Get Member Template Details &amp; Parameters<br/>GET .../template?id={memberTemplateId}<br/>build param JSON → memberTemplateDeploymentInfo"]
+    I --> O{More member<br/>templates?}
+    O -->|Yes| H
+    O -->|No| P
+
+    P["Step 3 - Get Latest Template Version<br/>GET .../templates/{templateId}/versions<br/>Assemble final deployment payload"]
+    P --> S
+
+    S["Step 4 - Check Provisioning State at Site<br/>GET .../sda/provisionDevices?siteId=<br/>build provisionedDeviceList"]
+    S --> T
+
+    T(["For each device"])
+    T --> V{Device already<br/>provisioned?}
+
+    V -->|No| W1["Provision Device<br/>POST .../sda/provisionDevices<br/>→ wait for task"]
+    V -->|Yes| W2["Re-Provision Device<br/>PUT .../sda/provisionDevices<br/>→ wait for task"]
+
+    W1 --> X
+    W2 --> X
+
+    X["Step 5 - Deploy Composite Template<br/>POST .../template-programmer/template/deploy<br/>poll task until endTime or isError"]
+    X --> AA{Task<br/>successful?}
+
+    AA -->|isError = true| FAIL_B([Fail: task error<br/>+ failureReason])
+    AA -->|Success| AB{More<br/>devices?}
+
+    AB -->|Yes| T
+    AB -->|No| DONE([Done])
+
+    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    style FAIL_B fill:#c0392b,color:#fff,stroke:#922b21
+    style DONE fill:#27ae60,color:#fff,stroke:#1e8449
+    style START fill:#2980b9,color:#fff,stroke:#1a5276
