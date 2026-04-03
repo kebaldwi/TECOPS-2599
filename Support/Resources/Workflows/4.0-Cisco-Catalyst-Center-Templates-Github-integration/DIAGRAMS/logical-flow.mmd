@@ -1,0 +1,62 @@
+flowchart TD
+    START([Start]) --> A
+
+    A["Step 1 - Get-GitHub-Directory-v2\nGET api.github.com/repos/{owner}/{repo}/contents/{path}"] --> B
+    B["Step 2 - JSONPath names + count\n$.length(), $..name"] --> C
+    C["Step 3 - Python: derive CATC project name\nfrom GITHUB-PATH"] --> D
+    D{"TemplateHubProjectName\nprovided?"}
+    D -->|Yes| E1["Use input project name"]
+    D -->|No| E2["Use derived project name"]
+    E1 --> F
+    E2 --> F
+
+    F["Step 4 - CATC-DependencyMapping-v1\nBuild sorted file order by include dependencies"] --> G
+
+    subgraph STEP5B["Step 5 - Dependency Mapping Subprocess"]
+        direction TB
+        G1["Scan files matching j2/vm/json"] --> G2
+        G2["Get each file content from GitHub"] --> G3
+        G3["Regex extract includes:\ninclude TEMPLATE_PROJECT_NAME/... pattern"] --> G4
+        G4["Build dependency table and topological sort\nOutput: SortedFileList"]
+    end
+
+    G --> G1
+    G4 --> H
+
+    H(["For each file in SortedFileList"]) --> I{"Template extension\nvalid?"}
+    I -->|No| H
+    I -->|Yes| J
+
+    J["Step 6 - Get-GitHub-File-v2\nDownload template source"] --> K
+    K["Python replace placeholder\n{{ TEMPLATE_PROJECT_NAME }} with ProjectName"] --> L
+
+    subgraph STEP5C["Step 7 - CATC-CreateTemplate-v3"]
+        direction TB
+        L1["1) GET /dna/intent/api/v2/template-programmer/project?name=...\nFind project + existing templates"] --> L2
+        L2{"Project/template\nexists?"}
+        L2 -->|Project missing| L3
+        L2 -->|Project found\nTemplate missing| L4
+        L2 -->|Both found| L5
+        L3["2a) POST /dna/intent/api/v1/template-programmer/project\nCreate project"] --> L4
+        L4["2b) POST /dna/intent/api/v1/template-programmer/project/{projectId}/template\nCreate template"] --> L6
+        L5["2c) PUT /dna/intent/api/v1/template-programmer/template/\nUpdate existing template"] --> L6
+        L6["3) Poll task status\nGet Task ID -> Wait For Catalyst Center Task"]
+    end
+
+    L --> L1
+    L6 --> M{Template create/update\nOK?}
+    M -->|No| FAIL_A([Fail: template\ncreate/update error])
+    M -->|Yes| H
+
+    H --> N
+    N["Step 8 - Sleep 30 seconds"] --> O
+    O["Step 9 - CATC-GetProjectTemplatesIDs\nGET /dna/intent/api/v1/template-programmer/projects/{projectId}/templates\nExtract TemplateListIDs"] --> P
+    P(["For each template ID"]) --> Q
+    Q["Step 10 - CATC-CommitTemplate-v2\nCommit template version + poll task"] --> R
+    R{More IDs?}
+    R -->|Yes| P
+    R -->|No| DONE([Done])
+
+    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    style DONE fill:#27ae60,color:#fff,stroke:#1e8449
+    style START fill:#2980b9,color:#fff,stroke:#1a5276

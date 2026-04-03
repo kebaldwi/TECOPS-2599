@@ -1,0 +1,45 @@
+flowchart TD
+    START([Start]) --> A
+
+    A["Step 1 - Get-GitHub-Directory-v2\nGET api.github.com/repos/{owner}/{repo}/contents/{path}"] --> B
+    B["Step 2 - JSONPath names + count\n$.length(), $..name"] --> C
+    C["Step 3 - Python: derive project name\nfrom GITHUB-PATH"] --> D
+    D{"TemplateHubProjectName\nprovided?"}
+    D -->|Yes| E1["Use input project name"]
+    D -->|No| E2["Use derived project name"]
+    E1 --> F
+    E2 --> F
+
+    F(["For each file in GithubFileList"]) --> G{"File is YAML\n(.yml)?"}
+    G -->|No| F
+    G -->|Yes| H
+
+    H["Step 4 - Get-GitHub-File-v2\nDownload YAML definition"] --> I
+    I["Python transform\nfilename .yml -> .j2"] --> J
+
+    subgraph STEP5C["Step 5 - CATC-CreateCompositeTemplate-v3"]
+        direction TB
+        J1["1) GET /dna/intent/api/v2/template-programmer/project?name=...\nGet project + existing templates"] --> J2
+        J2{"Project exists?"}
+        J2 -->|No| J3
+        J2 -->|Yes| J4
+        J3["2a) POST /dna/intent/api/v1/template-programmer/project\nCreate project"] --> J4
+        J4["2b) POST /dna/intent/api/v1/template-programmer/project/{projectId}/template\nCreate composite template shell"] --> J5
+        J5["3) Resolve member templates and product families\nCATC-ProductFamily-v1 mapping"] --> J6
+        J6["4) PUT /api/v1/template-programmer/template\nUpdate composite containingTemplates[]"] --> J7
+        J7["5) Poll task status for create/update\nGet Task ID -> Wait For Catalyst Center Task"]
+    end
+
+    J --> J1
+    J7 --> K{Composite template\ncreate/update OK?}
+    K -->|No| FAIL_A([Fail: composite template\ncreate/update error])
+    K -->|Yes| F
+
+    F --> L
+    L["Step 6 - Sleep 30 seconds"] --> M
+    M["Step 7 - CATC-CommitTemplate-v2\nPOST /api/v1/template-programmer/template/version\nCommit composite template"] --> N
+    N["Poll task status\nWait For Catalyst Center Task"] --> DONE([Done])
+
+    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    style DONE fill:#27ae60,color:#fff,stroke:#1e8449
+    style START fill:#2980b9,color:#fff,stroke:#1a5276

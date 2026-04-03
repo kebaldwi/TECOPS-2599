@@ -1,0 +1,48 @@
+flowchart TD
+    START([Start]) --> A
+
+    A["Step 1 - Get-GitHub-Directory-v2\nGET api.github.com/repos/{owner}/{repo}/contents/{path}"] --> B
+    B["Step 2 - JSONPath + Set Variables\n$.length() -> NumberFiles\n$..name -> GithubFileList"] --> C
+    C(["For each file in GithubFileList"]) --> D{File ==\nsettings.json?}
+    D -->|No| C
+    D -->|Yes| E
+
+    E["Step 3 - Get-GitHub-File-v2\nGET api.github.com/repos/{owner}/{repo}/contents/{path}/{file}\nAccept: application/vnd.github.raw+json"] --> F
+    F["Step 4 - Parse Hierarchy Table\nRead Table from JSON -> HierarchyList\nColumns: Parent, Area, Bldg, Floor"] --> G
+    G(["For each hierarchy row"]) --> H
+
+    H["Step 5a - Extract row data\nHierarchy path, device_list, and\ncredential selectors"] --> S31
+
+    subgraph STEP5B["Step 5b - Discovery Preparation"]
+        direction TB
+        S31["1) GET /dna/intent/api/v2/global-credential\nResolve CLI/SNMP/NETCONF UUIDs"] --> S32
+        S32["2) GET /dna/intent/api/v1/dnac-release\nDetermine compatibility + discovery type"] --> S33
+        S33["3) Build discovery payload\nname, IP ranges, protocolOrder,\nglobalCredentialIdList"]
+    end
+
+    subgraph STEP5C["Step 5c - CATC-DeviceDiscovery-v3"]
+        direction TB
+        S34["4) GET /api/v1/discovery/1/100\nCheck existing discovery by name"] --> S35
+        S35{"Discovery exists?"}
+        S35 -->|No| S36
+        S35 -->|Yes| S37
+        S36["5a) POST /dna/intent/api/v1/discovery\nCreate discovery job"] --> S38
+        S37["5b) DELETE /dna/intent/api/v1/discovery/{id}\nSleep 8s\nPOST /dna/intent/api/v1/discovery"] --> S38
+        S38["6) Wait For Catalyst Center Task\nPoll /dna/intent/api/v1/task/{taskId}"] --> S39
+        S39["7) GET /dna/intent/api/v1/discovery/{discoveryId}/network-device\nExtract discovered device UUID list"] --> S40
+        S40["8) GET /dna/intent/api/v2/site?groupNameHierarchy=...\nExtract siteId"] --> S41
+        S41["9) POST /dna/intent/api/v1/networkDevices/assignToSite/apply\nAssign discovered devices to site"]
+    end
+
+    S33 --> S34
+    S41 --> I{Discovery and\nassignment OK?}
+    I -->|No| FAIL_A([Fail: discovery/assign\nreturned error])
+    I -->|Yes| J{More rows\nin HierarchyList?}
+    J -->|Yes| G
+    J -->|No| K
+
+    K["Step 6 - Sleep 30 seconds"] --> DONE([Done])
+
+    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    style DONE fill:#27ae60,color:#fff,stroke:#1e8449
+    style START fill:#2980b9,color:#fff,stroke:#1a5276
