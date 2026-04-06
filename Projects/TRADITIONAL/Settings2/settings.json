@@ -1,0 +1,89 @@
+{
+    "project": [
+        {
+            "HierarchyArea": "POD 1",
+            "HierarchyBldg": "Building P1",
+            "HierarchyFloor": "Floor 1",
+            "HierarchyParent": "Global/PODS",
+            "HierarchyBldgAddress": "400 E Tasman Dr, Bldg 12, San Jose, CA 95134",
+            "network_settings": {
+                "dhcp_server": ["198.18.133.1"],
+                "dns_server": {
+                    "domain_name": "dcloud.cisco.com",
+                    "primary_ip_address": "198.18.133.1",
+                    "secondary_ip_address": null
+                },
+                "ntp_server": ["198.18.133.1"],
+                "timezone": "America/Toronto",
+                "message_of_the_day": {
+                    "banner_message": "DNAC Template Lab P1!",
+                    "retain_existing_banner": false
+                },
+                "snmp_server": {
+                    "configure_dnac_ip": true,
+                    "ip_addresses": ["198.18.133.27"]
+                },
+                "syslog_server": {
+                    "configure_dnac_ip": true,
+                    "ip_addresses": ["198.18.133.27"]
+                },
+                "netflow_server": {
+                    "configure_dnac_ip": true,
+                    "ip_address": "198.18.133.27",
+                    "port": 2055
+                },
+                "network_aaa": null,
+                "client_and_endpoint_aaa": {
+                    "server_type": "ISE",
+                    "primary_server_address": "198.18.133.27",
+                    "pan_address": "198.18.133.27",
+                    "protocol": "RADIUS",
+                    "shared_secret": "C1sco12345",
+                    "secondary_server_address": null
+                }
+            },
+            "device_credentials": {
+                "cli_credential": {
+                    "description": "CLI-net-admin",
+                    "username": "netadmin",
+                    "password": "C1sco12345",
+                    "enable_password": "C1sco12345"
+                },
+                "snmp_v2c_read": {
+                    "description": "RO",
+                    "read_community": "ro"
+                },
+                "snmp_v2c_write": {
+                    "description": "RW",
+                    "write_community": "rw"
+                },
+                "netconf_credential": {
+                    "description": "NETCONF-netadmin",
+                    "netconf_port": "830"
+                }
+            },
+            "device_list": "198.18.130.1,198.18.10.2,198.18.20.2",
+            "network_profile": {
+                "profile_name": "Traditional-Switching",
+                "DayNTemplateNames": [
+                    {
+                        "TemplateName": "BUILD-MasterBuild.j2",
+                        "TemplateTag": "DEMO",
+                        "Project": "Building P1",
+                        "TemplateTarget": ["198.18.10.2","198.18.20.2"],
+                        "DeployTemplate": true
+                    }
+                ],
+                "Day0TemplateNames": [
+                    {
+                        "TemplateName": "Titanium-L2-PnP-Jinja-Template.j2",
+                        "TemplateTag": "DEMO",
+                        "Project": "Building P1",
+                        "TemplateTarget": ["198.18.10.2","198.18.20.2"],
+                        "DeployTemplate": true
+                    }
+                ]
+            }
+        }
+    ]
+}
