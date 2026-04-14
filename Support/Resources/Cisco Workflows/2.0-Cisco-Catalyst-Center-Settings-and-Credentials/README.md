@@ -286,7 +286,8 @@ Each top-level array entry represents one site hierarchy target (Area → Buildi
         "description": "HQ-NETCONF",
         "netconf_port": 830
       }
-    }
+    },
+    ...
   }
 ]
 ```
