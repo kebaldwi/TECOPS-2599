@@ -166,21 +166,28 @@ The workflow reads `settings.json` files from GitHub to drive all discovery and 
       "HierarchyBldg": "<building name>",
       "HierarchyFloor": "<floor name>",
       "HierarchyBldgAddress": "<building address>",
+      "network_settings": {...
+      },
       "device_credentials": {
         "cli_credential": {
-          "username": "<cli username>"
+          "username": "<cli username>",
+          ...
         },
         "snmp_v2c_read": {
           "description": "<snmpv2c read community description>"
+          ...
         },
         "snmp_v2c_write": {
           "description": "<snmpv2c write community description>"
+          ...
         },
         "netconf_credential": {
           "netconf_port": "<port number>"
+          ...
         }
       },
-      "device_list": "<comma-separated IP addresses>"
+      "device_list": "<comma-separated IP addresses>",
+      "network_profile": {...}
     }
   ]
 }
