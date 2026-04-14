@@ -1,41 +1,113 @@
 flowchart TD
     START([Start]) --> A
 
-    A["Step 1 - Get-GitHub-File-v2\nGET api.github.com/repos/{owner}/{repo}/contents/{path}/{file}\nAccept: application/vnd.github.raw+json"] --> B
-    B["Step 2 - JSONPath extraction\nParent/Area/Bldg/Floor\nprofile_name, Day0TemplateNames, DayNTemplateNames"] --> C
+    A["Step 1 - Get-GitHub-File-v2
+    GET api.github.com/repos/{owner}/{repo}/contents/{path}/settings.json
+    Header: Accept: application/vnd.github.raw+json
+    GITHUB-FILE = settings.json (pre-configured input)
+    Returns: raw JSON settings content"] --> B
 
-    subgraph STEP5B["Step 3 - Prepare Profile Inputs"]
+    B["Step 2 - JSONPath Queries on Settings File
+    $.length()                                         -> length
+    $..HierarchyParent / Area / Bldg / Floor           -> hierarchy fields
+    $..network_profile.profile_name                    -> ProfileName
+    $..network_profile.DayNTemplateNames[*].TemplateName -> DayNTemplates array
+    $..network_profile.Day0TemplateNames[*].TemplateName -> Day0Templates array
+    $..network_profile.DayNTemplateNames.length()        -> numberDayNTemplates
+    $..network_profile.Day0TemplateNames.length()        -> numberDay0Templates"] --> PAR1
+
+    PAR1(["Step 3 - Parallel Block: Prepare Template Names and Site Data
+    Three branches execute simultaneously"])
+
+    PAR1 --> C1 & C2 & C3A
+
+    subgraph DAY0_PREP["Step 3a - Day0 Branch (parallel)"]
         direction TB
-        C1["Join Day0 template array -> comma string"] --> C2
-        C2["Join DayN template array -> comma string"] --> C3
-        C3["Compose full hierarchy path\nParent/Area/Bldg/Floor"]
+        C1["Join Day0Templates array as comma-separated string
+        If result is valid and non-empty and not null:
+          Day0TemplateNames = joined comma string
+        Else:
+          Day0TemplateNames = empty string"]
     end
 
-    C --> C1
-    C3 --> D
-
-    D["Step 4 - Get site by hierarchy\nGET /dna/intent/api/v2/site?groupNameHierarchy=...\nExtract siteId"] --> E
-
-    subgraph STEP5C["Step 5 - Resolve Template IDs"]
+    subgraph DAYN_PREP["Step 3b - DayN Branch (parallel)"]
         direction TB
-        E1["Day0 branch\nIf comma present -> split and loop\nElse single lookup"] --> E2
-        E2["CATC-GetTemplates-v2\nGET /dna/intent/api/v2/template-programmer/project?name=...\nExtract Day0 template ID(s)"] --> E3
-        E3["Build Day0TemplateIDs string"] --> E4
-        E4["DayN branch\nIf comma present -> split and loop\nElse single lookup"] --> E5
-        E5["CATC-GetTemplates-v2\nGET /dna/intent/api/v2/template-programmer/project?name=...\nExtract DayN template ID(s)"] --> E6
-        E6["Build DayNTemplateIDs string"]
+        C2["Join DayNTemplates array as comma-separated string
+        If result is valid and non-empty and not null:
+          DayNTemplateNames = joined comma string
+        Else:
+          DayNTemplateNames = empty string"]
     end
 
-    D --> E1
-    E6 --> F
+    subgraph MISC_PREP["Step 3c - Misc Data Branch (parallel)"]
+        direction TB
+        C3A["1) Compose Site Hierarchy Name-v2
+        Concatenate HierarchyParent + Area + Bldg + Floor
+        -> groupNameHierarchy string"] --> C3B
+        C3B["2) GET /dna/intent/api/v2/site
+        Query by groupNameHierarchy
+        JSONPath: find site where groupNameHierarchy matches
+        Extract siteId"] --> C3C
+        C3C["3) Set Variables
+        siteId    = extracted site UUID
+        profileName = ProfileName from settings.json"]
+    end
 
-    F["Step 6 - CATC-CreateSiteProfile-v3\nCreate/assign profileType=switching\nBind Day0/DayN template IDs to siteId"] --> G
-    G{Profile creation\nand assignment OK?}
-    G -->|No| FAIL_A([Fail: network profile\nassignment error])
-    G -->|Yes| H
+    C1 & C2 & C3C --> PAR2
 
-    H["Step 7 - Sleep 30 seconds"] --> DONE([Done])
+    PAR2(["Step 4 - Parallel Block: Resolve Template Names to Template IDs
+    Two branches execute simultaneously"])
 
-    style FAIL_A fill:#c0392b,color:#fff,stroke:#922b21
+    PAR2 --> D1 & D2
+
+    subgraph DAY0_IDS["Step 4a - Day0 Template ID Resolution (parallel)"]
+        direction TB
+        D1["If Day0TemplateNames contains comma (multiple templates):
+          Split string by comma delimiter
+          CATC-GetTemplates-v2: GET all templates in project
+          For Each name: JSONPath to find matching template ID
+          Accumulate IDs (first=id, subsequent=,id)
+          -> Day0TemplateIDs comma-separated string
+        If Day0TemplateNames is single (no comma, not empty):
+          CATC-GetTemplates-v2: GET all templates in project
+          Extract single template ID directly
+          -> Day0TemplateIDs string"]
+    end
+
+    subgraph DAYN_IDS["Step 4b - DayN Template ID Resolution (parallel)"]
+        direction TB
+        D2["If DayNTemplateNames contains comma (multiple templates):
+          Split string by comma delimiter
+          CATC-GetTemplates-v2: GET all templates in project
+          For Each name: JSONPath to find matching template ID
+          Accumulate IDs (first=id, subsequent=,id)
+          -> DayNTemplateIDs comma-separated string
+        If DayNTemplateNames is single (no comma, not empty):
+          CATC-GetTemplates-v2: GET all templates in project
+          Extract single template ID directly
+          -> DayNTemplateIDs string"]
+    end
+
+    D1 & D2 --> E1
+
+    subgraph STEP5["Step 5 - CATC-CreateSiteProfile-v3"]
+        direction TB
+        E1["1) GET /dna/intent/api/v1/network-profile
+        Check if switching profile named profileName already exists"] --> E2
+        E2["2) Create or update switching network profile
+        POST /dna/intent/api/v1/network-profile
+        Body: name=profileName, type=switching
+              day0Templates = Day0TemplateIDs
+              dayNTemplates = DayNTemplateIDs"] --> E3
+        E3["3) GET /dna/intent/api/v1/network-profile/{id}/site
+        Poll task and check if profile is already assigned to site"] --> E4
+        E4["4) POST /dna/intent/api/v1/network-profile/{id}/site
+        Assign network profile to target site
+        Body: siteId = target site UUID"]
+    end
+
+    E4 --> F["Step 6 - Sleep 30 Seconds
+    Allow Catalyst Center to apply the network profile assignment"] --> DONE([Done])
+
     style DONE fill:#27ae60,color:#fff,stroke:#1e8449
     style START fill:#2980b9,color:#fff,stroke:#1a5276
