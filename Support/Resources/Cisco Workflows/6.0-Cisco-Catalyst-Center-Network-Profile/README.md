@@ -153,6 +153,11 @@ The `network_profile` section within `settings.json` drives all network profile 
       "HierarchyArea": "POD 0",
       "HierarchyBldg": "Building P0",
       "HierarchyFloor": "Floor 1",
+      "network_settings": {...
+      },            
+      "device_credentials": {...
+      },   
+      "device_list": "...",   
       "network_profile": {
         "profile_name": "BGP-EVPN-Switching",
         "DayNTemplateNames": [

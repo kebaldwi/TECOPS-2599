@@ -171,6 +171,11 @@ The workflow reads `settings.json` to extract the composite template name and th
       "HierarchyArea": "POD 0",
       "HierarchyBldg": "Building P0",
       "HierarchyFloor": "Floor 1",
+      "network_settings": {...
+      },            
+      "device_credentials": {...
+      },   
+      "device_list": "...",   
       "network_profile": {
         "profile_name": "BGP-EVPN-Switching",
         "DayNTemplateNames": [
@@ -188,7 +193,15 @@ The workflow reads `settings.json` to extract the composite template name and th
             ],
             "DeployTemplate": true
           }
-        ]
+        ],
+        "Day0TemplateNames": [
+          {
+            "TemplateName": null,
+            "TemplateTag": null,
+            "Project": null,
+            "TemplateTarget": [],
+            "DeployTemplate": null
+          }
       }
     }
   ]
