@@ -196,11 +196,9 @@
 #   value — actual value for the param type
 #   scope — RUNTIME (provided at deploy time, may differ per deployment)
 #
-#   [{type: MANAGED_DEVICE_UUID,     value: <uuid>,     scope: RUNTIME},
-#    {type: MANAGED_DEVICE_IP,       value: <mgmt_ip>,  scope: RUNTIME},
-#    {type: MANAGED_DEVICE_HOSTNAME, value: <hostname>, scope: RUNTIME}]
+#   [{type: MANAGED_DEVICE_UUID, scope: RUNTIME, value: <uuid>}]
 #
-# Note: MANAGED_DEVICE_IP value must be the actual management IP of the device.
+# Note: Only MANAGED_DEVICE_UUID is sent in resourceParams.
 - name: "[{{ deploy_entry.template_name }}] Build top-level targetInfo"
   set_fact:
     _target_info: >-
@@ -214,9 +212,7 @@
               'type':     'MANAGED_DEVICE_UUID',
               'params':   {},
               'resourceParams': [
-                {'type': 'MANAGED_DEVICE_UUID',     'value': d.uuid,     'scope': 'RUNTIME'},
-                {'type': 'MANAGED_DEVICE_IP',       'value': ip,         'scope': 'RUNTIME'},
-                {'type': 'MANAGED_DEVICE_HOSTNAME', 'value': d.hostname, 'scope': 'RUNTIME'}
+                {'type': 'MANAGED_DEVICE_UUID', 'scope': 'RUNTIME', 'value': d.uuid}
               ]
           }] -%}
         {%- endif -%}
@@ -261,9 +257,7 @@
                 'type':     'MANAGED_DEVICE_UUID',
                 'params':   params,
                 'resourceParams': [
-                  {'type': 'MANAGED_DEVICE_UUID',     'value': d.uuid,     'scope': 'RUNTIME'},
-                  {'type': 'MANAGED_DEVICE_IP',       'value': ip,         'scope': 'RUNTIME'},
-                  {'type': 'MANAGED_DEVICE_HOSTNAME', 'value': d.hostname, 'scope': 'RUNTIME'}
+                  {'type': 'MANAGED_DEVICE_UUID', 'scope': 'RUNTIME', 'value': d.uuid}
                 ]
             }] -%}
           {%- endif -%}
@@ -301,9 +295,7 @@
         'type': 'MANAGED_DEVICE_UUID',
         'params': {},
         'resourceParams': [
-          {'type': 'MANAGED_DEVICE_UUID', 'value': _first_dev.uuid, 'scope': 'RUNTIME'},
-          {'type': 'MANAGED_DEVICE_IP', 'value': (_device_uuid_map | dict2items | first).key, 'scope': 'RUNTIME'},
-          {'type': 'MANAGED_DEVICE_HOSTNAME', 'value': _first_dev.hostname, 'scope': 'RUNTIME'}
+          {'type': 'MANAGED_DEVICE_UUID', 'scope': 'RUNTIME', 'value': _first_dev.uuid}
         ]
       }],
       'memberTemplateDeploymentInfo': _member_deployment_info
@@ -338,14 +330,8 @@
         params:   {}
         resourceParams:
           - type:  "MANAGED_DEVICE_UUID"
+            scope: "RUNTIME"
             value: "{{ item.value.uuid }}"
-            scope: "RUNTIME"
-          - type:  "MANAGED_DEVICE_IP"
-            value: "{{ item.key }}"
-            scope: "RUNTIME"
-          - type:  "MANAGED_DEVICE_HOSTNAME"
-            value: "{{ item.value.hostname }}"
-            scope: "RUNTIME"
     _single_member_info: >-
       {%- set ns = namespace(result=[]) -%}
       {%- for m in _member_deployment_info -%}
