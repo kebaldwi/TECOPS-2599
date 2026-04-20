@@ -455,9 +455,10 @@
   # The CatC v2 Deploy Template API (2.3.7.9) is specified to return deploymentId
   # directly in the POST response body.  On this server the response only includes
   # taskId, so we read the authoritative push result from the task progress field
-  # which always ends with:
-  #   "Template Deployemnt Id: <id> | failureReason: <reason>"
-  # (CatC's own typo: "Deployemnt").  An empty failureReason means SUCCESS.
+  # The composite template UUID appears in the progress field as:
+  #   "Deployment of Composite Template: <uuid> Member Template: ..."
+  # Older CatC versions used "Template Deployemnt Id: <uuid> | failureReason: <reason>"
+  # (CatC's own typo: "Deployemnt"). We match both formats. An empty failureReason means SUCCESS.
   #
   # NOTE: CatC returns deploymentId only for the parent composite template, not for each member template.  
   # The member templates' deployment status must be inferred from the overall task success/failure and the presence of the 
@@ -468,7 +469,7 @@
       {%- for r in (_task_poll_results.results | default([])) -%}
         {%- set resp     = r.json.response | default({}) -%}
         {%- set progress = resp.progress | default('') -%}
-        {%- set id_match = progress | regex_search('Template Deploy[a-z]+ Id: ([a-zA-Z0-9-]+)', '\\1') -%}
+        {%- set id_match = progress | regex_search('(?:Template Deploy[a-z]+ Id:|Deployment of Composite Template:) ([a-zA-Z0-9-]+)', '\\1') -%}
         {%- set fr_match = progress | regex_search('\| failureReason: (.*)$', '\\1') -%}
         {%- set did = (id_match | first) if (id_match is not none and id_match | length > 0) else '' -%}
         {%- set fr_from_progress = ((fr_match | first) | trim) if (fr_match is not none and fr_match | length > 0) else '' -%}
