@@ -176,6 +176,7 @@
       Ensure the device is discovered and managed before deploying templates.
   loop: "{{ deploy_entry.template_target }}"
 
+
 # ── Step D: Build targetInfo and memberTemplateDeploymentInfo payloads ──────
 #
 # The CatC v2 composite deploy API requires device targets in the top-level
@@ -458,19 +459,22 @@
   #   "Template Deployemnt Id: <id> | failureReason: <reason>"
   # (CatC's own typo: "Deployemnt").  An empty failureReason means SUCCESS.
   #
-  # NOTE: On this CatC version the deployment ID last UUID segment is 9 hex chars
-  # (RFC 4122 requires 12), making GET /deploy/status/{deploymentId} return 404.
-  # We therefore determine success/failure from failureReason here instead of
-  # polling the status endpoint.
+  # NOTE: CatC returns deploymentId only for the parent composite template, not for each member template.  
+  # The member templates' deployment status must be inferred from the overall task success/failure and the presence of the 
+  # member template names in the task progress logs.
   set_fact:
     _deployment_status_ids: >-
       {%- set ns = namespace(result=[]) -%}
       {%- for r in (_task_poll_results.results | default([])) -%}
-        {%- set progress = (r.json.response | default({})).progress | default('') -%}
+        {%- set resp     = r.json.response | default({}) -%}
+        {%- set progress = resp.progress | default('') -%}
         {%- set id_match = progress | regex_search('Template Deploy[a-z]+ Id: ([a-zA-Z0-9-]+)', '\\1') -%}
         {%- set fr_match = progress | regex_search('\| failureReason: (.*)$', '\\1') -%}
         {%- set did = (id_match | first) if (id_match is not none and id_match | length > 0) else '' -%}
-        {%- set fr  = ((fr_match | first) | trim) if (fr_match is not none and fr_match | length > 0) else '' -%}
+        {%- set fr_from_progress = ((fr_match | first) | trim) if (fr_match is not none and fr_match | length > 0) else '' -%}
+        {# If isError=True but progress has no failureReason pattern, fall back to task-level failureReason field #}
+        {%- set is_err = resp.isError | default(false) | bool -%}
+        {%- set fr = fr_from_progress if fr_from_progress else (resp.failureReason | default('') if is_err else '') -%}
         {%- set ns.result = ns.result + [{'ip': r.item.ip, 'deploymentId': did, 'failureReason': fr}] -%}
       {%- endfor -%}
       {{ ns.result }}
