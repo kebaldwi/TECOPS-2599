@@ -1,0 +1,112 @@
+Category,Symbol,ToolName
+AIOps/Analytics,In,Instana
+AIOps/Analytics,Dd,Datadog
+AIOps/Analytics,Sp,Splunk
+AIOps/Analytics,Ad,AppDynamics
+AIOps/Analytics,Dt,Dynatrace
+AIOps/Analytics,Nr,New Relic
+AIOps/Analytics,Gr,Grafana
+AIOps/Analytics,El,Elastic (ELK)
+Artifact/Package Management,Ja,JFrog Artifactory
+Artifact/Package Management,Snx,Sonatype Nexus
+Artifact/Package Management,Dh,Docker Hub
+Artifact/Package Management,Np,npm
+Artifact/Package Management,Yn,Yarn
+Artifact/Package Management,Nu,NuGet
+Cloud,Aws,AWS
+Cloud,Az,Azure
+Cloud,Gc,Google Cloud
+Cloud,Ic,IBM Cloud
+Cloud,Os,OpenStack
+Collaboration,Sl,Slack
+Collaboration,Mt,Microsoft Teams
+Collaboration,Ac,Atlassian Confluence
+Collaboration,So,Stack Overflow
+Collaboration,Mm,Mattermost
+Configuration Automation,Rha,Red Hat Ansible
+Configuration Automation,Ht,HashiCorp Terraform
+Configuration Automation,Ch,Chef
+Configuration Automation,Pu,Puppet
+Configuration Automation,Hc,HashiCorp Consul
+Configuration Automation,Sa,Salt
+Containers,Dk,Docker
+Containers,Rho,Red Hat OpenShift
+Containers,Ku,Kubernetes
+Containers,Ak,Amazon EKS
+Containers,Azk,Azure AKS
+Containers,Ae,Amazon ECS
+Containers,Gk,Google GKE
+Containers,Hm,Helm
+Continuous Integration,Jn,Jenkins
+Continuous Integration,Azc,Azure DevOps Code
+Continuous Integration,Glc,GitLab CI
+Continuous Integration,Tr,Travis CI
+Continuous Integration,Cc,CircleCI
+Continuous Integration,Mv,Maven
+Continuous Integration,Ab,Atlassian Bamboo
+Continuous Integration,Gd,Gradle
+Continuous Integration,Acb,AWS CodeBuild
+Database Management,Lb,Liquibase
+Database Management,Dp,Delphix
+Database Management,Id,Idera
+Database Management,Qt,Quest Toad
+Database Management,Db,DBmaestro
+Deployment,Ud,Digital.ai Deploy
+Deployment,Ck,CyberArk Conjur
+Deployment,Ha,Harness
+Deployment,Sk,Spinnaker
+Deployment,Od,Octopus Deploy
+Deployment,Cfd,CloudBees CD
+Deployment,Acd,AWS CodeDeploy
+Enterprise Agile Planning,Aja,Atlassian Jira Align
+Enterprise Agile Planning,Daa,Digital.ai Agility
+Enterprise Agile Planning,Tp,Targetprocess
+Enterprise Agile Planning,Aj,Atlassian Jira
+Enterprise Agile Planning,At,Atlassian Trello
+Issue Tracking/ITSM,Bi,BMC Helix ITSM
+Issue Tracking/ITSM,Sw,ServiceNow
+Issue Tracking/ITSM,Td,TOPdesk
+Issue Tracking/ITSM,Pd,PagerDuty
+Release Management,Br,Broadcom Rally
+Release Management,Pv,Prowview
+Release Management,Pl,Plutora
+Security,Ow,OWASP ZAP
+Security,Dap,Digital.ai App Protection
+Security,Aq,Aqua Security
+Security,Hv,HashiCorp Vault
+Security,Vc,Veracode
+Security,Sr,SonarQube
+Security,Cx,Checkmarx SAST
+Security,Sn,Snort
+Security,Pbs,PortSwigger Burp Suite
+Serverless/PaaS,Al,AWS Lambda
+Serverless/PaaS,Azf,Azure Functions
+Serverless/PaaS,He,Heroku
+Serverless/PaaS,Gf,Google Firebase
+Serverless/PaaS,Cf,Cloud Foundry
+Source Control Management,Gi,Git
+Source Control Management,Gh,GitHub
+Source Control Management,Gls,GitLab SCM
+Source Control Management,Abb,Atlassian Bitbucket
+Source Control Management,Ci,Compuware ISPW
+Source Control Management,Sv,Subversion
+Testing,Dar,Digital.ai Release
+Testing,Acp,AWS CodePipeline
+Testing,Sni,Sonatype Nexus IQ
+Testing,Cfr,CloudBees Flow
+Testing,Brl,BMC RLM
+Testing,Ur,UrbanCode Release
+Testing,Ff,Micro Focus Fortify SCA
+Testing,Tt,Tricentis Tosca
+Testing,Nn,Neotys NeoLoad
+Testing,Se,Selenium
+Testing,Ju,JUnit
+Testing,Sl,Sauce Labs
+Testing,Ct,Compuware Topaz
+Testing,Ap,Appium
+Testing,Sq,Squash TM
+Testing,Cu,Cucumber
+Testing,Jm,JMeter
+Testing,Pa,Parasoft
+Value Stream Management,Dai,Digital.ai
+Value Stream Management,Tp,Tapstop
