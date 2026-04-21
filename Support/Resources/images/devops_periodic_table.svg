@@ -3,10 +3,10 @@
     <style><![CDATA[
       .bg            { fill: none; }
       .cell          { stroke: #222; stroke-width: 2; }
-      .name          { font: 700 24px Arial, sans-serif; fill: #111; }
+      .name          { font: 700 24px Inter, sans-serif; fill: #111; }
       .logo-bg       { fill: #fff; stroke: #222; stroke-width: 1.5; }
-      .logo-fallback { font: 700 14px Arial, sans-serif; fill: #444; }
-      .block-label   { font: 700 28px Arial, sans-serif; fill: #666; }
+      .logo-fallback { font: 700 14px Inter, sans-serif; fill: #444; }
+      .block-label   { font: 700 28px Inter, sans-serif; fill: #666; }
     ]]></style>
   </defs>
   <rect class="bg" x="0" y="0" width="3410" height="1620"/>

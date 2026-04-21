@@ -2,8 +2,8 @@
   <defs>
     <style><![CDATA[
       .bg           { fill: none; }
-      .legend-title { font: 700 72px Arial, sans-serif; fill: #1a1a1a; }
-      .legend-text  { font: 400 42px Arial, sans-serif; fill: #222; }
+      .legend-title { font: 700 72px Inter, sans-serif; fill: #1a1a1a; }
+      .legend-text  { font: 400 42px Inter, sans-serif; fill: #222; }
     ]]></style>
   </defs>
   <rect class="bg" x="0" y="0" width="2100" height="430"/>
