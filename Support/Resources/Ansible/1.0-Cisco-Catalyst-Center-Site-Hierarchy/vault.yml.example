@@ -5,4 +5,5 @@
 #
 # Set catc_username and catc_password to match
 # the credentials used by the cisco.catalystcenter modules.
+catc_username: "admin"
 catc_password: "your_catc_password_here"
