@@ -4,7 +4,96 @@
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)
 > **Copyright © 2024–2026 Cisco Systems, Inc. All rights reserved.**
 
-This document describes the end-to-end Ansible automation suite for provisioning a Cisco Catalyst Center (formerly DNA Center) managed network fabric. The suite consists of eight sequentially-ordered playbooks that collectively automate the full device onboarding lifecycle — from initial site hierarchy creation through Day-N template deployment.
+This document describes the end-to-end Ansible automation suite for provisioning a Cisco Catalyst Center (formerly DNA Center) managed network fabric. The suite consists of nine sequentially-ordered provisioning playbooks plus one standalone backup utility (10.0) that collectively automate the full device onboarding lifecycle — from initial site hierarchy creation through Day-N template deployment.
+
+---
+
+## Getting Started
+
+> **Platform:** Ubuntu 22.04 or 24.04 (required — the setup script uses `apt` and the `deadsnakes` PPA)
+> **Privileges:** A regular user account with `sudo` access
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/kebaldwi/TECOPS-2599.git
+cd TECOPS-2599/Support/Resources/Ansible
+```
+
+### 2. Run the Setup Script
+
+`install-ansible.sh` bootstraps the complete Ansible environment in a single step:
+
+```bash
+chmod +x install-ansible.sh
+./install-ansible.sh
+```
+
+What the script does:
+
+| Step | Action |
+|------|--------|
+| 0 | Restores system `python3` → `python3.8` for `apt` compatibility (Ubuntu 20.04 only) |
+| 1 | Updates `apt` package lists |
+| 2 | Installs Python 3.9 from the `deadsnakes` PPA |
+| 3 | Creates an isolated virtual environment at `~/tecops-venv` and appends activation to `~/.bashrc` |
+| 4 | Installs `ansible>=8.0` (ansible-core 2.15) into the venv |
+| 5 | Installs Python SDKs: `catalystcentersdk`, `dnacentersdk`, `github-clone` |
+| 6 | Installs Ansible Galaxy collections: `cisco.catalystcenter`, `cisco.dnac`, `ansible.utils`, `community.general`, `cisco.ios`, `cisco.nxos` |
+| 7 | Checks for `~/.vault_pass` and enforces `600` permissions |
+| 8 | Prints a verification summary of all installed components |
+
+After the script completes, activate the venv in your current shell:
+
+```bash
+source ~/tecops-venv/bin/activate
+```
+
+> New shell sessions activate the venv automatically via `~/.bashrc`.
+
+### 3. Create the Vault Password File
+
+All playbooks use Ansible Vault to protect credentials at rest. Choose any password — this is the master key used to encrypt and decrypt every `vault.yml` in the suite.
+
+```bash
+echo 'YourVaultPassword' > ~/.vault_pass && chmod 600 ~/.vault_pass
+```
+
+### 4. Configure Credentials for Each Playbook
+
+Each playbook directory contains a `vault.yml.example` that documents all required variables. Copy it to `vault.yml`, fill in your values, and encrypt:
+
+```bash
+cd 1.0-Cisco-Catalyst-Center-Site-Hierarchy
+cp vault.yml.example vault.yml
+# Edit vault.yml with your Catalyst Center credentials
+ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+```
+
+Required variables by playbook:
+
+| Playbook | Required Vault Variables |
+|----------|--------------------------|
+| 1.0 Site Hierarchy | `catc_username`, `catc_password` |
+| 2.0 Network Settings | `catc_username`, `catc_password` |
+| 3.0 Device Credentials | `catc_username`, `catc_password` |
+| 4.0 Device Discovery | `dnac_username`, `dnac_password` |
+| 5.0 Assign to Site | `dnac_username`, `dnac_password` |
+| 6.0 Template GitOps | `dnac_username`, `dnac_password` (+ optional `git_token` for private repos) |
+| 7.0 Network Profile | `dnac_username`, `dnac_password` |
+| 8.0 Provision Devices | `dnac_username`, `dnac_password` |
+| 9.0 Composite Deployment | `dnac_username`, `dnac_password` |
+| 10.0 Backup My Configs | `vault_device_username`, `vault_device_password`, `vault_device_enable_password` |
+
+### 5. Run the Playbooks in Order
+
+From each playbook directory:
+
+```bash
+ansible-playbook -i inventory.yml <playbook>.yml --vault-password-file ~/.vault_pass
+```
+
+See [Ordering and Dependencies](#ordering-and-dependencies) for the required execution sequence.
 
 ---
 
@@ -20,7 +109,9 @@ This document describes the end-to-end Ansible automation suite for provisioning
    - [5.0 — Assign to Site](#50--assign-to-site)
    - [6.0 — Template GitOps](#60--template-gitops)
    - [7.0 — Network Profile](#70--network-profile)
+   - [8.0 — Provision Devices](#80--provision-devices)
    - [9.0 — Composite Template Deployment](#90--composite-template-deployment)
+   - [10.0 — Backup My Configs](#100--backup-my-configs)
 4. [Ansible Module Reference](#ansible-module-reference)
 5. [Input Data Sources](#input-data-sources)
 6. [Compatibility Matrix](#compatibility-matrix)
@@ -41,12 +132,13 @@ This document describes the end-to-end Ansible automation suite for provisioning
 | 7.0 | [Network Profile](7.0-Cisco-Catalyst-Center-Network-Profile/) | `network_profile.yml` | Switching Network Profile created and assigned to sites with Day-N templates bound |
 | 8.0 | [Provision Devices](8.0-Cisco-Catalyst-Center-Provision-Devices/) | `provision_devices.yml` | Devices provisioned to their site via SDA provisionDevices API; site-level settings pushed; idempotent skip for already-provisioned devices |
 | 9.0 | [Composite Deployment](9.0-Cisco-Catalyst-Center-Provision-Composite/) | `deploy_composite_template.yml` | Composite Day-N templates deployed to managed devices; verification via async task poll |
+| 10.0 | [Backup My Configs](10.0-Backup-My-Configs/) | `10.0-Backup-My-Configs.yml` | Running configurations backed up from all IOS-XE and NX-OS devices via SSH; timestamped archives with configurable retention |
 
 ---
 
 ## Provisioning Workflow
 
-The following diagram shows the complete end-to-end data flow across all nine playbooks — input sources, playbook execution order, intermediate Catalyst Center resources produced, and hard dependencies between stages.
+The following diagram shows the complete end-to-end data flow across all ten playbooks — input sources, playbook execution order, intermediate Catalyst Center resources produced, and hard dependencies between stages.
 
 ![Provisioning Workflow](DIAGRAMS/provisioning-workflow.png)
 
@@ -305,6 +397,33 @@ Deploys composite Day-N templates to managed devices. A composite template bundl
 
 ---
 
+### 10.0 — Backup My Configs
+
+**Playbook:** [`10.0-Backup-My-Configs.yml`](10.0-Backup-My-Configs/10.0-Backup-My-Configs.yml)
+**Full README:** [10.0-Backup-My-Configs/README.md](10.0-Backup-My-Configs/README.md)
+**Collections:** `cisco.ios ≥ 4.0.0`, `cisco.nxos ≥ 5.0.0`
+
+#### Function
+
+Captures the running configuration of all managed network devices (IOS-XE and NX-OS) via SSH and writes each device's output to a timestamped file on the Ansible controller. A shared timestamp is generated once per run so every file in a single execution shares the same folder name. A configurable retention policy (`backup_retention_count`) automatically removes the oldest backup sets, keeping the `config-backups/` directory bounded in size.
+
+This playbook is **independent of the CatC provisioning workflow** — it can be run at any point and does not interact with Catalyst Center.
+
+#### Outcome
+
+- Running configurations saved to `config-backups/<YYYYMMDD-HHMMSS>/` on the Ansible controller
+- Separate sub-directories or file naming per device type (IOS-XE, NX-OS)
+- Oldest backup sets pruned automatically per `backup_retention_count` (default: 3)
+
+| Action | Module / Mechanism |
+|--------|-------------------|
+| Generate shared timestamp | `ansible.builtin.set_fact` + `lookup('pipe', 'date')` on `localhost` |
+| Collect IOS-XE running-config | `cisco.ios.ios_command` (delegated output saved to file) |
+| Collect NX-OS running-config | `cisco.nxos.nxos_command` (delegated output saved to file) |
+| Prune old backup sets | `ansible.builtin.find` + `ansible.builtin.file` (state: absent) |
+
+---
+
 ## Ansible Module Reference
 
 The following table lists every Ansible module used across the suite, the collection it belongs to, where it is used, and the Ansible Galaxy documentation link.
@@ -325,6 +444,8 @@ The following table lists every Ansible module used across the suite, the collec
 | `template_workflow_manager` | `cisco.dnac` | 6.0 Template GitOps | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/template_workflow_manager/) |
 | `network_profile_switching_workflow_manager` | `cisco.dnac` | 7.0 Network Profile | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/network_profile_switching_workflow_manager/) |
 | `configuration_template_deploy_v2` | `cisco.dnac` | 9.0 Composite Deployment | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/configuration_template_deploy_v2/) |
+| `ios_command` | `cisco.ios` | 10.0 Backup My Configs | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/ios/content/module/ios_command/) |
+| `nxos_command` | `cisco.nxos` | 10.0 Backup My Configs | [docs](https://galaxy.ansible.com/ui/repo/published/cisco/nxos/content/module/nxos_command/) |
 | `ansible.builtin.uri` | Ansible Core | 2.0, 6.0, 8.0, 9.0 | [docs](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/uri_module.html) |
 
 ### Collection Installation
@@ -333,7 +454,7 @@ The following table lists every Ansible module used across the suite, the collec
 # cisco.catalystcenter (used by playbooks 1.0 and 2.0)
 ansible-galaxy collection install cisco.catalystcenter:==2.1.3
 
-# cisco.dnac (used by playbooks 3.0–8.0)
+# cisco.dnac (used by playbooks 3.0–9.0)
 ansible-galaxy collection install cisco.dnac:==6.46.0
 ```
 
@@ -386,7 +507,7 @@ Jinja2 template files (`.j2`) and composite definitions (`.yml`) stored in a sub
 | Parameter | Value |
 |-----------|-------|
 | `git_repo` | `https://github.com/imanassypov/CatalystCenter-BGP-EVPN-VXLAN.git` |
-| `git_branch` | `main` |
+| `git_branch` | `main` (configurable via `inventory.yml`) |
 | `git_repo_subfolder` | `BGP EVPN` |
 
 ---
@@ -421,6 +542,9 @@ The playbooks must be executed in the order shown. Each playbook depends on reso
                    ▼
              5.0 Assign to Site
                    │  Requires discovered devices from 4.0
+                   ▼
+             8.0 Provision Devices
+                   │  Pushes site settings; creates SDA provisioning record required by 9.0
                    │
       ┌────────────┘
       │
@@ -431,9 +555,11 @@ The playbooks must be executed in the order shown. Each playbook depends on reso
       │         │  Requires sites (1.0) and templates (6.0)
       │         │
       └─────────┴────────────▶  9.0 Composite Deployment
-                                     Requires: assigned devices (5.0)
+                                     Requires: provisioned devices (8.0)
                                                templates in CatC (6.0)
                                                profile bound to sites (7.0)
+
+10.0 Backup My Configs  ←  (independent; can run at any point against SSH-reachable devices)
 ```
 
-**Deletion runs in reverse order** — 8.0 → 7.0 → 6.0 → 5.0 → 4.0 → 3.0 → 2.0 → 1.0 — to respect parent-child and dependency constraints.
+**Deletion runs in reverse order** — 9.0 → 8.0 → 7.0 → 6.0 → 5.0 → 4.0 → 3.0 → 2.0 → 1.0 — to respect parent-child and dependency constraints.
