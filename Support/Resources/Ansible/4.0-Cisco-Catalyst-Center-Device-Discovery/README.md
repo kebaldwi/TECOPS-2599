@@ -54,6 +54,26 @@ Catalyst Center's discovery engine then attempts to reach each IP using SSH, val
 | Builds one discovery job config per site entry | `set_fact` with `namespace` |
 | Submits all discovery jobs | `cisco.dnac.discovery_workflow_manager` — `state: merged` |
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook | Module Docs |
+|---|---|---|---|
+| cisco.dnac | discovery_workflow_manager | Submit and manage discovery jobs from grouped IP ranges | cisco.dnac 6.46.0: [discovery_workflow_manager](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/discovery_workflow_manager/) |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used | API Docs |
+|---|---|---|---|---|
+| Discovery operations | module-managed | Discovery API set used internally by discovery_workflow_manager | Create and track discovery jobs without raw uri tasks | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+
+### Notes
+
+- This playbook does not call uri directly; all CatC API interaction is encapsulated in the cisco.dnac module.
+- Device onboarding results depend on credentials already configured in step 3.0.
+
+
 ### Logical Flow
 
 The diagram below shows every decision point and state transition from startup to completion:
@@ -73,25 +93,6 @@ This playbook should run **after** [3.0 — Device Credentials](../3.0-Cisco-Cat
 ```
 
 ---
-
-## API Endpoints and Modules Summary
-
-### Modules Summary
-
-| Collection | Module | Purpose in this playbook |
-|---|---|---|
-| cisco.dnac | discovery_workflow_manager | Submit and manage discovery jobs from grouped IP ranges |
-
-### Endpoint Summary by Phase
-
-| Phase | HTTP | Endpoint | Why it is used |
-|---|---|---|---|
-| Discovery operations | module-managed | Discovery API set used internally by discovery_workflow_manager | Create and track discovery jobs without raw uri tasks |
-
-### Notes
-
-- This playbook does not call uri directly; all CatC API interaction is encapsulated in the cisco.dnac module.
-- Device onboarding results depend on credentials already configured in step 3.0.
 
 ## Prerequisites
 

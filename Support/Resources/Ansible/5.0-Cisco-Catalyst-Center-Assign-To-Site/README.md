@@ -54,6 +54,28 @@ Site assignment is a prerequisite for template deployment, SWIM software managem
 | Resolves site name → UUID | `cisco.dnac.site_info` |
 | Assigns IP list to site UUID | `cisco.dnac.assign_device_to_site` |
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook | Module Docs |
+|---|---|---|---|
+| cisco.dnac | site_info | Resolve target site UUID for each reconstructed hierarchy path | cisco.dnac 6.46.0: [site_info](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/site_info/) |
+| cisco.dnac | assign_device_to_site | Assign one or more discovered devices to the resolved site | cisco.dnac 6.46.0: [assign_device_to_site](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/assign_device_to_site/) |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used | API Docs |
+|---|---|---|---|---|
+| Site lookup | module-managed | Site lookup endpoints used by site_info | Translate hierarchy path into site UUID | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Device assignment | module-managed | Device-to-site assignment endpoints used by assign_device_to_site | Move discovered devices from Global to target site | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+
+### Notes
+
+- This workflow is module-driven; no direct uri tasks are used.
+- Assignment requires both existing site hierarchy (1.0) and discovered devices (4.0).
+
+
 ### Logical Flow
 
 The diagram below shows every decision point and state transition from startup to completion:
@@ -77,27 +99,6 @@ The diagram below shows every decision point and state transition from startup t
 Devices must exist in the CatC inventory (discovered by 4.0) before they can be assigned. Sites must exist (created by 1.0) before they can receive devices.
 
 ---
-
-## API Endpoints and Modules Summary
-
-### Modules Summary
-
-| Collection | Module | Purpose in this playbook |
-|---|---|---|
-| cisco.dnac | site_info | Resolve target site UUID for each reconstructed hierarchy path |
-| cisco.dnac | assign_device_to_site | Assign one or more discovered devices to the resolved site |
-
-### Endpoint Summary by Phase
-
-| Phase | HTTP | Endpoint | Why it is used |
-|---|---|---|---|
-| Site lookup | module-managed | Site lookup endpoints used by site_info | Translate hierarchy path into site UUID |
-| Device assignment | module-managed | Device-to-site assignment endpoints used by assign_device_to_site | Move discovered devices from Global to target site |
-
-### Notes
-
-- This workflow is module-driven; no direct uri tasks are used.
-- Assignment requires both existing site hierarchy (1.0) and discovered devices (4.0).
 
 ## Prerequisites
 

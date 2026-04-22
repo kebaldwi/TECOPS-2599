@@ -53,6 +53,26 @@ The playbook is data-driven: it reads a `settings.json` file (shared with other 
 | Assigns the profile to one or more sites | `site_names` list in the payload |
 | Attaches Day-N and/or onboarding templates | `day_n_templates` / `onboarding_templates` keys |
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook | Module Docs |
+|---|---|---|---|
+| cisco.dnac | network_profile_switching_workflow_manager | Create/update switching network profiles and assign them to sites | cisco.dnac 6.46.0: [network_profile_switching_workflow_manager](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/network_profile_switching_workflow_manager/) |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used | API Docs |
+|---|---|---|---|---|
+| Network profile workflow | module-managed | Network profile endpoints used internally by network_profile_switching_workflow_manager | Apply merged profile config and site bindings | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+
+### Notes
+
+- All CatC API interactions are performed by the workflow manager module (no direct uri tasks).
+- Payload batching is built in playbook logic, then submitted as one merged config list.
+
+
 ### Logical Flow
 
 The diagram below shows every decision point and state transition from startup to completion:
@@ -62,25 +82,6 @@ The diagram below shows every decision point and state transition from startup t
 > Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
 
 ---
-
-## API Endpoints and Modules Summary
-
-### Modules Summary
-
-| Collection | Module | Purpose in this playbook |
-|---|---|---|
-| cisco.dnac | network_profile_switching_workflow_manager | Create/update switching network profiles and assign them to sites |
-
-### Endpoint Summary by Phase
-
-| Phase | HTTP | Endpoint | Why it is used |
-|---|---|---|---|
-| Network profile workflow | module-managed | Network profile endpoints used internally by network_profile_switching_workflow_manager | Apply merged profile config and site bindings |
-
-### Notes
-
-- All CatC API interactions are performed by the workflow manager module (no direct uri tasks).
-- Payload batching is built in playbook logic, then submitted as one merged config list.
 
 ## Prerequisites
 

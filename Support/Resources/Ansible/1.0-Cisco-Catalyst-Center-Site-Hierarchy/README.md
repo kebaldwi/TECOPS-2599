@@ -27,29 +27,29 @@ This section summarizes all API actions exercised by this 1.0 workflow, mapped t
 
 ### Modules Summary
 
-| Collection | Module | Purpose in this playbook |
-|---|---|---|
-| cisco.catalystcenter | sites_info | Read existing site inventory and query newly created site UUID by hierarchy path |
-| cisco.catalystcenter | areas | Create, update, and delete area sites |
-| cisco.catalystcenter | buildings | Create, update, and delete building sites |
-| cisco.catalystcenter | floors | Create, update, and delete floor sites |
-| ansible.utils | (action plugin dependency) | Required by cisco.catalystcenter action plugin argument validation |
+| Collection | Module | Purpose in this playbook | Module Docs |
+|---|---|---|---|
+| cisco.catalystcenter | sites_info | Read existing site inventory and query newly created site UUID by hierarchy path | cisco.catalystcenter 2.1.3: [sites_info](https://galaxy.ansible.com/ui/repo/published/cisco/catalystcenter/content/module/sites_info/) |
+| cisco.catalystcenter | areas | Create, update, and delete area sites | cisco.catalystcenter 2.1.3: [areas](https://galaxy.ansible.com/ui/repo/published/cisco/catalystcenter/content/module/areas/) |
+| cisco.catalystcenter | buildings | Create, update, and delete building sites | cisco.catalystcenter 2.1.3: [buildings](https://galaxy.ansible.com/ui/repo/published/cisco/catalystcenter/content/module/buildings/) |
+| cisco.catalystcenter | floors | Create, update, and delete floor sites | cisco.catalystcenter 2.1.3: [floors](https://galaxy.ansible.com/ui/repo/published/cisco/catalystcenter/content/module/floors/) |
+| ansible.utils | (action plugin dependency) | Required by cisco.catalystcenter action plugin argument validation | ansible.utils >= 2.11.0: [collection](https://galaxy.ansible.com/ui/repo/published/ansible/utils/) |
 
 ### Endpoint Summary by Phase
 
-| Phase | Module | HTTP | Endpoint | Why it is used |
-|---|---|---|---|---|
-| Phase A (discover existing) | sites_info | GET | /dna/intent/api/v1/sites | Builds initial site_id_map (nameHierarchy -> UUID) before any create/update/delete |
-| Phase B (post-create UUID resolve) | sites_info | GET | /dna/intent/api/v1/sites?nameHierarchy=<path> | Resolves UUID for newly created site so child sites can use parentId |
-| Phase B (create area) | areas | POST | /dna/intent/api/v1/areas | Creates new area when path does not exist |
-| Phase B (update area) | areas | PUT | /dna/intent/api/v1/areas/{id} | Updates existing area when UUID exists |
-| Phase B (create building) | buildings | POST | /dna/intent/api/v2/buildings | Creates new building with address/country/lat/lon payload |
-| Phase B (update building) | buildings | PUT | /dna/intent/api/v2/buildings/{id} | Updates existing building metadata |
-| Phase B (create floor) | floors | POST | /dna/intent/api/v2/floors | Creates new floor (unitsOfMeasure and floorNumber required by payload policy) |
-| Phase B (update floor) | floors | PUT | /dna/intent/api/v2/floors/{id} | Updates existing floor settings |
-| Phase C (delete area) | areas | DELETE | /dna/intent/api/v1/areas/{id} | Deletes area site when state=deleted |
-| Phase C (delete building) | buildings | DELETE | /dna/intent/api/v2/buildings/{id} | Deletes building site when state=deleted |
-| Phase C (delete floor) | floors | DELETE | /dna/intent/api/v2/floors/{id} | Deletes floor site when state=deleted |
+| Phase | Module | HTTP | Endpoint | Why it is used | API Docs |
+|---|---|---|---|---|---|
+| Phase A (discover existing) | sites_info | GET | /dna/intent/api/v1/sites | Builds initial site_id_map (nameHierarchy -> UUID) before any create/update/delete | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase B (post-create UUID resolve) | sites_info | GET | /dna/intent/api/v1/sites?nameHierarchy=<path> | Resolves UUID for newly created site so child sites can use parentId | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase B (create area) | areas | POST | /dna/intent/api/v1/areas | Creates new area when path does not exist | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase B (update area) | areas | PUT | /dna/intent/api/v1/areas/{id} | Updates existing area when UUID exists | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase B (create building) | buildings | POST | /dna/intent/api/v2/buildings | Creates new building with address/country/lat/lon payload | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase B (update building) | buildings | PUT | /dna/intent/api/v2/buildings/{id} | Updates existing building metadata | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase B (create floor) | floors | POST | /dna/intent/api/v2/floors | Creates new floor (unitsOfMeasure and floorNumber required by payload policy) | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase B (update floor) | floors | PUT | /dna/intent/api/v2/floors/{id} | Updates existing floor settings | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase C (delete area) | areas | DELETE | /dna/intent/api/v1/areas/{id} | Deletes area site when state=deleted | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase C (delete building) | buildings | DELETE | /dna/intent/api/v2/buildings/{id} | Deletes building site when state=deleted | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Phase C (delete floor) | floors | DELETE | /dna/intent/api/v2/floors/{id} | Deletes floor site when state=deleted | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
 
 ### Notes
 

@@ -29,7 +29,7 @@
 5. [Configuration](#configuration)
    - [Inventory](#inventory)
    - [Vault (Credentials)](#vault-credentials)
-6. [Input Data Structure — `devices.json`](#input-data-structure--devicesjson)
+6. [Input Data Structure — `settings.json`](#input-data-structure--settingsjson)
    - [Top-Level Schema](#top-level-schema)
    - [The `DayNTemplateNames` Block](#the-dayntemplatesnames-block)
    - [Full Example](#full-example)
@@ -65,7 +65,7 @@
 
 This playbook deploys **composite Day-N templates** to managed devices in Cisco Catalyst Center. A composite template is a single deployable unit that bundles multiple child (member) templates, allowing a full device configuration stack — VRF definitions, loopbacks, overlay, NVE, multicast, and more — to be pushed atomically in one operation.
 
-The playbook is data-driven: it reads the same `devices.json` file used across the entire automation suite, extracts every `DayNTemplateNames` entry marked `DeployTemplate: true`, resolves all required UUIDs from Catalyst Center via REST, and deploys using the v2 template deploy API.
+The playbook is data-driven: it reads the same `settings.json` file used across the entire automation suite, extracts every `DayNTemplateNames` entry marked `DeployTemplate: true`, resolves all required UUIDs from Catalyst Center via REST, and deploys using the v2 template deploy API.
 
 ### What it does
 
@@ -94,7 +94,32 @@ Catalyst Center resolves the composite template's member list at deploy time, so
 2. Know each member template's committed `templateId` and origin `mainTemplateId`.
 3. Provide per-member `targetInfo` entries with device UUIDs (not IPs).
 
-This playbook automates all three lookups so the operator only needs to specify human-readable names and IP addresses in `devices.json`.
+This playbook automates all three lookups so the operator only needs to specify human-readable names and IP addresses in `settings.json`.
+
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook | Module Docs |
+|---|---|---|---|
+| ansible.builtin | uri | Handles all CatC REST interactions: auth, template lookups, deploy submit, and task polling | ansible-core: [uri](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/uri_module.html) |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used | API Docs |
+|---|---|---|---|---|
+| Auth | POST | /dna/system/api/v1/auth/token | Obtain JWT used by all deployment REST calls | CatC 2.3.7.9: [Authentication](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/authentication) |
+| Project template list | GET | /dna/intent/api/v1/template-programmer/template?projectNames={name} | Resolve latest template version UUIDs in project scope | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Template detail | GET | /dna/intent/api/v1/template-programmer/template/{templateId} | Extract containingTemplates and member metadata | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Device UUID lookup | GET | /dna/intent/api/v1/network-device?managementIpAddress={ip} | Resolve deployment targets by management IP | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Composite deploy | POST | /dna/intent/api/v2/template-programmer/template/deploy | Submit composite deployment request with memberTemplateDeploymentInfo | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Async task polling | GET | /dna/intent/api/v1/task/{taskId} | Monitor completion and parse progress/failureReason | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+
+### Notes
+
+- Composite deployment uses direct REST instead of the Ansible module path for deterministic payload control.
+- Deployment success/failure is derived from async task progress, not only initial POST response.
+
 
 ### Logical Flow
 
@@ -105,30 +130,6 @@ The diagram below shows every decision point and state transition from startup t
 > Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
 
 ---
-
-## API Endpoints and Modules Summary
-
-### Modules Summary
-
-| Collection | Module | Purpose in this playbook |
-|---|---|---|
-| ansible.builtin | uri | Handles all CatC REST interactions: auth, template lookups, deploy submit, and task polling |
-
-### Endpoint Summary by Phase
-
-| Phase | HTTP | Endpoint | Why it is used |
-|---|---|---|---|
-| Auth | POST | /dna/system/api/v1/auth/token | Obtain JWT used by all deployment REST calls |
-| Project template list | GET | /dna/intent/api/v1/template-programmer/template?projectNames={name} | Resolve latest template version UUIDs in project scope |
-| Template detail | GET | /dna/intent/api/v1/template-programmer/template/{templateId} | Extract containingTemplates and member metadata |
-| Device UUID lookup | GET | /dna/intent/api/v1/network-device?managementIpAddress={ip} | Resolve deployment targets by management IP |
-| Composite deploy | POST | /dna/intent/api/v2/template-programmer/template/deploy | Submit composite deployment request with memberTemplateDeploymentInfo |
-| Async task polling | GET | /dna/intent/api/v1/task/{taskId} | Monitor completion and parse progress/failureReason |
-
-### Notes
-
-- Composite deployment uses direct REST instead of the Ansible module path for deterministic payload control.
-- Deployment success/failure is derived from async task progress, not only initial POST response.
 
 ## Prerequisites
 
@@ -991,7 +992,7 @@ Member templates not listed in `member_template_params` receive `params: {}`. If
 ## Data Transformation Reference
 
 ```
-devices.json
+settings.json
 └── project[]
     └── [n].DayNTemplateNames[]    ← filter: DeployTemplate == true AND TemplateName not null
               │
@@ -1021,7 +1022,7 @@ devices.json
        → GET  /dna/intent/api/v1/task/{taskId}  (poll until endTime set or isError=true)
 ```
 
-**Before — `DayNTemplateNames[]` (one `devices.json` project entry):**
+**Before — `DayNTemplateNames[]` (one `settings.json` project entry):**
 
 ```json
 [

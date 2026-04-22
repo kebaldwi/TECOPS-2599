@@ -1,7 +1,7 @@
 # 3.0 — Cisco Catalyst Center: Device Credentials Automation
 
 > **Playbook:** `credentials.yml`  
-> **Modules:** `cisco.dnac.device_credential_workflow_manager`, `.global_credential_info`, `.netconf_credential`, `.global_credential_delete`  
+> **Modules:** `cisco.dnac.device_credential_workflow_manager`, `cisco.dnac.global_credential_info`, `cisco.dnac.global_credential_delete`, `ansible.builtin.uri` (NETCONF create/update REST calls)  
 > **Minimum Catalyst Center version:** 2.3.7.6  
 > **Minimum Ansible version:** 2.15  
 > **Authors:** Igor Manassypov — Systems Engineer (imanassy@cisco.com)  
@@ -47,7 +47,7 @@ This playbook automates the creation, update, deletion, and site assignment of *
 The playbook is data-driven and reads `settings.json` (the single source of truth). Each project entry may declare `device_credentials` (what credentials to create) and `assign_credentials` (which credentials to assign and to which sites). Credential definitions are de-duplicated across entries so multiple pods sharing the same credential set result in a single API call.
 
 > **Why `device_credential_workflow_manager`?**  
-> `cisco.dnac.device_credential_workflow_manager` (introduced in collection 6.7.0) is the recommended high-level module for managing CLI and SNMP v2c credentials. It handles idempotency internally — querying existing credentials, creating missing ones, updating changed ones, and assigning them to sites in a single call — eliminating the need for external UUID maps, create-vs-update splits, and separate site-resolution steps. NETCONF credentials are not supported by the workflow manager and continue to be handled by the separate `netconf_credential` + `global_credential_delete` module chain, following the same `include_tasks` pattern used in playbook 1.0.
+> `cisco.dnac.device_credential_workflow_manager` (introduced in collection 6.7.0) is the recommended high-level module for managing CLI and SNMP v2c credentials. It handles idempotency internally — querying existing credentials, creating missing ones, updating changed ones, and assigning them to sites in a single call — eliminating the need for external UUID maps, create-vs-update splits, and separate site-resolution steps. NETCONF credential create/update is handled separately via direct REST (`ansible.builtin.uri`) plus `global_credential_info` and `global_credential_delete` in the same include_tasks pattern used in playbook 1.0.
 
 ### What it does
 
@@ -63,12 +63,36 @@ The playbook is data-driven and reads `settings.json` (the single source of trut
 | Deletes SNMP v2c credentials | `device_credential_workflow_manager` state=deleted |
 | Assigns credentials to sites | `device_credential_workflow_manager` `assign_credentials_to_site` |
 | Queries existing NETCONF credentials | `global_credential_info` (credentialSubType: NETCONF) |
-| Creates NETCONF credentials | `netconf_credential` state=present, payload list (POST), `ignore_errors: true` |
-| Updates NETCONF credentials | `netconf_credential` state=present, id + scalar fields (PUT) |
+| Creates NETCONF credentials | `ansible.builtin.uri` → `POST /dna/intent/api/v1/global-credential/netconf` |
+| Updates NETCONF credentials | `ansible.builtin.uri` → `PUT /dna/intent/api/v1/global-credential/netconf` |
 | Deletes NETCONF credentials | `global_credential_delete` (globalCredentialId) |
 
-> **Why `device_credential_workflow_manager`?**  
-> Introduced in `cisco.dnac` 6.7.0, this is the recommended high-level module for CLI and SNMP v2c credentials. It handles idempotency internally — querying existing credentials, creating missing ones, updating changed ones, and assigning them to sites in a single call — eliminating external UUID maps, create-vs-update splits, and separate site-resolution steps. NETCONF credentials are not supported by the workflow manager and continue to be handled by the `netconf_credential` + `global_credential_delete` module chain via `include_tasks`, following the same pattern as playbook 1.0.
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook | Module Docs |
+|---|---|---|---|
+| cisco.dnac | device_credential_workflow_manager | Idempotent create/update/delete/assign for CLI and SNMP credentials | cisco.dnac 6.48.2: [device_credential_workflow_manager](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/device_credential_workflow_manager/) |
+| cisco.dnac | global_credential_info | Read existing NETCONF global credentials for UUID matching | cisco.dnac 6.48.2: [global_credential_info](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/global_credential_info/) |
+| ansible.builtin | uri | Execute NETCONF create/update REST operations and poll async task status | ansible-core: [uri](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/uri_module.html) |
+| cisco.dnac | global_credential_delete | Delete NETCONF credentials by globalCredentialId | cisco.dnac 6.48.2: [global_credential_delete](https://galaxy.ansible.com/ui/repo/published/cisco/dnac/content/module/global_credential_delete/) |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used | API Docs |
+|---|---|---|---|---|
+| Module auth | POST | /dna/system/api/v1/auth/token | Session token flow handled by cisco.dnac modules | CatC 2.3.7.9: [Authentication](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/authentication) |
+| CLI/SNMP workflow manager | module-managed | /dna/intent/api/v2/global-credential and related workflow endpoints | High-level idempotent credential operations and site assignment | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| NETCONF lookup | GET | /dna/intent/api/v1/global-credential?credentialSubType=NETCONF | Build name/port to UUID map for update/delete decisions | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| NETCONF create/update | POST, PUT | /dna/intent/api/v1/global-credential/netconf | Manage NETCONF credential lifecycle | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| NETCONF delete | DELETE | /dna/intent/api/v1/global-credential/{globalCredentialId} | Remove NETCONF credentials selected for deletion | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+
+### Notes
+
+- CLI and SNMP are intentionally handled by workflow manager for idempotency and assignment behavior.
+- NETCONF is handled separately because workflow manager does not cover NETCONF credential lifecycle.
+
 
 ### Logical Flow
 
@@ -79,32 +103,6 @@ The diagram below shows every decision point and state transition from startup t
 > Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
 
 ---
-
-## API Endpoints and Modules Summary
-
-### Modules Summary
-
-| Collection | Module | Purpose in this playbook |
-|---|---|---|
-| cisco.dnac | device_credential_workflow_manager | Idempotent create/update/delete/assign for CLI and SNMP credentials |
-| cisco.dnac | global_credential_info | Read existing NETCONF global credentials for UUID matching |
-| cisco.dnac | netconf_credential | Create or update NETCONF credentials |
-| cisco.dnac | global_credential_delete | Delete NETCONF credentials by globalCredentialId |
-
-### Endpoint Summary by Phase
-
-| Phase | HTTP | Endpoint | Why it is used |
-|---|---|---|---|
-| Module auth | POST | /dna/system/api/v1/auth/token | Session token flow handled by cisco.dnac modules |
-| CLI/SNMP workflow manager | module-managed | /dna/intent/api/v2/global-credential and related workflow endpoints | High-level idempotent credential operations and site assignment |
-| NETCONF lookup | GET | /dna/intent/api/v1/global-credential?credentialSubType=NETCONF | Build name/port to UUID map for update/delete decisions |
-| NETCONF create/update | POST, PUT | /dna/intent/api/v1/global-credential/netconf | Manage NETCONF credential lifecycle |
-| NETCONF delete | DELETE | /dna/intent/api/v1/global-credential/{globalCredentialId} | Remove NETCONF credentials selected for deletion |
-
-### Notes
-
-- CLI and SNMP are intentionally handled by workflow manager for idempotency and assignment behavior.
-- NETCONF is handled separately because workflow manager does not cover NETCONF credential lifecycle.
 
 ## Prerequisites
 
