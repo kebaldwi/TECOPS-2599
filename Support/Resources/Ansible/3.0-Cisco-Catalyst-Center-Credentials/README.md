@@ -80,6 +80,32 @@ The diagram below shows every decision point and state transition from startup t
 
 ---
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| cisco.dnac | device_credential_workflow_manager | Idempotent create/update/delete/assign for CLI and SNMP credentials |
+| cisco.dnac | global_credential_info | Read existing NETCONF global credentials for UUID matching |
+| cisco.dnac | netconf_credential | Create or update NETCONF credentials |
+| cisco.dnac | global_credential_delete | Delete NETCONF credentials by globalCredentialId |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used |
+|---|---|---|---|
+| Module auth | POST | /dna/system/api/v1/auth/token | Session token flow handled by cisco.dnac modules |
+| CLI/SNMP workflow manager | module-managed | /dna/intent/api/v2/global-credential and related workflow endpoints | High-level idempotent credential operations and site assignment |
+| NETCONF lookup | GET | /dna/intent/api/v1/global-credential?credentialSubType=NETCONF | Build name/port to UUID map for update/delete decisions |
+| NETCONF create/update | POST, PUT | /dna/intent/api/v1/global-credential/netconf | Manage NETCONF credential lifecycle |
+| NETCONF delete | DELETE | /dna/intent/api/v1/global-credential/{globalCredentialId} | Remove NETCONF credentials selected for deletion |
+
+### Notes
+
+- CLI and SNMP are intentionally handled by workflow manager for idempotency and assignment behavior.
+- NETCONF is handled separately because workflow manager does not cover NETCONF credential lifecycle.
+
 ## Prerequisites
 
 | Requirement | Version / Notes |

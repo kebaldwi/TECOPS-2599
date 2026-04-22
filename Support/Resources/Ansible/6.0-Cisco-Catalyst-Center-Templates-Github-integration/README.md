@@ -66,6 +66,31 @@ Point the playbook at any GitHub repository subfolder containing `.j2` files and
 
 ---
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Platform | Module | Purpose in this playbook |
+|---|---|---|
+| Cisco Catalyst Center | cisco.dnac.template_workflow_manager | Create or update template and composite template objects in CatC |
+| GitHub API | ansible.builtin.uri | Repository verification, branch checks, tree listing, file/commit/diff fetch |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used |
+|---|---|---|---|
+| Repository access check | GET | https://api.github.com/repos/{owner}/{repo} | Validate repository exists and token access is valid |
+| Branch validation | GET | https://api.github.com/repos/{owner}/{repo}/branches/{branch} | Confirm requested branch is available |
+| Tree discovery | GET | https://api.github.com/repos/{owner}/{repo}/git/trees/{branch}?recursive=1 | Enumerate candidate template and composite files |
+| Raw template/composite content | GET | https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path} | Pull source template text used for CatC sync |
+| Commit metadata and diff | GET | https://api.github.com/repos/{owner}/{repo}/commits?... | Build template summary metadata and optional diff header |
+| CatC template sync | module-managed | Template-programmer endpoints used by template_workflow_manager | Apply merged template/composite state in target CatC project |
+
+### Notes
+
+- GitHub calls are direct uri tasks; Catalyst Center writes are module-managed.
+- The section above lists the primary endpoint families used by the workflow stages.
+
 ## Prerequisites
 
 | Requirement | Version | Where to Get It |

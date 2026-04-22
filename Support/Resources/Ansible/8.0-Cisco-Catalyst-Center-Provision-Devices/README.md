@@ -95,6 +95,30 @@ The playbook is safe to run more than once. Before submitting a provision reques
 
 ---
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| ansible.builtin | uri | Handles all CatC REST interactions: auth, lookups, provisioning, and async task polling |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used |
+|---|---|---|---|
+| Auth | POST | /dna/system/api/v1/auth/token | Obtain JWT used by all subsequent REST calls |
+| Site UUID lookup | GET | /dna/intent/api/v1/site?name={hierarchy_path} | Resolve site UUID for provisioning target |
+| Device UUID lookup | GET | /dna/intent/api/v1/network-device?managementIpAddress={ip} | Resolve each target device ID and hostname |
+| Existing provisioned state | GET | /dna/intent/api/v1/sda/provisionDevices?siteId={uuid}&limit=500 | Enforce idempotency by skipping already provisioned devices |
+| Provision submit | POST | /dna/intent/api/v1/sda/provisionDevices | Submit batch provision request for unresolved devices |
+| Task polling | GET | /dna/intent/api/v1/task/{taskId} | Wait for async job completion and capture final status |
+
+### Notes
+
+- This workflow intentionally uses direct REST for full control of payload and idempotency checks.
+- Async task polling is mandatory because provision API responses are not final operation status.
+
 ## Prerequisites
 
 | Requirement | Version / Detail |

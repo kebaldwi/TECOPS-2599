@@ -63,6 +63,25 @@ The diagram below shows every decision point and state transition from startup t
 
 ---
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| cisco.dnac | network_profile_switching_workflow_manager | Create/update switching network profiles and assign them to sites |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used |
+|---|---|---|---|
+| Network profile workflow | module-managed | Network profile endpoints used internally by network_profile_switching_workflow_manager | Apply merged profile config and site bindings |
+
+### Notes
+
+- All CatC API interactions are performed by the workflow manager module (no direct uri tasks).
+- Payload batching is built in playbook logic, then submitted as one merged config list.
+
 ## Prerequisites
 
 | Requirement | Version / Notes |

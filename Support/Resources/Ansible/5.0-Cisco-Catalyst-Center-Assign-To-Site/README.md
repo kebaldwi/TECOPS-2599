@@ -78,6 +78,27 @@ Devices must exist in the CatC inventory (discovered by 4.0) before they can be 
 
 ---
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| cisco.dnac | site_info | Resolve target site UUID for each reconstructed hierarchy path |
+| cisco.dnac | assign_device_to_site | Assign one or more discovered devices to the resolved site |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used |
+|---|---|---|---|
+| Site lookup | module-managed | Site lookup endpoints used by site_info | Translate hierarchy path into site UUID |
+| Device assignment | module-managed | Device-to-site assignment endpoints used by assign_device_to_site | Move discovered devices from Global to target site |
+
+### Notes
+
+- This workflow is module-driven; no direct uri tasks are used.
+- Assignment requires both existing site hierarchy (1.0) and discovered devices (4.0).
+
 ## Prerequisites
 
 | Requirement | Version / Notes |

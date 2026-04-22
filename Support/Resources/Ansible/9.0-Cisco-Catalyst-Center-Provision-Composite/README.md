@@ -106,6 +106,30 @@ The diagram below shows every decision point and state transition from startup t
 
 ---
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| ansible.builtin | uri | Handles all CatC REST interactions: auth, template lookups, deploy submit, and task polling |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used |
+|---|---|---|---|
+| Auth | POST | /dna/system/api/v1/auth/token | Obtain JWT used by all deployment REST calls |
+| Project template list | GET | /dna/intent/api/v1/template-programmer/template?projectNames={name} | Resolve latest template version UUIDs in project scope |
+| Template detail | GET | /dna/intent/api/v1/template-programmer/template/{templateId} | Extract containingTemplates and member metadata |
+| Device UUID lookup | GET | /dna/intent/api/v1/network-device?managementIpAddress={ip} | Resolve deployment targets by management IP |
+| Composite deploy | POST | /dna/intent/api/v2/template-programmer/template/deploy | Submit composite deployment request with memberTemplateDeploymentInfo |
+| Async task polling | GET | /dna/intent/api/v1/task/{taskId} | Monitor completion and parse progress/failureReason |
+
+### Notes
+
+- Composite deployment uses direct REST instead of the Ansible module path for deterministic payload control.
+- Deployment success/failure is derived from async task progress, not only initial POST response.
+
 ## Prerequisites
 
 | Requirement | Version / Notes |

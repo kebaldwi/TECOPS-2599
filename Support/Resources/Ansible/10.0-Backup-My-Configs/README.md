@@ -13,6 +13,30 @@ What it does:
 | Secure credential handling | Uses `vault.yml` with Ansible Vault |
 | Controller-local storage | Writes files with `delegate_to: localhost` |
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| cisco.ios | ios_command | Collect running configuration from IOS-XE devices |
+| cisco.nxos | nxos_command | Collect running configuration from NX-OS devices |
+| ansible.builtin | copy | Write collected configs to timestamped files on localhost |
+| ansible.builtin | find, file | Retention and directory lifecycle on backup storage |
+
+### Endpoint/Transport Summary by Phase
+
+| Phase | Transport | Endpoint/Command | Why it is used |
+|---|---|---|---|
+| IOS-XE collection | network_cli over SSH | show running-config | Retrieve current device configuration text |
+| NX-OS collection | network_cli over SSH | show running-config | Retrieve current device configuration text |
+| Local archive write | localhost filesystem | config-backups/<timestamp>/<hostname>.cfg | Persist per-device backup artifacts |
+
+### Notes
+
+- This workflow does not call Catalyst Center REST APIs.
+- Device interaction is CLI-based using network collections over SSH.
+
 ## Prerequisites
 
 | Requirement | Version |

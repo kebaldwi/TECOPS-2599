@@ -115,6 +115,29 @@ The `PUT /dna/intent/api/v1/network/{siteId}` endpoint accepts a composite setti
 
 ---
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| cisco.catalystcenter | sites_info | Build site UUID map from hierarchy paths |
+| ansible.builtin | uri | Authenticate, push network settings, and poll async execution status |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used |
+|---|---|---|---|
+| Auth | POST | /dna/system/api/v1/auth/token | Obtain JWT used by direct REST calls |
+| Site resolution | GET | /dna/intent/api/v1/sites | Source data for site path to UUID mapping |
+| Apply settings | PUT | /dna/intent/api/v1/network/{siteId} | Submit per-site composite network settings payload |
+| Async status polling | GET | /dna/intent/api/v1/dnacaap/management/execution-status/{executionId} | Wait for SUCCESS or FAILURE after async PUT |
+
+### Notes
+
+- This workflow mixes one CatC collection module for site resolution with direct REST calls for network settings push.
+- Network settings apply is asynchronous; polling execution status is required for reliable result reporting.
+
 ## Prerequisites
 
 | Requirement | Version / Notes |

@@ -74,6 +74,25 @@ This playbook should run **after** [3.0 — Device Credentials](../3.0-Cisco-Cat
 
 ---
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| cisco.dnac | discovery_workflow_manager | Submit and manage discovery jobs from grouped IP ranges |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used |
+|---|---|---|---|
+| Discovery operations | module-managed | Discovery API set used internally by discovery_workflow_manager | Create and track discovery jobs without raw uri tasks |
+
+### Notes
+
+- This playbook does not call uri directly; all CatC API interaction is encapsulated in the cisco.dnac module.
+- Device onboarding results depend on credentials already configured in step 3.0.
+
 ## Prerequisites
 
 | Requirement | Version / Notes |
