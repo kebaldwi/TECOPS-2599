@@ -106,6 +106,14 @@ Synthesis behavior:
 
 ## Task Components
 
+### Logical Flow Diagram
+
+The execution flow below matches the current task orchestration in site_hierarchy.yml and tasks/*.yml.
+
+![Logical flow for site hierarchy automation](DIAGRAMS/logical-flow.png)
+
+Source file: DIAGRAMS/logical-flow.mmd
+
 ### Main Playbook Flow (site_hierarchy.yml)
 
 1. Resolve and load settings JSON.
@@ -145,6 +153,42 @@ Per-site responsibilities:
 3. If site exists, delete with matching module and id.
 
 Deletion order is controlled by the caller (main playbook) using reverse list traversal, so children are deleted before parents.
+
+### API Endpoints and Modules Summary
+
+This section summarizes all API actions exercised by this 1.0 workflow, mapped to the Ansible Galaxy modules used.
+
+#### Modules Summary
+
+| Collection | Module | Purpose in this playbook |
+|---|---|---|
+| cisco.catalystcenter | sites_info | Read existing site inventory and query newly created site UUID by hierarchy path |
+| cisco.catalystcenter | areas | Create, update, and delete area sites |
+| cisco.catalystcenter | buildings | Create, update, and delete building sites |
+| cisco.catalystcenter | floors | Create, update, and delete floor sites |
+| ansible.utils | (action plugin dependency) | Required by cisco.catalystcenter action plugin argument validation |
+
+#### Endpoint Summary by Phase
+
+| Phase | Module | HTTP | Endpoint | Why it is used |
+|---|---|---|---|---|
+| Phase A (discover existing) | sites_info | GET | /dna/intent/api/v1/sites | Builds initial site_id_map (nameHierarchy -> UUID) before any create/update/delete |
+| Phase B (post-create UUID resolve) | sites_info | GET | /dna/intent/api/v1/sites?nameHierarchy=<path> | Resolves UUID for newly created site so child sites can use parentId |
+| Phase B (create area) | areas | POST | /dna/intent/api/v1/areas | Creates new area when path does not exist |
+| Phase B (update area) | areas | PUT | /dna/intent/api/v1/areas/{id} | Updates existing area when UUID exists |
+| Phase B (create building) | buildings | POST | /dna/intent/api/v2/buildings | Creates new building with address/country/lat/lon payload |
+| Phase B (update building) | buildings | PUT | /dna/intent/api/v2/buildings/{id} | Updates existing building metadata |
+| Phase B (create floor) | floors | POST | /dna/intent/api/v2/floors | Creates new floor (unitsOfMeasure and floorNumber required by payload policy) |
+| Phase B (update floor) | floors | PUT | /dna/intent/api/v2/floors/{id} | Updates existing floor settings |
+| Phase C (delete area) | areas | DELETE | /dna/intent/api/v1/areas/{id} | Deletes area site when state=deleted |
+| Phase C (delete building) | buildings | DELETE | /dna/intent/api/v2/buildings/{id} | Deletes building site when state=deleted |
+| Phase C (delete floor) | floors | DELETE | /dna/intent/api/v2/floors/{id} | Deletes floor site when state=deleted |
+
+#### Notes
+
+- Operations are executed through cisco.catalystcenter modules, not raw URI tasks.
+- UUID-based idempotent behavior depends on site_id_map; updates and deletes require id values.
+- Deletion uses reversed path order so child endpoints run before parent endpoints.
 
 ## Running
 
