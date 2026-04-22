@@ -22,6 +22,10 @@
     # host / username / password / verify / api_port / version / debug params.
     # Note: cisco.catalystcenter has no log/log_level params; use
     #       catc_debug: true for verbose SDK tracing instead.
+    # The cisco.catalystcenter collection handles the actual auth — it sends 
+    # a POST /dna/system/api/v1/auth/token request using the username/password 
+    # to obtain a Bearer token, then injects that token into all subsequent API
+    # calls automatically. The playbook never manages the token lifecycle directly.
     cisco.catalystcenter.sites_info: &catc_auth
       catalystcenter_host:     "{{ catc_host }}"
       catalystcenter_username: "{{ catc_username }}"
