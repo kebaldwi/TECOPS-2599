@@ -13,6 +13,30 @@ What it does:
 | Secure credential handling | Uses `vault.yml` with Ansible Vault |
 | Controller-local storage | Writes files with `delegate_to: localhost` |
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook | Module Docs |
+|---|---|---|---|
+| cisco.ios | ios_command | Collect running configuration from IOS-XE devices | cisco.ios >= 4.0.0: [ios_command](https://galaxy.ansible.com/ui/repo/published/cisco/ios/content/module/ios_command/) |
+| cisco.nxos | nxos_command | Collect running configuration from NX-OS devices | cisco.nxos >= 5.0.0: [nxos_command](https://galaxy.ansible.com/ui/repo/published/cisco/nxos/content/module/nxos_command/) |
+| ansible.builtin | copy | Write collected configs to timestamped files on localhost | ansible-core: [copy](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html) |
+| ansible.builtin | find, file | Retention and directory lifecycle on backup storage | ansible-core: [find](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/find_module.html), [file](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/file_module.html) |
+
+### Endpoint/Transport Summary by Phase
+
+| Phase | Transport | Endpoint/Command | Why it is used | API Docs |
+|---|---|---|---|---|
+| IOS-XE collection | network_cli over SSH | show running-config | Retrieve current device configuration text | N/A (CLI workflow, no Catalyst Center API endpoint) |
+| NX-OS collection | network_cli over SSH | show running-config | Retrieve current device configuration text | N/A (CLI workflow, no Catalyst Center API endpoint) |
+| Local archive write | localhost filesystem | config-backups/<timestamp>/<hostname>.cfg | Persist per-device backup artifacts | N/A (local filesystem operation) |
+
+### Notes
+
+- This workflow does not call Catalyst Center REST APIs.
+- Device interaction is CLI-based using network collections over SSH.
+
 ## Prerequisites
 
 | Requirement | Version |

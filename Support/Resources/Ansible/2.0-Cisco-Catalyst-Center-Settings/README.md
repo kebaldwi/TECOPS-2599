@@ -59,6 +59,30 @@ This operation is fully idempotent. If settings already match the desired state 
 | Resolves all site paths → UUID map | `cisco.catalystcenter.sites_info` (Phase A — same pattern as playbook 1.0) |
 | Applies DNS, DHCP, NTP, SNMP, Syslog, Banner, AAA per site | `ansible.builtin.uri` → `PUT /dna/intent/api/v1/network/{siteId}` (NCND01243 bypass) |
 
+## API Endpoints and Modules Summary
+
+### Modules Summary
+
+| Collection | Module | Purpose in this playbook | Module Docs |
+|---|---|---|---|
+| cisco.catalystcenter | sites_info | Build site UUID map from hierarchy paths | cisco.catalystcenter 2.1.3: [sites_info](https://galaxy.ansible.com/ui/repo/published/cisco/catalystcenter/content/module/sites_info/) |
+| ansible.builtin | uri | Authenticate, push network settings, and poll async execution status | ansible-core: [uri](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/uri_module.html) |
+
+### Endpoint Summary by Phase
+
+| Phase | HTTP | Endpoint | Why it is used | API Docs |
+|---|---|---|---|---|
+| Auth | POST | /dna/system/api/v1/auth/token | Obtain JWT used by direct REST calls | CatC 2.3.7.9: [Authentication](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/authentication) |
+| Site resolution | GET | /dna/intent/api/v1/sites | Source data for site path to UUID mapping | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Apply settings | PUT | /dna/intent/api/v1/network/{siteId} | Submit per-site composite network settings payload | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+| Async status polling | GET | /dna/intent/api/v1/dnacaap/management/execution-status/{executionId} | Wait for SUCCESS or FAILURE after async PUT | CatC 2.3.7.9: [API Reference](https://developer.cisco.com/docs/catalyst-center/2-3-7-9/cisco-catalyst-center-2-3-7-9-api-overview) |
+
+### Notes
+
+- This workflow mixes one CatC collection module for site resolution with direct REST calls for network settings push.
+- Network settings apply is asynchronous; polling execution status is required for reliable result reporting.
+
+
 ### Logical Flow
 
 The diagram below shows every decision point and state transition from startup to completion:

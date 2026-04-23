@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="430" viewBox="0 0 2100 430">
+  <defs>
+    <style><![CDATA[
+      .bg           { fill: none; }
+      .legend-title { font: 700 72px Inter, sans-serif; fill: #1a1a1a; }
+      .legend-text  { font: 400 42px Inter, sans-serif; fill: #222; }
+    ]]></style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="2100" height="430"/>
+
+  <rect x="40" y="120" width="30" height="30" fill="#52a9dd" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="82" y="147">AIOps/Analytics</text>
+  <rect x="720" y="120" width="30" height="30" fill="#6fa8dc" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="762" y="147">Artifact/Package Management</text>
+  <rect x="1450" y="120" width="30" height="30" fill="#89c7de" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="1492" y="147">Cloud</text>
+
+  <rect x="40" y="172" width="30" height="30" fill="#f28ab2" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="82" y="199">Collaboration</text>
+  <rect x="720" y="172" width="30" height="30" fill="#8fbe66" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="762" y="199">Configuration Automation</text>
+  <rect x="1450" y="172" width="30" height="30" fill="#9ad29a" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="1492" y="199">Containers</text>
+
+  <rect x="40" y="224" width="30" height="30" fill="#e67c3a" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="82" y="251">Continuous Integration</text>
+  <rect x="720" y="224" width="30" height="30" fill="#f4b183" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="762" y="251">Database Management</text>
+  <rect x="1450" y="224" width="30" height="30" fill="#b46ac8" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="1492" y="251">Deployment</text>
+
+  <rect x="40" y="276" width="30" height="30" fill="#5cb96c" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="82" y="303">Enterprise Agile Planning</text>
+  <rect x="720" y="276" width="30" height="30" fill="#6ea7a1" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="762" y="303">Issue Tracking/ITSM</text>
+  <rect x="1450" y="276" width="30" height="30" fill="#4b8f88" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="1492" y="303">Release Management</text>
+
+  <rect x="40" y="328" width="30" height="30" fill="#d64a3b" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="82" y="355">Security</text>
+  <rect x="720" y="328" width="30" height="30" fill="#f0c92e" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="762" y="355">Serverless/PaaS</text>
+  <rect x="1450" y="328" width="30" height="30" fill="#c2a6d2" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="1492" y="355">Source Control Management</text>
+
+  <rect x="40" y="380" width="30" height="30" fill="#9bc6cb" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="82" y="407">Testing</text>
+  <rect x="720" y="380" width="30" height="30" fill="#7fae47" stroke="#333" stroke-width="1"/>
+  <text class="legend-text" x="762" y="407">Value Stream Management</text>
+</svg>

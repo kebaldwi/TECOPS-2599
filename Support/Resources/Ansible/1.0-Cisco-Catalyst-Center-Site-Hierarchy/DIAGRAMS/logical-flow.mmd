@@ -4,7 +4,10 @@ flowchart TD
     A["Step 1 -- Load settings.json<br/>settings_json_path resolved to absolute<br/>lookup file -> from_json"]
     A --> B{project key<br/>exists and non-empty?}
     B -->|No| FAIL_A([Fail: invalid<br/>input JSON shape])
-    B -->|Yes| C
+    B -->|Yes| S
+
+    S["Step 1b -- Synthesize site_data.project<br/>Build area/building/floor records from<br/>HierarchyParent/Area/Bldg/Floor fields<br/>deduplicate paths first-seen wins"]
+    S --> C
 
     C["Step 2 -- Build lookup maps<br/>site_type_map: path -> area/building/floor<br/>building_info_map: path -> address/lat/lon<br/>floor_info_map: path -> rf_model/units_of_measure/dims/number"]
     C --> D
@@ -15,7 +18,7 @@ flowchart TD
     F["Step 4 -- Pre-compute site_configs_list<br/>one typed dict per path<br/>site_type + site: name, parent_name, metadata"]
     F --> PA
 
-    PA["Phase A -- Fetch all existing sites<br/>GET /dna/intent/api/v1/sites<br/>Build site_id_map: nameHierarchy -> UUID"]
+    PA["Phase A -- Fetch all existing sites<br/>GET /dna/intent/api/v1/sites<br/>Build site_id_map: nameHierarchy -> UUID<br/>plus explicit Global -> global-site UUID"]
     PA --> STATE{state?}
 
     STATE -->|merged| PB
