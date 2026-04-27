@@ -22,8 +22,12 @@ echo "============================================================"
 # python3.8. If a previous script run used update-alternatives to point
 # /usr/bin/python3 at python3.9, every subsequent apt command breaks with
 # "No module named 'apt_pkg'". Restore it here before touching apt.
+# Also remove any stale 'alias python=python3.x' lines that would shadow the
+# venv's python binary and the update-alternatives setting.
 echo ""
-echo "[ 0/8 ] Preflight: ensuring system python3 points to python3.8..."
+echo "[ 0/9 ] Preflight: ensuring system python3 points to python3.8..."
+sed -i "/alias python=/d" ~/.bashrc ~/.bash_aliases 2>/dev/null || true
+unalias python 2>/dev/null || true
 if [ -f /usr/bin/python3.8 ]; then
     sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10 2>/dev/null || true
     sudo update-alternatives --set python3 /usr/bin/python3.8 2>/dev/null || true
@@ -39,24 +43,58 @@ echo "[ 1/9 ] Updating apt package lists..."
 # (e.g. expired Grafana/Jenkins keys common on shared lab jumpboxes)
 sudo apt-get update || true
 
-# ── 2. Python 3.9 ─────────────────────────────────────────────────────────────
+# ── 2. Python 3.10 ────────────────────────────────────────────────────────────
 echo ""
-echo "[ 2/9 ] Installing Python 3.9..."
-# deadsnakes PPA guarantees Python 3.9 is available on all Ubuntu LTS versions
-sudo apt-get install -y software-properties-common
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt-get update || true
-sudo apt-get install -y python3.9 python3.9-venv python3.9-distutils curl
+echo "[ 2/9 ] Installing Python 3.10..."
+# Ubuntu 20.04 focal is EOL — the deadsnakes PPA no longer provides packages
+# for focal. Build Python 3.10 from source instead.
+# Python 3.10 satisfies ansible 9.x (ansible-core 2.16) which needs Python >=3.10.
+if command -v python3.10 &>/dev/null; then
+    echo "  python3.10 already installed: $(python3.10 --version)"
+else
+    echo "  Building Python 3.10 from source..."
+    PYTHON310_VERSION="3.10.16"
+    sudo apt-get install -y --no-install-recommends \
+        build-essential libssl-dev zlib1g-dev libncurses5-dev \
+        libncursesw5-dev libreadline-dev libsqlite3-dev libgdbm-dev \
+        libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev libffi-dev \
+        tk-dev curl
+    TMP_SRC=$(mktemp -d)
+    curl -fsSL "https://www.python.org/ftp/python/${PYTHON310_VERSION}/Python-${PYTHON310_VERSION}.tgz" \
+        -o "${TMP_SRC}/Python-${PYTHON310_VERSION}.tgz"
+    tar -xf "${TMP_SRC}/Python-${PYTHON310_VERSION}.tgz" -C "${TMP_SRC}"
+    pushd "${TMP_SRC}/Python-${PYTHON310_VERSION}" > /dev/null
+    ./configure --prefix=/usr/local --enable-optimizations --with-ensurepip=install 2>&1 | tail -3
+    make -j"$(nproc)" 2>&1 | tail -3
+    sudo make altinstall 2>&1 | tail -3
+    popd > /dev/null
+    rm -rf "${TMP_SRC}"
+fi
 
-# Verify the python3.9 binary is available — do NOT change the system default
-# (update-alternatives would break apt_pkg which is compiled for system Python)
-python3.9 --version
+# Verify the python3.10 binary is available — do NOT change python3 system default
+# (apt_pkg is compiled for python3.8; touching python3 alternative breaks apt).
+# Register the unversioned 'python' command → python3.10 so it survives reboots.
+python3.10 --version
+sudo update-alternatives --install /usr/bin/python python /usr/local/bin/python3.10 10
+sudo update-alternatives --set python /usr/local/bin/python3.10
+echo "  python → $(python --version)"
 
 # ── 3. Virtual environment ────────────────────────────────────────────────────
 echo ""
 echo "[ 3/9 ] Creating virtual environment at $VENV_DIR..."
-# Use python3.9 explicitly — system python3 may still point to 3.8 on focal
-python3.9 -m venv "$VENV_DIR"
+# If an existing venv was built with a different Python (e.g. 3.9 from a
+# previous failed run), remove it so python3.10 creates a clean one.
+if [ -d "$VENV_DIR" ]; then
+    EXISTING_PY=$("$VENV_DIR/bin/python3" --version 2>&1 | awk '{print $2}')
+    if [[ "$EXISTING_PY" != 3.10* ]]; then
+        echo "  Existing venv uses Python $EXISTING_PY — removing and recreating with Python 3.10..."
+        rm -rf "$VENV_DIR"
+    else
+        echo "  Existing venv already uses Python $EXISTING_PY — reusing."
+    fi
+fi
+# Use python3.10 explicitly — system python3 may still point to 3.8 on focal
+python3.10 -m venv "$VENV_DIR"
 
 # Activate the venv for the remainder of this script
 # shellcheck disable=SC1091
@@ -81,10 +119,10 @@ fi
 # ── 4. Ansible ────────────────────────────────────────────────────────────────
 echo ""
 echo "[ 4/9 ] Installing Ansible into venv..."
-# ansible 8.x ships ansible-core 2.15 — minimum version required by all
-# playbooks in this lab series (cisco.catalystcenter and cisco.dnac both need
-# ansible-core >= 2.15 for their workflow manager modules)
-pip install 'ansible>=8.0.0,<9.0.0'
+# ansible 9.x ships ansible-core 2.16 — required to support the latest
+# cisco.catalystcenter collection (>=2.4.0 requires ansible-core >=2.16).
+# ansible 9.x requires Python >=3.10 (venv uses Python 3.10 — satisfied).
+pip install 'ansible>=9.0.0,<10.0.0'
 ansible --version
 
 # ── 5. Python SDK dependencies ────────────────────────────────────────────────
@@ -118,11 +156,11 @@ ansible-galaxy collection install 'cisco.dnac:==6.46.0' --force
 
 # ansible.utils — utility filters/plugins required by both cisco collections
 #   Used by: playbooks 1.0, 2.0, 3.0
-ansible-galaxy collection install 'ansible.utils:>=2.11.0' --force
+ansible-galaxy collection install 'ansible.utils:==5.1.2' --force
 
 # community.general — general-purpose modules (git_config, uri extras, etc.)
 #   Used by: playbook 6.0 (Templates GitHub integration)
-ansible-galaxy collection install community.general --force
+ansible-galaxy collection install 'community.general:==10.7.0' --force
 
 # cisco.ios — SSH-based IOS device management
 #   Used by: playbook 10.0 (Backup My Configs)
