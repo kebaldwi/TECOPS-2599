@@ -23,6 +23,7 @@
    - [What it does](#what-it-does)
    - [Why this step matters](#why-this-step-matters)
    - [Idempotency](#idempotency)
+   - [Logical Flow](#logical-flow)
 2. [Prerequisites](#prerequisites)
 3. [Directory Structure](#directory-structure)
 4. [Installation](#installation)
@@ -119,6 +120,16 @@ The playbook is safe to run more than once. Before submitting a provision reques
 - This workflow intentionally uses direct REST for full control of payload and idempotency checks.
 - Async task polling is mandatory because provision API responses are not final operation status.
 
+### Logical Flow
+
+The diagram below shows every decision point and state transition from startup to completion:
+
+![Logical Flow](DIAGRAMS/logical-flow.png)
+
+> Source: [`DIAGRAMS/logical-flow.mmd`](DIAGRAMS/logical-flow.mmd) — re-render with `mmdc -i DIAGRAMS/logical-flow.mmd -o DIAGRAMS/logical-flow.png --scale 3`
+
+---
+
 ## Prerequisites
 
 | Requirement | Version / Detail |
@@ -148,7 +159,11 @@ The playbook is safe to run more than once. Before submitting a provision reques
 ├── vault.yml               # Encrypted CatC credentials (gitignored)
 ├── vault.yml.example       # Template for vault.yml
 ├── ansible.cfg             # Ansible defaults (inventory, result format)
-└── requirements.yml        # cisco.dnac collection pin
+├── requirements.yml        # cisco.dnac collection pin
+├── DIAGRAMS/
+│   ├── logical-flow.mmd    # Mermaid source — re-render with mmdc
+│   └── logical-flow.png    # Rendered flowchart (referenced by README)
+└── README.md               # This document
 ```
 
 ---

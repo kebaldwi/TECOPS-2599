@@ -129,6 +129,10 @@ ansible --version
 echo ""
 echo "[ 5/9 ] Installing Python SDK dependencies into venv..."
 
+# libssh-dev — C library required to build ansible-pylibssh (see below)
+# Must be installed before pip attempts to compile the extension module.
+sudo apt-get install -y --no-install-recommends libssh-dev
+
 # catalystcentersdk — required by cisco.catalystcenter collection
 #   Used by: playbooks 1.0 (Site Hierarchy) and 2.0 (Settings)
 pip install 'catalystcentersdk>=2.3.7.9,<3.0.0'
@@ -139,6 +143,18 @@ pip install 'dnacentersdk>=2.11.0'
 
 # github-clone — used by playbook 6.0 (Templates GitHub integration)
 pip install github-clone
+
+# paramiko — SSH transport library; fallback backend for ansible.netcommon network_cli
+#   Used by: backup-lab-configs.yml (playbook 10.0)
+pip install 'paramiko>=2.11'
+
+# ansible-pylibssh — preferred SSH backend for ansible.netcommon network_cli
+#   Used by: backup-lab-configs.yml (playbook 10.0)
+#   Without this, network_cli falls back to paramiko which fails with
+#   "transport shut down or saw EOF" on Python 3.10+ when connecting to
+#   Cisco IOS-XE/NX-OS devices via interactive PTY shells.
+#   Requires libssh-dev (installed above via apt) for the C extension build.
+pip install 'ansible-pylibssh>=1.4.0'
 
 # ── 6. Ansible Galaxy collections ─────────────────────────────────────────────
 echo ""
@@ -197,7 +213,7 @@ ansible --version
 
 echo ""
 echo "--- Installed Python packages ---"
-pip show catalystcentersdk dnacentersdk ansible | grep -E '^(Name|Version)'
+pip show catalystcentersdk dnacentersdk ansible paramiko ansible-pylibssh | grep -E '^(Name|Version)'
 
 echo ""
 echo "--- Installed Ansible collections ---"
