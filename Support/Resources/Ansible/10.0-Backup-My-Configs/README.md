@@ -41,10 +41,12 @@ What it does:
 
 | Requirement | Version |
 |---|---|
-| Python | 3.9+ |
+| Python | 3.9+ (tested on 3.13) |
 | Ansible Core | 2.14+ |
 | `cisco.ios` collection | `>=4.0.0` |
 | `cisco.nxos` collection | `>=5.0.0` |
+| `paramiko` pip package | `>=2.11` |
+| `ansible-pylibssh` pip package | `>=1.4.0` |
 
 Install required collections:
 
@@ -52,14 +54,30 @@ Install required collections:
 ansible-galaxy collection install -r requirements.yml
 ```
 
+Install required Python packages:
+
+> **macOS (Apple Silicon / Homebrew) — Important:** `ansible-pylibssh` must be compiled against the Homebrew `libssh` library. A plain `pip install ansible-pylibssh` will fail with `libssh/libssh.h file not found` because the compiler cannot find the Homebrew headers at their non-standard path. Always install it with the flags below:
+
+```bash
+brew install libssh
+CFLAGS="-I/opt/homebrew/include" LDFLAGS="-L/opt/homebrew/lib" pip install ansible-pylibssh
+```
+
+On Linux or if `libssh` headers are on the default system path:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Directory Structure
 
 ```text
 10.0-Backup-My-Configs/
 ├── ansible.cfg
-├── 10.0-Backup-My-Configs.yml
+├── backup-lab-configs.yml      # main playbook
 ├── inventory.yml
-├── requirements.yml
+├── requirements.yml            # Ansible Galaxy collections
+├── requirements.txt            # Python pip packages
 ├── vault.yml
 ├── vault.yml.example
 ├── .vault_pass
@@ -126,31 +144,31 @@ Notes:
 Back up all hosts:
 
 ```bash
-ansible-playbook 10.0-Backup-My-Configs.yml --vault-password-file .vault_pass
+ansible-playbook backup-lab-configs.yml --vault-password-file .vault_pass
 ```
 
 Back up only IOS-XE hosts:
 
 ```bash
-ansible-playbook 10.0-Backup-My-Configs.yml --vault-password-file .vault_pass --limit iosxe
+ansible-playbook backup-lab-configs.yml --vault-password-file .vault_pass --limit iosxe
 ```
 
 Back up only NX-OS hosts:
 
 ```bash
-ansible-playbook 10.0-Backup-My-Configs.yml --vault-password-file .vault_pass --limit nxos
+ansible-playbook backup-lab-configs.yml --vault-password-file .vault_pass --limit nxos
 ```
 
 Back up a single host:
 
 ```bash
-ansible-playbook 10.0-Backup-My-Configs.yml --vault-password-file .vault_pass --limit Spine01
+ansible-playbook backup-lab-configs.yml --vault-password-file .vault_pass --limit Spine01
 ```
 
 Syntax check:
 
 ```bash
-ansible-playbook 10.0-Backup-My-Configs.yml --vault-password-file .vault_pass --syntax-check
+ansible-playbook backup-lab-configs.yml --vault-password-file .vault_pass --syntax-check
 ```
 
 ## Debug Mode
@@ -158,7 +176,7 @@ ansible-playbook 10.0-Backup-My-Configs.yml --vault-password-file .vault_pass --
 Increase verbosity:
 
 ```bash
-ansible-playbook 10.0-Backup-My-Configs.yml --vault-password-file .vault_pass -vvv
+ansible-playbook backup-lab-configs.yml --vault-password-file .vault_pass -vvv
 ```
 
 ## Expected Output
@@ -184,6 +202,8 @@ Core-02 : ok=3 changed=1 failed=0
 |---|---|---|
 | `Decryption failed` | Wrong vault password | Verify `.vault_pass` value and re-run |
 | `Collection not found` | Missing Galaxy collections | Install with `ansible-galaxy collection install -r requirements.yml` |
+| `transport shut down or saw EOF` | `ansible-pylibssh` not installed — `network_cli` fell back to paramiko, which cannot open interactive PTY shells to Cisco devices on Python 3.13 | Install `ansible-pylibssh` with Homebrew headers: `brew install libssh && CFLAGS="-I/opt/homebrew/include" LDFLAGS="-L/opt/homebrew/lib" pip install ansible-pylibssh` |
+| `libssh/libssh.h file not found` during `pip install ansible-pylibssh` | Compiler cannot find Homebrew libssh headers at the non-standard `/opt/homebrew` path | Pass the include/lib paths explicitly: `CFLAGS="-I/opt/homebrew/include" LDFLAGS="-L/opt/homebrew/lib" pip install ansible-pylibssh` |
 | Timeout to device | Management IP unreachable | Test connectivity to `ansible_host` and credentials |
 | Empty or missing `.cfg` file | Command failed on device | Re-run with `-vvv`, validate SSH and privilege mode |
 | Permission error writing backup | Local filesystem permissions | Ensure write access to `backup_root_dir` |
