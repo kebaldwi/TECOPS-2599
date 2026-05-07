@@ -50,7 +50,7 @@ Each level (Parent → Area → Building → Floor) is checked with a `Find Stri
 
    - That matches 
 
-      <img src="../../images/workflows/orientation/targets.png" alt="Cisco Workflows" style="width:100%; height:auto;">
+      <img src="../../images/workflows/orientation/Targets.png" alt="Cisco Workflows" style="width:100%; height:auto;">
 
 ## Provide Input Parameters and Run
 
