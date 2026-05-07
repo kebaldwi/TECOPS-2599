@@ -25,13 +25,13 @@ The settings and credentials this workflow applies cover the full set of design-
 
 The workflow we will run in this module — `GitOps-BuildSettings-v3` — is a generic Catalyst Center workflow that calls the Catalyst Center **Intent API** (`/dna/intent/api/v1/network/{siteId}`, `/dna/intent/api/v1/global-credential`, `/dna/intent/api/v2/site/{siteId}/credential`) and the **GitHub Contents API**. It does the following on your behalf:
 
-| Stage | What Happens |
-|-------|--------------|
-| 1. List | Lists all files in a GitHub directory (`Get-GitHub-Directory-v2`) |
-| 2. Match | Filters down to the target `settings.json` file |
-| 3. Read | Pulls the raw contents of `settings.json` (`Get-GitHub-File-v2`) |
-| 4. Parse | Converts the JSON array into a table of hierarchy rows (Parent / Area / Building / Floor) and extracts up to 35 settings/credential fields per row |
-| 5. Apply | For each row: `CATC-AssignSettings-v2` calls `POST /dna/intent/api/v1/network/{siteId}` to apply network settings, then checks (`GET /dna/intent/api/v1/global-credential`), creates (`POST /dna/intent/api/v1/global-credential`), and assigns (`POST /dna/intent/api/v2/site/{siteId}/credential`) device credentials |
+| Stage     | What Happens |
+|-----------|--------------|
+| 1. List   | Lists all files in a GitHub directory (`Get-GitHub-Directory-v2`) |
+| 2. Match  | Filters down to the target `settings.json` file |
+| 3. Read   | Pulls the raw contents of `settings.json` (`Get-GitHub-File-v2`) |
+| 4. Parse  | Converts the JSON array into a table of hierarchy rows (Parent / Area / Building / Floor) and extracts up to 35 settings/credential fields per row |
+| 5. Apply  | For each row: `CATC-AssignSettings-v2` calls `POST /dna/intent/api/v1/network/{siteId}` to apply network settings, then checks (`GET /dna/intent/api/v1/global-credential`), creates (`POST /dna/intent/api/v1/global-credential`), and assigns (`POST /dna/intent/api/v2/site/{siteId}/credential`) device credentials |
 | 6. Verify | Resultant settings and credentials are reflected back in the workflow output |
 
 Because the workflow checks for existing credentials before creating them, the run is **idempotent** — running it again with the same `settings.json` does not duplicate global credentials. To overwrite existing settings or credentials, set `FORCE Update = true`.
