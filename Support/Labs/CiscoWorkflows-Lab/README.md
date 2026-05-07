@@ -1,23 +1,54 @@
-# REST API Orchestration with Postman
+# Catalyst Center Orchestration with Cisco Workflows
 
 ## Overview
 
 This Lab is designed as a standalone lab to help customers with varying challenges in Automating and Orchestrating their network infrastructure. Within the lab, we will use various tools and techniques to Automate various tasks and orchestrate Catalyst Center.
 
+## Network management is far too complex
+
+Complexities of network environments that involve multiple devices, configurations, and policies. These environments often include legacy systems, various hardware types, and differing compliance requirements, making management incredibly challenging. 
+
+The Networking Landscape complexity is increased with islands of management planes, discontiguous implementation flows, especially where multiple controllers are involved.
+
+Double administration at times for monitoring which leads to wasted time, and inability to track change across it all.
+
+![Managing Complex Environments](../images/workflows/readme/COMPLEX.png?raw=true "Complex Environment")
+
+## Complexity creates challenges for network and security teams
+
+<img src="../images/workflows/readme/COMPLEXITY.png" alt="Workflow Properties" style="width:100%; height:auto;">
+
+Complexity leads to inaccuracy which leads to failures. Error prone processes and troubleshooting cause a loss in time due to Management Plane sprawl which is compounded by the growth and demand of the networks today.
+
+<img src="../images/workflows/readme/CHANGE.png" alt="Workflow Properties" style="width:100%; height:auto;">
+
+* *What if it didn’t have to be that way.*
+* *What if management planes could talk to one another, without fate sharing,
+without complex integrations.*
+* *What if this could somehow even be driven by events or even AI.*
+
+## Cisco Workflows - *'What is it?'*
+
+Meraki has added a well-established Cisco tool to the dashboard; Workflows. But let’s be very clear, it’s not just for Meraki. Customers can use this powerful automation and orchestration engine on pretty much anything. In addition to Meraki, it can be used for automating Cisco controllers like Catalyst Center, SD-WAN, ISE, ThousandEyes, ACI, Nexus Dashboard, Intersight, Webex, IOT, and anything Cisco or 3rd party that utilizes REST-API. If it has a REST API or an SSH adapter, Workflows can automate it.
+
+<img src="../images/workflows/readme/WORKFLOWS.png" alt="Workflow Properties" style="width:100%; height:auto;">
+
+If you can use Microsoft Visio, you can use Workflows.
+
 ## General Information
 
-Until this point, we have used REST API for some basic setup tasks, but there are so many situations that can be solved or at least eased using REST API in conjunction with Catalyst Center. In this lab, we will use a complete set of REST API collections which will build upon the foundational knowledge acquired in the previous labs. For this lab, we will concentrate on Catalyst Center configuration and how Catalyst Center can be automated to perform various functions which we have already covered. 
+In this lab, we will use a complete set of Cisco Workflows which use REST API requests to automate and orchestrate network devices through Catalyst Center. This lab will focus on Catalyst Center orchestrations to build intent and templates to drive configuration.
 
 This set of Labs is developed around a set of simple use cases to show both the power of Catalyst Center, the REST APIs, and easy methodologies for execution through Postman.
 
-The lab will utilize a set of collections publicly shared on postman workspaces and those collections will also be expanded to keep in line with this lab.
+The lab will utilize a set of Cisco Workflows publicly shared on Cisco Workflows Exchange and those workflows may be installed and customized for your own use.
 
 > [!IMPORTANT] 
 > Please note that LAB content in this Repository is aligned with specific DCLOUD Demonstrations that have to be set up by either a **Cisco Employee** or a **Cisco Partner**. If you are having trouble accessing the DCLOUD content please get in touch with your **Local Cisco Account Team**.
 
 ## Lab Modules
 
-The Story we will use will be the following, after orientation, we will first integrate ISE with Catalyst Center, and then construct our design. The design consists of a hierarchy, settings and credentials. With the hierarchy set, we still discover our pod devices assigned by the instructor and then deploy templates to the pod. After some time we will archive the configurations of the pod, and then collect the updated inventory. Finally, we will send a show CDP neighbor command to the equipment we have been assigned. 
+The Story we will use will be the following, after orientation, we will first construct our design. The design consists of a hierarchy, settings and credentials. With the hierarchy set, we still discover our pod devices and then import templates to Catalyst Center. We will then build a Network Profile, and provision devices. 
 
 The use cases we will cover are the following which you can access via the links below:
 
@@ -25,18 +56,17 @@ The use cases we will cover are the following which you can access via the links
 2. [**Building Hierarchy**](./catc-catcenter-1-hierarchy/01-intro.md)
 3. [**Assign Settings and Credentials**](./catc-catcenter-2-settings/01-intro.md)
 4. [**Device Discovery**](./catc-catcenter-3-discovery/01-intro.md)
-5. [**Template Deployment**](./catc-catcenter-4-templates/01-intro.md)
-6. [**Configuration Archive**](./catc-catcenter-5-archive/01-intro.md)
-7. [**Retrieving Network Inventory**](./catc-catcenter-6-inventory/01-intro.md)
-8. [**Running Show Commands**](./catc-catcenter-7-cmd-run/01-intro.md)
+5. [**Import Templates**](./catc-catcenter-4-templates/01-intro.md)
+6. [**Build Network Profile**](./catc-catcenter-5-network-profile/01-intro.md)
+7. [**Provisioning Devices**](./catc-catcenter-6-provisioning/01-intro.md)
 
 ## Preparation Notes
 
-The following section of the README contains information for DevNet Test Drive instructors.
+The following section of the README contains information for the lab.
 
 ### The DCLOUD Environment
 
-For DevNet Test Drive events, use this environment: [**Catalyst Center pods for DevNet Test Drives v4**]()
+Use this environment: [**Catalyst Center + ISE lab for Automation & Orchestration**](https://dcloud2.cisco.com/demo/catalyst-center-ise-lab-for-automation-orchestration)
 
 The DCLOUD session includes the following equipment.
 
@@ -46,54 +76,61 @@ The DCLOUD session includes the following equipment.
   * Script Server - Ubuntu 20.04  or better
   * Windows 10 Jump Host 
   * Windows Server 2019 - Can be configured to provide identity, DHCP, DNS, etc.
+  * vSphere 8.0 - For hosting Workflows Remote AO
+  * ESXi Host - For hosting Workflows Remote AO
 
 * Virtual Networking Devices:
-  * Catalyst 8000v Router - 17.06.01a IOS-XE Code
-  * Catalyst 9300v Switch - 17.12.01 IOS-XE Code 
+  * Catalyst 8000v Router - 17.16.01a IOS-XE Code
+  * Catalyst 9000v Switch - 17.15.03 IOS-XE Code 
+  * Cisco Nexus 9000v Switch - 10.5.3 Code
 
 The following diagram shows the DCLOUD topology.
 
-![DCLOUD LAB TOPOLOGY](../../ASSETS/COMMON/DCLOUD/DCLOUD_Topology_A.png?raw=true)
+![DCLOUD LAB TOPOLOGY](../images/common/DCLOUD_Topology_A.png?raw=true)
+
+### Access and Credentials:
+
+| Platform:       | IP Address:    | Username      | Password    | 
+|-----------------|----------------|---------------|-------------|
+| Catalyst Center | 198.18.129.100 | admin         | C1sco12345  |
+| ISE             | 198.18.133.27  | admin         | C1sco12345  |
+| Windows AD      | 198.18.133.1   | admin         | C1sco12345  |
+| Script Server   | 198.18.133.28  | root          | C1sco12345  |
+| vSphere Server  | 198.18.134.80  | Administrator | C1sco12345! |
+| CML Server      | 198.18.128.11  | Guest         | C1sco12345  |
+
+#### Large Branch Topology
 
 The following diagram shows one of the CML pods topology.
 
-![DCLOUD CML POD TOPOLOGY](../../ASSETS/COMMON/DCLOUD/DCLOUD_Topology_B.png?raw=true)
+![DCLOUD CML LARGE CAMPUS TOPOLOGY](../images/common/DCLOUD_Topology_B.png?raw=true)
 
-### Management IPs:
+| Platform:  | OOB Mgmt:      | Loopback 0: | Username  | Password   |
+|------------|----------------|-------------|-----------|------------|
+| Spine-01   | 198.18.128.101 | 198.19.1.1  | net-admin | C1sco12345 |
+| Spine-02   | 198.18.128.102 | 198.19.1.2  | net-admin | C1sco12345 |
+| Border-01  | 198.18.128.103 | 198.19.1.3  | netadmin  | C1sco12345 |
+| Border-02  | 198.18.128.104 | 198.19.1.4  | netadmin  | C1sco12345 |
+| Leaf-01    | 198.18.128.105 | 198.19.1.5  | netadmin  | C1sco12345 |
+| Leaf-02    | 198.18.128.106 | 198.19.1.6  | netadmin  | C1sco12345 |
 
-This is the pod IP addressing schema that will be used to discover devices within the lab.
-Your instructor will assign you a pod number:
+#### Small Branch Topology
 
-| Pod: | Router:     | gi 1         | Switch 1:   | gi 0/0      | Switch2:    | gi 0/0      |
-|------|-------------|--------------|-------------|-------------|-------------|-------------|
-| 0    | c8000v-p0-1 | 198.18.140.1 | c9000v-p0-1 | 198.18.10.2 | c9000v-p0-2 | 198.18.20.2 |
-| 1    | c8000v-p1-1 | 198.18.141.1 | c9000v-p1-1 | 198.18.11.2 | c9000v-p1-2 | 198.18.21.2 |
-| 2    | c8000v-p2-1 | 198.18.142.1 | c9000v-p2-1 | 198.18.12.2 | c9000v-p2-2 | 198.18.22.2 |
-| 3    | c8000v-p3-1 | 198.18.143.1 | c9000v-p3-1 | 198.18.13.2 | c9000v-p3-2 | 198.18.23.2 |
-| 4    | c8000v-p4-1 | 198.18.144.1 | c9000v-p4-1 | 198.18.14.2 | c9000v-p4-2 | 198.18.24.2 |
-| 5    | c8000v-p5-1 | 198.18.145.1 | c9000v-p5-1 | 198.18.15.2 | c9000v-p5-2 | 198.18.25.2 |
-| 6    | c8000v-p6-1 | 198.18.146.1 | c9000v-p6-1 | 198.18.16.2 | c9000v-p6-2 | 198.18.26.2 |
-| 7    | c8000v-p7-1 | 198.18.147.1 | c9000v-p7-1 | 198.18.17.2 | c9000v-p7-2 | 198.18.27.2 |
-| 8    | c8000v-p8-1 | 198.18.148.1 | c9000v-p8-1 | 198.18.18.2 | c9000v-p8-2 | 198.18.28.2 |
-| 9    | c8000v-p9-1 | 198.18.149.1 | c9000v-p9-1 | 198.18.19.2 | c9000v-p9-2 | 198.18.29.2 |
+The following diagram shows one of the CML pods topology.
 
-## Credentials:
+![DCLOUD CML SMALL BRANCH TOPOLOGY](../images/common/DCLOUD_Topology_C.png?raw=true)
 
 | Platform:       | IP Address:    | Username | Password   | 
 |-----------------|----------------|----------|------------|
-| Catalyst Center | 198.18.129.100 | admin    | C1sco12345 |
-| ISE             | 198.18.133.27  | admin    | C1sco12345 |
-| Windows AD      | 198.18.133.1   | admin    | C1sco12345 |
-| Script Server   | 198.18.133.28  | root     | C1sco12345 |
-| Router          | 198.18.14[X].1 | netadmin | C1sco12345 |
-| Switch 1        | 198.18.1[X].2  | netadmin | C1sco12345 |
-| Switch 2        | 198.18.2[X].2  | netadmin | C1sco12345 |
+| Router          | 198.18.140.1   | netadmin | C1sco12345 |
+| Switch 1        | 198.18.10.2    | netadmin | C1sco12345 |
+| Switch 2        | 198.18.20.2    | netadmin | C1sco12345 |
 
 ### DCLOUD VPN Connection
 
 Use AnyConnect VPN to connect to DCLOUD. When connecting, look at the session details and copy the credentials from the session booked into the client to connect.
 
-![DCLOUD VPN CONNECTION](../../ASSETS/COMMON/DCLOUD/VPN-to-DCLOUD.png)
+![DCLOUD VPN CONNECTION](../images/common/VPN-to-DCLOUD.png?raw=true)
 
 ### Tools Required
 
