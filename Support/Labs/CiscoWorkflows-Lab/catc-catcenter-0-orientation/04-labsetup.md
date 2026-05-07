@@ -83,7 +83,7 @@ these values in several places.
 On the **Remote Targets** page, click the **Download Appliance** button to
 download the latest Automation Remote OVA.
 
-![Download the Remote Appliance](https://documentation.meraki.com/@api/deki/files/35425/Download_Remote_appliance_nov19.png)
+<img src="https://documentation.meraki.com/@api/deki/files/35425/Download_Remote_appliance_nov19.png" alt="Download the Remote Appliance" style="border-radius: 4px;" />
 
 <details closed><summary> Optional: verify the OVA file hash </summary>
 
@@ -109,37 +109,37 @@ with `Administrator` / `C1sco12345!`.
 3. Give the virtual appliance a unique name (for example, `DCLOUD-Workflows-Remote`)
    and confirm the location. Click **Next**.
 
-   ![Name the VM](https://documentation.meraki.com/@api/deki/files/35427/ova_deploy2.png)
+   <img src="https://documentation.meraki.com/@api/deki/files/35427/ova_deploy2.png" alt="Name the VM" style="border-radius: 4px;" />
 
 4. Choose the compute resource (cluster or ESXi host) where the appliance will
    run, then click **Next**.
 
-   ![Select compute resource](https://documentation.meraki.com/@api/deki/files/35428/ova_deploy3.png)
+   <img src="https://documentation.meraki.com/@api/deki/files/35428/ova_deploy3.png" alt="Select compute resource" style="border-radius: 4px;" />
 
 5. Review the deployment details and click **Next**.
 6. Pick the datastore for the appliance. A minimum of **30 GB** of free space is
    recommended. Click **Next**.
 
-   ![Select datastore](https://documentation.meraki.com/@api/deki/files/35430/ova_deploy5.png)
+   <img src="https://documentation.meraki.com/@api/deki/files/35430/ova_deploy5.png" alt="Select datastore" style="border-radius: 4px;" />
 
 7. For each **Source Network**, choose the **Destination Network** (lab port
    group) that has reachability to `198.18.133.0/18`. Click **Next**.
 
-   ![Select networks](https://documentation.meraki.com/@api/deki/files/35431/ova_deploy6.png)
+   <img src="https://documentation.meraki.com/@api/deki/files/35431/ova_deploy6.png" alt="Select networks" style="border-radius: 4px;" />
 
 8. On the **Customize template** screen:
 
    * **Unique ID and Hostname** — enter a unique value (for example,
      `dcloud-workflows-remote`).
 
-     ![Customize identity](https://documentation.meraki.com/@api/deki/files/35432/ova_deploy7.png)
+     <img src="https://documentation.meraki.com/@api/deki/files/35432/ova_deploy7.png" alt="Customize identity" style="border-radius: 4px;" />
 
    * **SSH public key** — leave blank for this lab (out of scope).
    * **Encoded user-data** — paste the **entire contents** of `remoteconfig.txt`
      from the unzipped `remotePackage.zip` (Step 2).
    * **Default user's password** — set a console password for the `ubuntu` user.
 
-     ![Customize user-data and password](https://documentation.meraki.com/@api/deki/files/35433/ova_deploy8.png)
+     <img src="https://documentation.meraki.com/@api/deki/files/35433/ova_deploy8.png" alt="Customize user-data and password" style="border-radius: 4px;" />
 
    > [!NOTE]
    > To avoid a setup failure, the password **must be at least 14 characters**
@@ -230,7 +230,7 @@ walkthrough uses that flow. The full GitHub procedure is documented at
 10. **Copy the token immediately** using the copy icon — GitHub will only
     display it once.
 
-    ![Copy the new personal access token](https://docs.github.com/assets/cb-17251/mw-1440/images/help/settings/personal-access-tokens.webp)
+    <img src="https://docs.github.com/assets/cb-17251/mw-1440/images/help/settings/personal-access-tokens.webp" alt="Copy the new personal access token" style="border-radius: 4px;" />
 
 11. If your token must access repositories owned by a SAML-SSO organization,
     click **Configure SSO** and authorize the token.
