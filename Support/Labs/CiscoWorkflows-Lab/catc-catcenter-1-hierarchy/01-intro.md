@@ -25,13 +25,13 @@ Catalyst Center uses this hierarchy to logically align intent (code and configur
 The workflow we will run in this module — `GitOps-BuildHierarchy-v3` — is a generic Catalyst Center workflow that talks to the Catalyst Center **Intent API** (`/dna/intent/api/v1/site` and `/dna/intent/api/v2/site`) and to the **GitHub Contents API**. It does the following on your behalf:
 
 | Stage | What Happens |
-|-------|--------------|
-| 1. List | Lists all files in a GitHub directory (`Get-GitHub-Directory-v2`) |
-| 2. Match | Filters down to the target `settings.json` file |
-| 3. Read | Pulls the raw contents of `settings.json` (`Get-GitHub-File-v2`) |
-| 4. Parse | Converts the JSON array into a table of hierarchy rows (Parent / Area / Building / Floor / Address) |
-| 5. Build | For each row: checks Catalyst Center, then conditionally creates the **Parent**, **Area**, **Building**, and **Floor** if missing, polling each create operation to completion |
-| 6. Verify | Returns the resultant hierarchy via `GET /dna/intent/api/v2/site` |
+|---|---|
+| **1. List** | Lists all files in a GitHub directory (`Get-GitHub-Directory-v2`) |
+| **2. Match** | Filters down to the target `settings.json` file |
+| **3. Read** | Pulls the raw contents of `settings.json` (`Get-GitHub-File-v2`) |
+| **4. Parse** |  Converts the JSON array into a table of hierarchy rows (Parent / Area / Building / Floor / Address) |
+| **5. Build** | For each row:<br>• checks Catalyst Center<br> Then conditionally IF missing:<br>• creates the **Parent**, **Area**, **Building**, and **Floor**<br>• polling each create operation to completion |
+| **6. Verify** | Resultant settings and credentials reflected in the workflow output |
 
 Because the workflow checks each level before creating it, the run is **idempotent** — running it again with the same `settings.json` does not duplicate sites. If you change `settings.json` in GitHub and re-run the workflow, only the new sites are added.
 
