@@ -5,12 +5,12 @@
          "content":"01-intro.md"
       },
       {
-         "title":"Archiving Configurations",
+         "title":"Network Profile Deployment",
          "content":"02-deploy.md"
       }
    ],
 	"meta": {
-		"code_name": "dntd-catcenter-5-archive",
+		"code_name": "dntd-catcenter-5-networkprofiles",
 		"tags": [
 			{
 				"title": "Cisco Catalyst Center"
@@ -31,7 +31,7 @@
 		"access": "public"
 	},
 	"config": {
-		"id": "dntd-catcenter-5-archive",
+		"id": "dntd-catcenter-5-networkprofiles",
 		"devEnv": {},
 		"sandbox": {},
 		"video": {}
