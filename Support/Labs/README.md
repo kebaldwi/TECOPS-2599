@@ -24,7 +24,7 @@ Both tracks follow the same seven-module story. The Cisco Workflows track is ful
 
 ### Cisco Workflows Track
 
-Reference index: [Support/Resources/Cisco Workflows/README.md](../Resources/Cisco%20Workflows/README.md)
+Reference index: [Getting Started Cisco Workflows](../Resources/Cisco%20Workflows/README.md)
 
 | # | Module | Lab Walkthrough | Workflow Reference |
 |---|--------|-----------------|--------------------|
@@ -38,7 +38,7 @@ Reference index: [Support/Resources/Cisco Workflows/README.md](../Resources/Cisc
 
 ### Ansible Track
 
-Reference index: [Support/Resources/Ansible/README.md](../Resources/Ansible/README.md)
+Reference index: [Getting Started Ansible](../Resources/Ansible/README.md)
 
 | # | Module | Lab Walkthrough | Playbook Reference |
 |---|--------|-----------------|--------------------|
