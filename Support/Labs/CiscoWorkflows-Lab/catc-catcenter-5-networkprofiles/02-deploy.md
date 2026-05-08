@@ -1,93 +1,132 @@
-# Archiving Device Configurations
+# Examine and Run the Network Profile Workflow
 
-We will now use the REST-API's within the collection `Configuration Archive` to pull the configuration archives for all devices within the inventory. 
+In this section we will open the **`GitOps-BuildNetworkProfile`** workflow in the **Cisco Workflows** dashboard, walk through what it does, supply the input parameters, run it against Catalyst Center, and verify that the switching network profile was created with the correct template assignment and bound to the target site.
 
-This collection will first get a list of devices, then download the configuration archive for each one. You will need to save the responses to download them.
+This workflow is the **sixth** in the GitOps provisioning suite and depends on the site hierarchy created by `GitOps-BuildHierarchy-v3`, the network settings applied by `GitOps-BuildSettings-v3`, and the templates published by `GitOps-ImportTemplates` (and optionally the composite assembled by `GitOps-BuildCompositeTemplate`) in the previous modules. The provisioning module that follows depends on the profile this workflow assigns.
 
-There is a difference in the way we will approach this use case because of the way the API was written. The API was developed to download or archive a specific configuration. To Archive multiple configurations you would create a loop. As Postman has nowhere to send the data as a zip file we will do only one of these. Normally you would loop through and archive them into a file store.
+## Examine the Workflow
 
-Follow these steps:
+The workflow follows the same GitOps pattern as the previous modules: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match — but instead of building hierarchy, applying settings, discovering devices, or importing templates, it **creates a switching profile** and **binds** it to a site.
 
-## Open the Collection Runner
+<img src="../../images/common/gitops/settingsJson.png" alt="settings.json structure" style="width:100%; height:auto;">
 
-Navigate and open the desired collection runner through the following:
+### High-level Steps
 
-   1. Within Postman, click on the collection shortcut in the sidebar
-   2. Hover over the collection `Catalyst Center API LAB 304 - Configuration Archive`
-   3. Click the `Run Collection` submenu option
+| # | Step | What Happens |
+|---|------|--------------|
+| 1 | **Read `settings.json`** | `Get-GitHub-File-v2` → `GET api.github.com/repos/{owner}/{repo}/contents/{path}/{file}` with `Accept: application/vnd.github.raw+json` (no directory scan loop — the file is retrieved directly) |
+| 2 | **Parse profile fields** | A single JSONPath query extracts 9 values: `HierarchyParent/Area/Bldg/Floor`, `ProfileName`, `DayNTemplates`, `Day0Templates`, `numberDayNTemplates`, `numberDay0Templates` |
+| 3 | **Prepare (parallel)** | Three branches run simultaneously:<br>• Join `Day0Templates` array → `Day0TemplateNames` (empty when null)<br>• Join `DayNTemplates` array → `DayNTemplateNames`<br>• Compose `siteNameHierarchy`, `GET /dna/intent/api/v2/site?groupNameHierarchy=…`, extract `siteId` |
+| 4 | **Resolve template UUIDs (parallel)** | Two branches run simultaneously:<br>• `CATC-GetTemplates-v2` resolves each Day0 name → `Day0TemplateIDs` (empty string when no Day0 template configured)<br>• `CATC-GetTemplates-v2` resolves each DayN name → `DayNTemplateIDs` (handles single or comma-separated multi-template input) |
+| 5 | **Create & assign profile** | `CATC-CreateSiteProfile-v3`:<br>• `GET /dna/intent/api/v1/network-profile?name={ProfileName}&type=switching` (existence check)<br>• `POST /dna/intent/api/v1/network-profile` (create switching profile with `templates.dayN.id` and, when present, `templates.day0.id`)<br>• `GET /dna/intent/api/v1/network-profile/{profileId}/site` (verify current assignment)<br>• `POST /dna/intent/api/v1/network-profile/{profileId}/site` with `{ "siteId": "<siteId>" }` (skipped when already assigned) |
+| 6 | **Settle** | Top-level `Sleep 30 s` allows Catalyst Center to propagate the profile/site binding before downstream provisioning workflows begin |
 
-      ![Open Collection Runner](./assets/Postman-Collection-ConfigArchive.png?raw=true)
+The full decision and parallel-branch structure (including the per-template ID-resolution sub-flow and the four-step `CATC-CreateSiteProfile-v3` sequence) is shown below:
 
-## Run the Collection
+![GitOps Build Network Profile — Logical Flow](../../../Resources/Cisco%20Workflows/6.0-Cisco-Catalyst-Center-Network-Profile/DIAGRAMS/logical-flow.png)
 
-To run the collection, do the following:
+> Full workflow reference: [Support/Resources/Cisco Workflows/6.0-Cisco-Catalyst-Center-Network-Profile/README.md](../../../Resources/Cisco%20Workflows/6.0-Cisco-Catalyst-Center-Network-Profile/README.md)
 
-To run the collection, do the following:
+### Why It's Safe to Re-run
 
-   1. Locate the sub components of the `Runner`
-   2. On the right under data, click *select* 
-   3. Browse and select the CSV using explorer
-   4. Click Open to select the file to be used
-   5. Optionally select the `Save Responses` option
+Before creating the profile, `CATC-CreateSiteProfile-v3` calls `GET /dna/intent/api/v1/network-profile?name={ProfileName}&type=switching` and reuses the existing `profileId` if one is found. Before assigning the profile to the site, it calls `GET /dna/intent/api/v1/network-profile/{profileId}/site` and skips the `POST` if the binding is already present. Re-running the workflow with the same `settings.json` therefore produces no duplicate profiles and no duplicate site bindings.
 
-      ![Select File](./assets/Postman-Collection-ConfigArchive-Run-CSV.png?raw=true)
+> **Important:** Every template name listed under `network_profile.DayNTemplateNames` (and `Day0TemplateNames`, when non-null) must already exist **and be published** in the Template Hub. The previous module's `GitOps-ImportTemplates` workflow performs both steps for every `.j2` file in the source directory.
 
-   6. Click  the `Run Catalyst Center API LAB 201 - Device Discovery` button
+## Open the Workflow in the Dashboard
 
-      ![Run Collection](./assets/Postman-Collection-ConfigArchive-Runner.png?raw=true)
+1. From the Cisco Workflows dashboard, navigate to **Workflows** in the sidebar.
 
+   <img src="../../images/common/gitops/gitops-workflows.png" alt="Cisco Workflows" style="width:100%; height:auto;">
 
-## Retrieve the Archive
+2. Locate **`GitOps-BuildNetworkProfile`** in the workflow list and click to open it.
+3. Review the canvas — you should see the six high-level activities listed above. Click any activity to inspect its **Properties** (input/output mapping, JSONPath queries, parallel branch composition, target accounts).
 
-1. The following summary will slowly appear as the collection is processed
+   <img src="../../images/workflows/networkprofile/BuildNetworkProfile-workflow.png" alt="BuildNetworkProfile workflow canvas" style="width:100%; height:auto;">
 
-   1. Copy the Password `TestT3$t` to open the zip file later.
- 
-      ![Results](./assets/Postman-Collection-ConfigArchive-Summary.png?raw=true)
- 
-   2. Click the console at the bottom of Postman and search for the last API call made.
+4. Drill into the `CATC-CreateSiteProfile-v3` sub-workflow to view the existence check, profile create `POST`, current-assignment check, and site-assignment `POST` activities.
 
-      ![View Console](./assets/Postman-Collection-ConfigArchive-Console.png?raw=true)
+   <img src="../../images/workflows/networkprofile/BuildNetworkProfile-workflow-detail.png" alt="BuildNetworkProfile workflow detail" style="width:100%; height:auto;">
 
-   3. Expand the results of the API call and open the `Response Body`
-   4. Notice the file response does have the Configurations in it. This API Collection collected all of them and, if exported to a Python system, could save them to a local file folder.
+5. In the **Properties** panel of the workflow itself, confirm that the configured **Targets** include both:
+    - **GitHub Target** (`api.github.com`) — set up in the orientation module
+    - **Catalyst Center Target** (`https://198.18.129.100`) — set up in the orientation module
 
-      ![Raw Data](./assets/Postman-Collection-ConfigArchive-Console-Results.png?raw=true)
+   - That matches
 
-2. Click on the collection `Catalyst Center API LAB 304 - Configuration Archive` to expand it in the left pane, then do the following:
+      <img src="../../images/workflows/orientation/Targets.png" alt="Cisco Workflows Targets" style="width:100%; height:auto;">
 
-   1. Click on the Rest-API `Get Results` sub-component to open it on the right
-   2. Click on the little arrow on the right of `Send` to expose a submenu
-   3. Click `Send and Download` to send this Rest-API and automatically download what is retrieved
+## Provide Input Parameters and Run
 
-      ![Get Request](./assets/Postman-Collection-ConfigArchive-ResultsAPI.png?raw=true)
+1. Click **Run** on the workflow. The input form opens.
+2. Fill in (or accept the defaults for) the following parameters:
 
-3. As the Rest-API `Get Results`completes an explorer window will prompt to save the results to the desktop click ok to save the file
+   <img src="../../images/workflows/networkprofile/BuildNetworkProfile-runner.png" alt="BuildNetworkProfile workflow runner" style="width:100%; height:auto;">
 
-   ![Download](./assets/Postman-Collection-ConfigArchive-ResultsAPI-Send.png?raw=true)
+   | Parameter                | Value for this Lab           |
+   |--------------------------|------------------------------|
+   | `GITHUB-OWNER`           | `kebaldwi`                   |
+   | `GITHUB-REPO`            | `TECOPS-2599`                |
+   | `GITHUB-PATH`            | `Projects/BGP_EVPN/Settings` |
+   | `GITHUB-FILE`            | `settings.json`              |
+   | `TemplateHubProjectName` | `BGP_EVPN`                   |
 
-4. Locate the zip file on the desktop, and extract it using whatever extraction tool is available to your system. WinRar is what can be used and is displayed here.
+3. Click **Run** to start execution.
 
-   ![Extract](./assets/Postman-Collection-ConfigArchive-Extract.png?raw=true)
+## Monitor the Execution
 
-5. During Extraction, you will be prompted for the password we stored from step 6, but again it is `TestT3$t` in the event you can't locate it. Enter the password as prompted and complete the extraction.
+1. Open **More Actions → View Runs** for the workflow.
+2. Click the most recent run to expand the **Execution Details** view.
 
-   ![Opening](./assets/Postman-Collection-ConfigArchive-Pwd.png?raw=true)
+   <img src="../../images/workflows/networkprofile/BuildNetworkProfile-monitoring.png" alt="BuildNetworkProfile execution details" style="width:100%; height:auto;">
 
-6. Locate the Extracted folder and open one of the text-based files within to reveal the configuration selected.
+3. Step through each activity and inspect its **Input** and **Output**:
+    - **Step 1** — confirms `settings.json` was retrieved directly from the GitHub path.
+    - **Step 2** — shows the JSONPath extraction:</br> `HierarchyParent`, `HierarchyArea`, `HierarchyBldg`, `HierarchyFloor`, `ProfileName`, `DayNTemplates`, `Day0Templates`, and the two count values.
+    - **Step 3** — three parallel branches:<br>• Day0 template name join (empty string when null in `settings.json`)<br>• DayN template name join (`BGP-EVPN-BUILD.j2` for the lab example)<br>• Composed `siteNameHierarchy` (`Global/PODS/POD x/Building Px/Floor 1`), `GET /dna/intent/api/v2/site` result, and the resolved `siteId`.
+    - **Step 4** — two parallel branches:<br>• `Day0TemplateIDs` empty when no Day0 template configured<br>• `DayNTemplateIDs` resolved from `BGP-EVPN-BUILD.j2` to its Template Hub UUID.
+    - **Step 5** — `CATC-CreateSiteProfile-v3` sequence:<br>• `GET /dna/intent/api/v1/network-profile` existence check<br>• `POST /dna/intent/api/v1/network-profile` create with the `templates.dayN.id` payload (and `templates.day0.id` when present)<br>• `GET /dna/intent/api/v1/network-profile/{profileId}/site` current-assignment check<br>• `POST /dna/intent/api/v1/network-profile/{profileId}/site` with `{ "siteId": "<siteId>" }`.
+    - **Step 6** — the 30 s settle while Catalyst Center propagates the profile/site binding.
 
-   ![Files](./assets/Postman-Collection-ConfigArchive-Verify.png?raw=true)
+A successful run reports the profile name, the resolved `profileId`, the resolved `siteId`, and the assignment result.
+
+## Verify the Network Profile in Catalyst Center
+
+1. Open a browser and navigate to [**Catalyst Center**](https://198.18.129.100). If an SSL warning is displayed, click **Proceed to `https://198.18.129.100` (unsafe)** to continue.
+
+   ![SSL Error](../../images/common/platform/catc-SSLERROR.png?raw=true)
+
+2. Log in with:
+    - **username:** `admin`
+    - **password:** `C1sco12345`
+
+   ![Login](../../images/common/platform/catc-Login.png?raw=true)
+
+3. When the Catalyst Center Dashboard is displayed, click the **&#8801;** icon to display the menu.
+
+   ![Hamburger](../../images/common/platform/catc-Menu.png?raw=true)
+
+4. Select **Design → Network Profiles** from the menu. 
+
+   ![Designs Menu](../../images/common/platform/catc-menu-design.png?raw=true)
+
+5. Locate the profile **`BGP-EVPN-Switching`** in the list and confirm:
+    - **Type:** `Switching`.
+    - **Sites Assigned:** at least one — the target site path from `settings.json` (e.g., `Global/PODS/POD 0/Building P0/Floor 1`).
+
+   ![Network Profiles](../../images/workflows/networkprofile/networkprofile.png?raw=true)
+
+6. Click the profile name to open its detail view. On the **Templates** tab, confirm:
+    - The DayN template (`BGP-EVPN-BUILD.j2`) is attached.
+    - When `Day0TemplateNames` was non-null in `settings.json`, the Day0 template is also attached; otherwise the Day0 slot is empty.
+    - The **Sites** tab lists the same `siteNameHierarchy` resolved by Step 3 of the workflow.
+
+   ![Network Profile Detail](../../images/workflows/networkprofile/networkprofile-detail.png?raw=true)
 
 ## Summary
 
-Congratulations, in this lablet, we used *Postman* to download an archive of the `running` and `startup` configurations of devices from Catalyst Center. 
+You have used a Cisco Workflow — driven entirely from version-controlled JSON in GitHub — to create a switching network profile in Catalyst Center, attach the published composite template as its DayN payload, and bind the profile to the correct site in the hierarchy. No per-profile UI clicking, no manual template-UUID lookups, no separate site-assignment screen. The same GitOps pattern (Read → Parse → Resolve → Act → Verify) used for hierarchy, settings, discovery, and templates now applies to network profiles, and the profile/site binding produced here is what makes the templates available for Day-N provisioning in the next module.
 
-Catalyst Center allows for the `archiving` of both the `running` and `startup` Configurations for devices within the inventory of Catalyst Center. 
-
-In the earlier Catalyst Center GUI's, there was no capability to archive the configurations apart from this REST-API-based approach. Additional capabilities have been added to the most recent version of Catalyst Center, but there remain good use cases for this capability.
-
-> **Note**: Additionally, if there is time, look at the pre and post-scripts within Postman.
-
-> [**Next Module**](../catc-catcenter-6-inventory/01-intro.md)
+> [**Next Module**](../catc-catcenter-6-provisioning/01-intro.md)
 
 > [**Return to LAB Menu**](../README.md)
