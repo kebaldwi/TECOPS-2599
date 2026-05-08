@@ -1,85 +1,134 @@
-# Device Discovery Deployment
+# Examine and Run Device Discovery Workflow
 
-We will now `discover` multiple devices listed within the CSV and assign them to the sites as per the hierarchy within the CSV.
+In this section we will open the **`GitOps-DeviceDiscovery`** workflow in the **Cisco Workflows** dashboard, walk through what it does, supply the input parameters, run it against Catalyst Center, and verify that every device listed in `settings.json` was discovered and assigned to its target site.
 
-Follow these steps:
+This workflow is the **third** in the GitOps provisioning suite and depends on the site hierarchy created by `GitOps-BuildHierarchy-v3` and the global credentials applied by `GitOps-BuildSettings-v3` in the previous modules. Every later module (Templates, Network Profiles, Provisioning) depends on the inventory it onboards.
 
-## Open the Collection Runner
+## Examine the Workflow
 
-Navigate and open the desired collection runner through the following:
+The workflow follows the same GitOps pattern as the hierarchy and settings builds: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match — but instead of creating sites or applying settings, it **discovers devices** by IP range and **assigns** them to the correct site in the inventory.
 
-   1. Within Postman, click on the collection shortcut in the sidebar
-   2. Hover over the collection `Catalyst Center API LAB 201 - Device Discovery`
-   3. Click the `Run Collection` submenu option
+<img src="../../images/common/gitops/settingsJson.png" alt="settings.json structure" style="width:100%; height:auto;">
 
-      ![Open Collection Runner](./assets/Postman-Collection-Discovery.png?raw=true)
+### High-level Steps
 
-## Run the Collection
+| # | Step | What Happens |
+|---|------|--------------|
+| 1 | **List GitHub directory** | `Get-GitHub-Directory-v2` → `GET api.github.com/repos/{owner}/{repo}/contents/{path}` |
+| 2 | **Match target file** | JSONPath filters the listing for the file matching `GITHUB-FILE` |
+| 3 | **Read `settings.json`** | `Get-GitHub-File-v2` → raw JSON pulled with `Accept: application/vnd.github.raw+json` |
+| 4 | **Parse hierarchy table** | JSONPath + Read Table → one row per Parent / Area / Building / Floor; null values sanitised to `""` before per-row queries; 10 fields extracted per row (site path, CLI / SNMP / NETCONF lookup keys, `device_list`) |
+| 5 | **Discover & Assign per row** | `CATC-DeviceDiscovery-v3` issues, in order:<br>• `GET /dna/intent/api/v2/global-credential` (resolve UUIDs by username/description/port)<br>• `GET /dna/intent/api/v1/dnac-release` (version-aware payload)<br>• Python transform (`Single` / `Range` / `Multi Range` + `ip-ip` vs `ip–ip`)<br>• `GET /api/v1/discovery/1/100` (duplicate detect by `siteNameHierarchy`)<br>• `DELETE /dna/intent/api/v1/discovery/{id}` (if duplicate, then 8 s pause)<br>• `POST /dna/intent/api/v1/discovery` (create job)<br>• `GET /dna/intent/api/v1/task/{taskId}` (poll every 5 s), 180 s discovery settle wait<br>• `GET /dna/intent/api/v1/discovery/{id}/network-device` (collect device UUIDs)<br>• `GET /dna/intent/api/v2/site` (resolve `siteId`)<br>• `POST /dna/intent/api/v1/networkDevices/assignToSite/apply` (assign devices) |
+| 6 | **Return result** | Discovered devices and site assignments returned in workflow output, then a 30 s post-loop sleep allows Catalyst Center inventory to settle |
 
-To run the collection, do the following:
+The full decision and loop structure (including the sub-flow that resolves credential UUIDs and the API invocation sequence) is shown below:
 
-   1. Locate the sub components of the `Runner`
-   2. On the right under data, click *select* 
-   3. Browse and select the CSV using explorer
-   4. Click Open to select the file to be used
-   5. Optionally select the `Save Responses` option
+![GitOps Device Discovery — Logical Flow](../../../Resources/Cisco%20Workflows/3.0-Cisco-Catalyst-Center-Device-Discovery-and-Assign/DIAGRAMS/logical-flow.png)
 
-      ![Select File](./assets/Postman-Collection-Discovery-Run-CSV.png?raw=true)
+> Full workflow reference: [Support/Resources/Cisco Workflows/3.0-Cisco-Catalyst-Center-Device-Discovery-and-Assign/README.md](../../../Resources/Cisco%20Workflows/3.0-Cisco-Catalyst-Center-Device-Discovery-and-Assign/README.md)
 
-   6. Click  the `Run Catalyst Center API LAB 201 - Device Discovery` button
+### Why It's Safe to Re-run
 
-      ![Run Collection](./assets/Postman-Collection-Discovery-Runner.png?raw=true)
+Before creating a new discovery job, the workflow lists existing jobs (`GET /api/v1/discovery/1/100`) and searches for one whose name matches the target `siteNameHierarchy`. If a match is found, the existing job is deleted and a fresh one is created — this guarantees clean state on every run. Site assignment is idempotent: reassigning a device to its current site is a no-op in Catalyst Center. To force overwrite of any pre-existing discovery state, set `FORCE Update = true`.
 
-3. The following summary will slowly appear as the collection is processed
+> **Note:** Each discovery row takes approximately 3–4 minutes (180 s discovery settle plus task polling overhead). Plan accordingly if `settings.json` contains multiple rows.
 
-   ![Results](./assets/Postman-Collection-Discovery-Summary.png?raw=true)
+## Open the Workflow in the Dashboard
 
-## Verifying Device Discovery
+1. From the Cisco Workflows dashboard, navigate to **Workflows** in the sidebar.
 
-We will inspect the Discovery Tool within Catalyst Center and the inventory to verify that the devices were discovered successfully.
+   <img src="../../images/common/gitops/gitops-workflows.png" alt="Cisco Workflows" style="width:100%; height:auto;">
 
-Follow these steps:
+2. Locate **`GitOps-DeviceDiscovery`** in the workflow list and click to open it.
+3. Review the canvas — you should see the six high-level activities listed above. Click any activity to inspect its **Properties** (input/output mapping, JSONPath queries, target accounts).
 
-1. Open a browser and navigate to [**Catalyst Center**](https://198.18.129.100), where an SSL Error is displayed as depicted. Click the **Proceed to `https://192.18.129.100` (unsafe)** link to continue
+   <img src="../../images/workflows/discovery/BuildDiscovery-workflow.png" alt="DeviceDiscovery workflow canvas" style="width:100%; height:auto;">
 
-   ![SSL Error](./assets/catc-SSLERROR.png?raw=true)
+4. Drill into the `CATC-DeviceDiscovery-v3` sub-workflow to view the credential UUID resolution, version detection, Python transform, duplicate detection, task polling, and `assignToSite/apply` activities.
 
-2. Log into Catalyst Center using 
+   <img src="../../images/workflows/discovery/BuildDiscovery-workflow-detail.png" alt="DeviceDiscovery workflow detail" style="width:100%; height:auto;">
 
-   * username: `admin`
-   * password: `C1sco12345`
+5. In the **Properties** panel of the workflow itself, confirm that the configured **Targets** include both:
+    - **GitHub Target** (`api.github.com`) — set up in the orientation module
+    - **Catalyst Center Target** (`https://198.18.129.100`) — set up in the orientation module
 
-   ![Login](./assets/catc-Login.png?raw=true)
+   - That matches
 
-3. When the Catalyst Center Dashboard is displayed, Click the **&#8801;** icon to display the menu'
+      <img src="../../images/workflows/orientation/Targets.png" alt="Cisco Workflows Targets" style="width:100%; height:auto;">
 
-   ![Hamburger](./assets/catc-Menu.png?raw=true)
+## Provide Input Parameters and Run
 
-4. Select `Tools>Discovery` from the menu to continue.
+1. Click **Run** on the workflow. The input form opens.
+2. Fill in (or accept the defaults for) the following parameters:
 
-   ![Discovery Menu](./assets/catc-Menu-Discovery.png?raw=true)
+   <img src="../../images/workflows/discovery/BuildDiscovery-runner.png" alt="DeviceDiscovery workflow runner" style="width:100%; height:auto;">
 
-5. On the left, you can click on the view all discoveries, then select it and view it on the right. 
+   | Parameter                | Value for this Lab           |
+   |--------------------------|------------------------------|
+   | `GITHUB-OWNER`           | `kebaldwi`                   |
+   | `GITHUB-REPO`            | `TECOPS-2599`                |
+   | `GITHUB-PATH`            | `Projects/BGP_EVPN/Settings` |
+   | `GITHUB-FILE`            | `settings.json`              |
+   | `FORCE Update`           | `false`                      |
+   | `TemplateHubProjectName` | `BGP_EVPN`                   |
 
-   ![Discovery Dashboard](./assets/catc-Discovery-Dashboard.png?raw=true)
+3. Click **Run** to start execution.
 
-6. Within that screen, you can select the various discoveries and look at their details.
+## Monitor the Execution
 
-   ![Discovery Job](./assets/catc-Discovery-Job.png?raw=true)
+1. Open **More Actions → View Runs** for the workflow.
+2. Click the most recent run to expand the **Execution Details** view.
 
-7. Alternatively, you can go `Provision > Network Devices > Inventory` and view the devices in the Global Level.
+   <img src="../../images/workflows/discovery/BuildDiscovery-monitoring.png" alt="DeviceDiscovery execution details" style="width:100%; height:auto;">
 
-   ![Inventory](./assets/catc-Inventory.png?raw=true)
+3. Step through each activity and inspect its **Input** and **Output**:
+    - **Step 1** — confirms a list of files was returned from the GitHub directory.
+    - **Step 2** — confirms `settings.json` matched and the loop proceeded.
+    - **Step 3** — shows the raw `settings.json` contents.
+    - **Step 4** — shows the parsed table of hierarchy rows and the 10 fields extracted for the current row</br> (site path, `cli_username`, `snmp_v2c_read_description`, `snmp_v2c_write_description`, `netconf_port`, `deviceDiscoveryList`).
+    - **Step 5** — shows, per row:<br>• `GET /dna/intent/api/v2/global-credential` snapshot and the four resolved UUIDs (CLI, SNMPv2c R/W, NETCONF)<br>• the detected Catalyst Center version<br>• the Python-built `discoveryType` / `ipAddressList`<br>• any duplicate-job `DELETE`<br>• the `POST /dna/intent/api/v1/discovery` request and `taskId`<br>• the polled task progress and resolved `discoveryId`<br>• the 180 s discovery settle wait<br>• the `GET /dna/intent/api/v1/discovery/{id}/network-device` device list<br>• the resolved `siteId`<br>• and the final `POST /dna/intent/api/v1/networkDevices/assignToSite/apply` assignment.
+    - **Step 6** — workflow output reflects the discovered devices and site assignments; a 30 s post-loop sleep allows Catalyst Center inventory to settle.
 
-You will notice the devices have been discovered and assigned to the appropriate level of the Hierarchy as per the CSV.
+A successful run reports each hierarchy row processed, with totals for discovered / assigned / errors at the end.
+
+## Verify Discovery and Inventory in Catalyst Center
+
+1. Open a browser and navigate to [**Catalyst Center**](https://198.18.129.100). If an SSL warning is displayed, click **Proceed to `https://198.18.129.100` (unsafe)** to continue.
+
+   ![SSL Error](../../images/common/platform/catc-SSLERROR.png?raw=true)
+
+2. Log in with:
+    - **username:** `admin`
+    - **password:** `C1sco12345`
+
+   ![Login](../../images/common/platform/catc-Login.png?raw=true)
+
+3. When the Catalyst Center Dashboard is displayed, click the **&#8801;** icon to display the menu.
+
+   ![Hamburger](../../images/common/platform/catc-Menu.png?raw=true)
+
+4. Select **Tools → Discovery** from the menu.
+
+   ![Discovery Menu](../../images/common/platform/catc-menu-tools.png?raw=true)
+
+5. In the Discovery dashboard, locate the discovery job named after the</br> target `siteNameHierarchy` (e.g., `Global/PODS/POD 0/Building P0/Floor 1`).
+
+   ![Discovery Dashboard](../../images/workflows/discovery/discovery.png?raw=true)
+
+6. Within that screen, you can select the named discovery job and look at its details.
+
+   ![Discovery Job](../../images/workflows/discovery/discovery-detail.png?raw=true)
+
+7. From the menu, select **Provision → Network Devices → Inventory**. Expand the hierarchy on the left, navigate to the same Area / Building / Floor used in `settings.json`, and confirm:
+    - Every device IP from `device_list` appears under the assigned site (not the **Unassigned** group).
+    - Each device shows a **Reachability** of `Reachable` and a **Manageability** of `Managed`.
+    - The site path shown for each device matches `Parent/Area/Building/Floor` exactly.
+
+      ![Inventory](../../images/workflows/discovery/inventory.png?raw=true)
 
 ## Summary
 
-We have discovered devices within the network and imported them into Catalyst Center. This scenario may be augmented and modified to create a brownfield learn, which would allow the provisioning of a template to nullify AAA settings and then assign the device to a site for provisioning.
-
-This may assist in brownfield learning so as to ensure the device may be properly provisioned with the UI based settings for intent.
-
-> **Note**: If there is time, look at the results of the Discovery and Inventory within Catalyst Center and the various pre and post-scripts within Postman.
+You have used a Cisco Workflow — driven entirely from version-controlled JSON in GitHub — to discover every device listed in `settings.json` and assign each one to the correct site in Catalyst Center. No CSV files, no Postman runner, no per-site UI clicking. The same GitOps pattern (List → Read → Parse → Act → Verify) used for hierarchy and settings now applies to discovery, and will reappear in every subsequent module.
 
 > [**Next Module**](../catc-catcenter-4-templates/01-intro.md)
 
