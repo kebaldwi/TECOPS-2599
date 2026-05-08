@@ -1,44 +1,66 @@
-# Device Discovery
+# Device Discovery and Site Assignment
 
-In this module, we will use *Postman* to `discover` devices within the network and `assign` them to specific sites within the hierarchy within Catalyst Center. 
+In this module we run two playbooks: **4.0 Device Discovery** discovers the pod devices over SSH and adds them to Catalyst Center's inventory; **5.0 Assign To Site** then moves each device from `Global` (where everything lands by default) into its correct hierarchy position.
 
-Catalyst Center uses hierarchy to logically align intent (code and configuration) against infrastructure. This allows the network administrator to align changes and modifications to the network within maintenance windows.
+> References:
+> * [4.0 Device Discovery — full as-built](../../../Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md)
+> * [5.0 Assign To Site — full as-built](../../../Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md)
 
-## Device Discovery Background
+## Why Two Playbooks?
 
-Catalyst Center has a Discovery Tool, which allows for the discovery of devices across the network through one of the following methods:
+Catalyst Center's discovery flow has two distinct outcomes:
 
-1. CDP
-2. LLDP
-3. IP Range 
+1. **Inventory** — the device exists in Catalyst Center, has been authenticated, and its facts (model, OS, interfaces, neighbors) are known.
+2. **Site placement** — the device is anchored to a specific Area / Building / Floor in the hierarchy.
 
-This tool also utilizes credentials for SSH/Telnet/SNMP/HTTPS connections.
+Running discovery alone is enough to manage a device's inventory state but **not** to provision it — site placement is required for credentials, settings, templates, and Day-N config. The two responsibilities are split because real-world workflows often discover first (read-only) and place later (after a human approves the inventory).
 
-Once a device has been discovered, the device is synchronized and deposited within the unassigned space in the inventory. The Administrator then must assign the device to a relevant **site** within the hierarchy. 
+## What 4.0 Discovery Does
 
-In this lab, we will **discover** all the devices within the dCloud lab as specified in the given CSV file. The devices will then be automatically be added to the sites as defined in the CSV. 
+`device_discovery.yml` is a thin wrapper around the high-level `cisco.dnac.discovery_workflow_manager` module. The Workflow Manager module hides the four-step CatC discovery API set (`POST /v1/discovery`, `GET /v1/discovery/{id}/...`, `DELETE /v1/discovery/{id}` etc.) behind a single idempotent task.
 
-> **Note**: If ISE is integrated with Catalyst Center and settings are applied, then the device is also added as a Network Access Device within ISE during the assignment task via **PxGrid Integration**
+The flow is:
 
-> **Prerequisites**: **Completed** the previous section **Assign Settings and Credentials**
+| Step | Mechanism |
+|------|-----------|
+| Read `device_list` from every project entry in `settings.json` | Jinja2 |
+| Reconstruct each entry's site path from `HierarchyParent/Area/Bldg/Floor` | Jinja2 (deepest non-null wins) |
+| Split comma-separated IPs into per-pod lists | `split(',') \| map('trim')` |
+| Submit one **MULTI RANGE** discovery job per pod | `cisco.dnac.discovery_workflow_manager state=merged` |
+| Track each job to completion | Module-internal polling |
 
-## Postman and External Data Sources
+Catalyst Center then reaches each IP using SSH against the global credentials created in 3.0, validates them, and adds the reachable devices to **Provision → Inventory**.
 
-Within Postman, we will utilize the collection `Device Discovery` to **discover** network infrastructure `routers`, `switches` and `wireless` network devices and **add** them in order to manage the devices. 
+The relevant `settings.json` fragment:
 
-This Collection may be run whenever you wish to configure or discover a `brownfield` device and add it to the inventory of Catalyst Center. 
+```json
+{
+  "HierarchyParent": "Global",
+  "HierarchyArea": "NA",
+  "HierarchyBldg": "Pod-1",
+  "device_list": "198.18.140.1, 198.18.10.2, 198.18.20.2"
+}
+```
 
-Accompanying the Collection is a **required** Comma Separated Value (CSV) file, which is essentially an `answer file` for the values used to build the design which we have previously edited. 
+## What 5.0 Assign To Site Does
 
-You will have already modified the 3rd line of the **CSV** with the correct POD information with the following: 
+`assign_to_site.yml` reads the same `device_list` entries, groups IPs by their reconstructed site path, resolves each site's UUID via `cisco.dnac.site_info`, and calls `cisco.dnac.assign_device_to_site` once per site with the full IP list.
 
-So it looks like this but for your **POD** specific information.
+| Step | Module |
+|------|--------|
+| Group device IPs by target site path | `set_fact` (Jinja2 dict accumulation) |
+| Resolve site name → UUID | `cisco.dnac.site_info` |
+| Move IP list under that site UUID | `cisco.dnac.assign_device_to_site` |
 
-![VS Code CSV edits for Hierarchy](./assets/csv-edit-hierarchy.png)
+The operation is idempotent — devices that are already at the correct site are skipped silently.
 
-![VS Code CSV edits for Devices](./assets/csv-edit-devices.png)
+## What You Will Do
 
-> [**RETURN**](../catc-catcenter-0-orientation/04-externaldata.md)**:** If you have not done so please refer back to the previous section to edit the **CSV** accordingly [**link**](../catc-catcenter-0-orientation/04-externaldata.md)
+1. Encrypt `vault.yml` in both `4.0-...-Device-Discovery` and `5.0-...-Assign-To-Site` directories.
+2. Run `device_discovery.yml`. Verify in **Provision → Inventory** that devices appear with status *Reachable* / *Managed*.
+3. Run `assign_to_site.yml`. Verify each device's site column reflects its `settings.json` position.
+
+> **Prerequisites:** Modules 1 (Hierarchy) and 2 (Settings + Credentials) are complete. The CLI / SNMP / NETCONF credentials assigned to the site **must** match the actual device credentials, otherwise discovery will mark the device *Unreachable*.
 
 > [**Next Section**](./02-deploy.md)
 

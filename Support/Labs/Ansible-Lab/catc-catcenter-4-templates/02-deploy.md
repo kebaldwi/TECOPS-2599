@@ -1,75 +1,91 @@
-# Template Deployment
+# Run the Template GitHub Sync Playbook
 
-We will now `deploy` a template within a Project with your Area Name within Catalyst Centers template editor.
+> All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
 
-Follow these steps:
+## Step 1 — Inspect the Playbook Directory
 
-## Open the Collection Runner
+```bash
+cd ~/TECOPS-2599/Support/Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration
+ls
+```
 
-Navigate and open the desired collection runner:
+```text
+ansible-git-catc.yml      process-composite.yml      requirements.yml
+ansible.cfg               process-template.yml       vault.yml.example
+inventory.yml             requirements.txt           README.md
+```
 
-   1. Within Postman, click on the collection shortcut in the sidebar
-   2. Hover over the collection `Catalyst Center API LAB 302 - Template Deployment`
-   3. Click the `Run Collection` submenu option
+The two `process-*.yml` files are include files used by the main playbook:
 
-      ![Open Collection Runner](./assets/Postman-Collection-DeployTemplate.png?raw=true)
+* `process-template.yml` — runs once per simple `.j2` template (sync to CatC).
+* `process-composite.yml` — runs once per `.yml` composite definition (resolve members, sync as one composite template).
 
-## Run the Collection
+## Step 2 — Confirm Inventory Variables
 
-To run the collection, follow these steps:
+```bash
+grep -E '^(github|template)_' inventory.yml
+```
 
-   1. Locate the sub-components of the `Runner`
-   2. On the right under data, click *select* 
-   3. Browse and select the CSV using explorer
-   4. Click Open to select the file to be used
-   5. Optionally select the `Save Responses` option
+For this lab the values should be:
 
-      ![Select File](./assets/Postman-Collection-DeployTemplate-Run-CSV.png?raw=true)
+```yaml
+github_owner: kebaldwi
+github_repo:  TECOPS-2599
+github_branch: main
+github_path:   Projects/BGP_EVPN/DayNTemplates
+template_project_name: TECOPS-2599
+```
 
-   6. Click  the `Run Catalyst Center API LAB 302 - Template Deployment` button
+## Step 3 — Encrypt the Vault
 
-      ![Run Collection](./assets/Postman-Collection-DeployTemplate-Runner.png?raw=true)
+```bash
+cp vault.yml.example vault.yml
+# Optional: edit and add `git_token: ghp_xxxxx` to raise GitHub's anonymous rate limit (60/hr → 5,000/hr)
+ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+```
 
-3. The following summary will slowly appear as the collection is processed
-   ![Results](./assets/Postman-Collection-DeployTemplate-Summary.png?raw=true)
+For the public `kebaldwi/TECOPS-2599` repo, anonymous access is sufficient — no `git_token` is required.
 
-## Verifying Template Deployment
+## Step 4 — Run the Playbook
 
-To verify that the template was deployed successfully, we will inspect the template editor within Catalyst Center.
+```bash
+ansible-playbook -i inventory.yml ansible-git-catc.yml \
+    --vault-password-file ~/.vault_pass
+```
 
-Follow these steps:
+Expect roughly the following stages in the console:
 
-1. Open a browser and navigate to [**Catalyst Center**](https://198.18.129.100), where an SSL Error is displayed as depicted. Click the **Proceed to `https://192.18.129.100` (unsafe)** link to continue
+| Stage | Console hint |
+|-------|--------------|
+| GitHub repo / branch validation | `Validate repository access` / `Validate branch` |
+| Tree listing | `Fetch repository tree` |
+| Per-template fetch | `Fetch raw template ...` (one task per `.j2`) |
+| Per-composite fetch | `Read composite definition ...` (one task per `.yml`) |
+| Topological ordering | `Build template processing order` |
+| CatC sync — flat templates | `process-template.yml` include — one *changed* per new/updated template |
+| CatC sync — composites | `process-composite.yml` include — one *changed* per composite |
 
-   ![SSL Error](./assets/catc-SSLERROR.png?raw=true)
+A successful first run produces `changed > 0` (every template is being created). Re-running with no source changes returns `changed=0`.
 
-2. Log into Catalyst Center using 
+## Step 5 — Verify in Catalyst Center
 
-   * username: `admin`
-   * password: `C1sco12345`
+1. Open Catalyst Center → **&#8801; Menu → Tools → Template Editor**.
 
-   ![Login](./assets/catc-Login.png?raw=true)
+   ![Template Editor](../../images/ansible/templates/templates.png?raw=true)
 
-3. When the Catalyst Center Dashboard is displayed, Click the **&#8801;** icon to display the menu'
+2. Expand the project named `TECOPS-2599` (or whatever you configured in `inventory.yml`). You should see:
 
-   ![Hamburger](./assets/catc-Menu.png?raw=true)
+    - One entry per `.j2` file under `Projects/BGP_EVPN/DayNTemplates` in the repo.
+    - One **composite** template per `.yml` file (notably `BGP-EVPN-BUILD`).
 
-4. Select `Tools>Template Editor` from the menu to continue.
+3. Open one of the templates (e.g. `FABRIC-VRF`). The body should match the `.j2` source, and the description field should contain the latest commit message and author.
 
-   ![Template Editor](./assets/catc-Menu-TemplateEditor.png?raw=true)
-
-5. Expand the Project with your Area Name on the left to show your specific Project with the template, then select it and view it on the right.
-
-   ![Template](./assets/catc-TemplateEditor-DeployTemplate-Verify.gif?raw=true)
+4. Open the composite template (`BGP-EVPN-BUILD`). The **Properties** tab lists the member templates in the same order as the `.yml` definition.
 
 ## Summary
 
-We have been able to deploy a template within a project inside Catalyst Centers template editor. 
+You have a fully populated Catalyst Center Template Project that mirrors a GitHub folder. Editing a `.j2` file in GitHub and re-running the playbook updates the corresponding template in CatC; adding a new file syncs it; removing a file leaves it in CatC (the playbook is `state: merged`-only — it does not delete templates).
 
-This scenario may be augmented and modified to use imported files within Postman to allow for a more dynamic approach. The flow allows us to rapidly stage Projects and Templates, perhaps importing them from GitHub in the CICD pipeline. 
-
-> **Note**: If there is time, look at the pre and post-scripts within Postman and look at the additionally included Deploy Template API and perhaps run it.
-
-> [**Next Module**](../catc-catcenter-5-archive/01-intro.md)
+> [**Next Module**](../catc-catcenter-5-networkprofiles/01-intro.md)
 
 > [**Return to LAB Menu**](../README.md)

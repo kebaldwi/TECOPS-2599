@@ -1,34 +1,50 @@
-# Archiving Configurations
+# Network Profile
 
-In this module, we will use *Postman* to download an archive of the running and startup configurations of a device in the hierarchy within Catalyst Center. 
+In this module we build a **Switching Network Profile** in Catalyst Center using the **`cisco.dnac.network_profile_switching_workflow_manager`** module. A Switching Network Profile is the binding layer between the templates synced in Module 4 and the sites built in Module 1 — it tells Catalyst Center "*these templates apply to switches in these sites*".
 
-Catalyst Center uses hierarchy to logically align intent (code and configuration) against infrastructure. This allows the network administrator to align changes and modifications to the network within maintenance windows.
+> Reference: [7.0 Network Profile — full as-built](../../../Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md)
 
-## Configuration Archive Background
+## What a Network Profile Is
 
-Catalyst Center allows for the Archiving of both the `Running` and `Startup` Configurations for devices within the `inventory` of Catalyst Center. In the earlier Catalyst Center GUI's, there was no capability to export or archive the configurations apart from this REST-API-based approach. Additional capabilities have been added to the most recent version of Catalyst Center, but there remain good use cases for this capability.
+A Network Profile groups together:
 
-One such use case is configuration `compliance`. Suppose we wanted to create a python-based `compliance` tool that utilized the Device Inventory and the configuration files. In that case, we could keep track of devices' **code** and **configurations** to ensure that the code was of a specific version and perhaps certain lines of code were included in the configuration. 
+* One or more **sites** the profile is assigned to.
+* One or more **Day-N templates** (the `.j2` and composite templates synced in Module 4).
+* Optionally **onboarding/PnP templates** for zero-touch device deployment.
 
-> **Prerequisites**: **Completed** the previous section **Device Discovery**
+Once a profile is assigned to a site, every device subsequently provisioned to that site (Module 6) inherits the profile's templates as its Day-N configuration source.
 
-## Postman and External Data Sources
+In `settings.json`, a profile is described like this:
 
-Within Postman, we will utilize the collection `Template Deployment` to build projects within the `Template Editor` and add `Regular Templates` to them in order to `configure` devices. 
+```json
+"network_profile": {
+  "name": "EVPN-FABRIC-PROFILE",
+  "type": "switching",
+  "site_names": ["Global/NA/Pod-1"],
+  "day_n_templates": ["BGP-EVPN-BUILD"],
+  "onboarding_templates": []
+}
+```
 
-This Collection may be run whenever you wish to `configure` or `modify` the **configuration** of a `device` within Catalyst Center. 
+## What 7.0 Does
 
-Accompanying the Collection is a **required** Comma Separated Value (CSV) file, which is essentially an `answer file` for the values used to build the design which we have previously edited. 
+`network_profile.yml` is short and direct — almost all the work is delegated to a single Workflow Manager module:
 
-You will have already modified the 3rd line of the **CSV** with the correct POD information with the following: 
+| Step | Mechanism |
+|------|-----------|
+| Read every project entry that has a `network_profile` block | Jinja2 filter |
+| Build a unified `config` payload (one entry per profile) | `set_fact` with `combine` |
+| Submit the batch as `state: merged` | `cisco.dnac.network_profile_switching_workflow_manager` |
 
-So it looks like this but for your **POD** specific information.
+The Workflow Manager module handles the underlying CatC API set internally — create vs. update, site UUID resolution, template UUID resolution, and binding the profile to its sites. It is fully idempotent: re-running with the same `settings.json` produces no change.
 
-![VS Code CSV edits for Hierarchy](./assets/csv-edit-hierarchy.png)
+## What You Will Do
 
-![VS Code CSV edits for Devices](./assets/csv-edit-devices.png)
+1. Encrypt the `vault.yml` for the 7.0 playbook.
+2. Run `network_profile.yml`.
+3. Verify the new Network Profile in **Design → Network Profiles**, including its site assignment and template binding.
 
-> [**RETURN**](../catc-catcenter-0-orientation/04-externaldata.md)**:** If you have not done so please refer back to the previous section to edit the **CSV** accordingly [**link**](../catc-catcenter-0-orientation/04-externaldata.md)
+> **Prerequisites:** Modules 1–4 complete. The Day-N templates referenced in `settings.json` (e.g. `BGP-EVPN-BUILD`) must already exist in the Catalyst Center Template Project — that is what Module 4 produced.
 
 > [**Next Section**](./02-deploy.md)
 

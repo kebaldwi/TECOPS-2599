@@ -1,87 +1,95 @@
-# Retrieving the Device Inventory
+# Run the Provision and Composite Deploy Playbooks
 
-We will now retrieve the entire device inventory from  Catalyst Center.
+> All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
 
-Follow these steps:
+## Part A — Provision Devices (8.0)
 
-## Open the Collection Runner
+### Step 1 — Encrypt the Vault
 
-Navigate and open the desired collection runner through the following:
+```bash
+cd ~/TECOPS-2599/Support/Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices
+cp vault.yml.example vault.yml
+ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+```
 
-   1. Within Postman, click on the collection shortcut in the sidebar
-   2. Hover over the collection `Catalyst Center API LAB 401 - Device Inventory`
-   3. Click the `Run Collection` submenu option
+### Step 2 — Run the Playbook
 
-      ![Open Collection Runner](./assets/Postman-Collection-DeviceInventory.png?raw=true)
+```bash
+ansible-playbook -i inventory.yml provision_devices.yml \
+    --vault-password-file ~/.vault_pass
+```
 
-## Run the Collection
+The playbook authenticates once, then loops through each site that has a `device_list`, batching all of that site's devices into a single `POST /v1/sda/provisionDevices` call. Each call is async — the playbook polls `GET /v1/task/<taskId>` until completion before moving on.
 
-To run the collection, do the following:
+> [!TIP]
+> A site that already has every device provisioned will report `changed=false` for that batch. The playbook computes a set-difference between the requested IPs and the already-provisioned IPs before submitting; an empty difference skips the call entirely.
 
-   1. Locate the sub components of the `Runner`
-   2. Select the `Save Responses` option as we will need the output
-   3. Click  the `Catalyst Center API LAB 401 - Device Inventory` button
+### Step 3 — Verify in Catalyst Center
 
-      ![Run Collection](./assets/Postman-Collection-DeviceInventory-Runner.png?raw=true)
+1. Open Catalyst Center → **&#8801; Menu → Provision → Inventory**.
 
-## View the Results
+   ![Provision Inventory](../../images/ansible/provisioning/provision.png?raw=true)
 
-The following results will slowly appear as the collection is processed.
+2. Confirm each device's **Provisioning Status** column is green / *Success*.
 
-   1. Click `View Results` on the Left
-   2. Watch the Results slowly appear. The API has been set up to give device info in the test area.
+   ![Provision Detail](../../images/ansible/provisioning/provision-detail.png?raw=true)
 
-      ![Results](./assets/Postman-Collection-DeviceInventory-Summary.png?raw=true)
+## Part B — Composite Template Deploy (9.0)
 
-5. To view the results, do the following:
+### Step 4 — Encrypt the Vault
 
-   1. Click the `Console` option at the bottom of postman
-   2. Expand the Get request that begins `GET https://198.18.129.100/api/v1/network-device` 
-   3. Within the `Response Body` click the `Drop Down` arrow and view the Response
+```bash
+cd ~/TECOPS-2599/Support/Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite
+cp vault.yml.example vault.yml
+ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+```
 
-      ![View Response](./assets/Postman-Collection-DeviceInventory-Console.png?raw=true)
+### Step 5 — Run the Playbook
 
-While this displayed all the devices in lab, let's try this one again, and and select the **CSV**.
+```bash
+ansible-playbook -i inventory.yml deploy_composite_template.yml \
+    --vault-password-file ~/.vault_pass
+```
 
-## Open the Collection Runner and use the CSV for the Pod
+For each `DayNTemplateNames` entry with `DeployTemplate: true`, the playbook:
 
-Navigate and open the desired collection runner through the following:
+1. Resolves the latest version UUID of the composite template.
+2. Resolves the UUID of every target device IP.
+3. Builds the `memberTemplateDeploymentInfo` payload (parameters per child template).
+4. Submits the deploy via `POST /v2/template-programmer/template/deploy`.
+5. Polls the task and surfaces `progress.failureReason` if any member fails to push.
 
-   1. Within Postman, click on the collection shortcut in the sidebar
-   2. Hover over the collection `Catalyst Center API LAB 401 - Device Inventory`
-   3. Click the `Run Collection` submenu option
+A successful run reports `changed=true` per deploy entry. Re-running redeploys (template deploy has no built-in idempotency in CatC — repeat applies the same intent again, which is safe but is *not* a no-op).
 
-      ![Open Collection Runner](./assets/Postman-Collection-DeviceInventory.png?raw=true)
+### Step 6 — Verify on the Device
 
-## Run the Collection
+SSH directly to one of the target switches and inspect the running-config (or use the CatC UI's **Command Runner** if you prefer):
 
-To run the collection, do the following:
+```bash
+ssh netadmin@198.18.10.2
+# C1sco12345
+show running-config | section vrf
+show running-config | section bgp
+show running-config | section nve
+```
 
-   1. Locate the sub-components of the `Runner`
-   2. Select the `Save Responses` option as we will need the output
-   3. Click  the `Catalyst Center API LAB 401 - Device Inventory` button
+You should see the BGP EVPN VRF, BGP, and NVE blocks rendered from the composite. The Catalyst Center UI also records the deploy in **Tools → Template Editor → Deployments** with one row per device target.
 
-      ![Run Collection](./assets/Postman-Collection-DeviceInventory-Pod-Runner-Select.png?raw=true)
+   ![Composite Deploy](../../images/ansible/composite/composite.png?raw=true)
 
-      ![Run Collection](./assets/Postman-Collection-DeviceInventory-Pod-Runner.png?raw=true)
-
-## View the Results
-
-The following results will slowly appear as the collection is processed.
-
-   1. Click `View Results` on the Left
-   2. Watch the Results slowly appear. The API has been set up to give device info in the test area.
-
-      ![Results](./assets/Postman-Collection-DeviceInventory-Pod-Summary.png?raw=true)
+   ![Provision Show](../../images/ansible/provisioning/provision-show.png?raw=true)
 
 ## Summary
 
-We have run a collection against Catalyst Center to retrieve the device inventory and can export that to a file within our host. In this section we prove you can create code to do the same process but display different results based on data given. Think how this might be driven from an AI perspective. Now you could ask for a Device List based on part of your hierarchy, and not just the entire list.
+You have walked the entire lifecycle of a Catalyst Center managed network through Ansible:
 
-This information might be used for many uses, including making decisions on template deployment, SWIM upgrades, etc. The limits of what can be done from here on are only those of your imagination.
+* **Hierarchy** built from `settings.json`.
+* **Settings & credentials** applied per site.
+* **Devices** discovered, authenticated, and placed at their sites.
+* **Templates** synced from GitHub into a CatC Template Project.
+* **Network Profile** built and bound to the sites.
+* **Devices** provisioned and the composite Day-N template deployed.
 
-> **Note**: Additionally, if there is time, look at the pre and post-scripts within Postman.
-
-> [**Next Module**](../catc-catcenter-7-cmd-run/01-intro.md)
+Every step is repeatable, idempotent, and captured in version control. Re-running the seven modules against an empty Catalyst Center reproduces the entire fabric state from `settings.json` alone.
 
 > [**Return to LAB Menu**](../README.md)

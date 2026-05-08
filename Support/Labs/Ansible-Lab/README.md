@@ -1,142 +1,164 @@
-# REST API Orchestration with Postman
+# Catalyst Center Orchestration with Ansible
 
 ## Overview
 
-This Lab is designed as a standalone lab to help customers with varying challenges in Automating and Orchestrating their network infrastructure. Within the lab, we will use various tools and techniques to Automate various tasks and orchestrate Catalyst Center.
+This Lab is designed as a standalone lab to help customers with varying challenges in Automating and Orchestrating their network infrastructure. Within the lab, we will use the **Cisco Catalyst Center Ansible collections** (`cisco.catalystcenter` and `cisco.dnac`) to drive the Catalyst Center Intent API end-to-end — from an empty system through a fully provisioned fabric — entirely from version-controlled JSON in this GitHub repository.
+
+## Network management is far too complex
+
+Complexities of network environments that involve multiple devices, configurations, and policies. These environments often include legacy systems, various hardware types, and differing compliance requirements, making management incredibly challenging.
+
+The Networking Landscape complexity is increased with islands of management planes, discontiguous implementation flows, especially where multiple controllers are involved. Double administration at times for monitoring leads to wasted time and an inability to track change across it all.
+
+![Managing Complex Environments](../images/ansible/readme/COMPLEX.png?raw=true "Complex Environment")
+
+## Complexity creates challenges for network and security teams
+
+<img src="../images/ansible/readme/COMPLEXITY.png" alt="Complexity Drivers" style="width:100%; height:auto;">
+
+Complexity leads to inaccuracy which leads to failures. Error-prone processes and troubleshooting cause a loss in time due to Management Plane sprawl, compounded by the growth and demand of the networks today.
+
+* *What if it didn't have to be that way.*
+* *What if a single declarative source of truth could drive the controller.*
+* *What if every change could be peer-reviewed in Git, replayed at will, and run unattended.*
+
+## Ansible for Catalyst Center — *'What is it?'*
+
+Cisco publishes two Ansible collections that wrap the Catalyst Center Intent API:
+
+* **`cisco.catalystcenter`** — newer collection aligned with the modern site-hierarchy model (areas, buildings, floors as typed resources).
+* **`cisco.dnac`** — long-standing collection providing high-level **Workflow Manager** modules (discovery, credentials, templates, network profiles) that wrap multi-step API sequences into single idempotent tasks.
+
+Together with `ansible.builtin.uri` for the handful of operations not yet covered by a module, these collections are sufficient to automate the entire Day-0 → Day-N lifecycle of a Catalyst Center managed network. Every playbook in this lab is **data-driven** — it reads the shared [`settings.json`](../../Projects/BGP_EVPN/Settings/settings.json) intent file and makes Catalyst Center match.
+
+> Reference: [Support/Resources/Ansible](../Resources/Ansible/README.md) — full as-built documentation for every playbook used in this lab.
 
 ## General Information
 
-Until this point, we have used REST API for some basic setup tasks, but there are so many situations that can be solved or at least eased using REST API in conjunction with Catalyst Center. In this lab, we will use a complete set of REST API collections which will build upon the foundational knowledge acquired in the previous labs. For this lab, we will concentrate on Catalyst Center configuration and how Catalyst Center can be automated to perform various functions which we have already covered. 
+This lab uses a complete set of Ansible playbooks that drive Catalyst Center through its REST APIs. The same `settings.json` consumed by the Cisco Workflows track is consumed here — only the orchestration engine changes. The playbooks are sequenced so that each one's outputs satisfy the next one's prerequisites.
 
-This set of Labs is developed around a set of simple use cases to show both the power of Catalyst Center, the REST APIs, and easy methodologies for execution through Postman.
-
-The lab will utilize a set of collections publicly shared on postman workspaces and those collections will also be expanded to keep in line with this lab.
-
-> [!IMPORTANT] 
-> Please note that LAB content in this Repository is aligned with specific DCLOUD Demonstrations that have to be set up by either a **Cisco Employee** or a **Cisco Partner**. If you are having trouble accessing the DCLOUD content please get in touch with your **Local Cisco Account Team**.
+> [!IMPORTANT]
+> Please note that lab content in this repository is aligned with specific DCLOUD demonstrations that have to be scheduled by either a **Cisco Employee** or a **Cisco Partner**. If you are having trouble accessing the DCLOUD content, please get in touch with your **Local Cisco Account Team**.
 
 ## Lab Modules
 
-The Story we will use will be the following, after orientation, we will first integrate ISE with Catalyst Center, and then construct our design. The design consists of a hierarchy, settings and credentials. With the hierarchy set, we still discover our pod devices assigned by the instructor and then deploy templates to the pod. After some time we will archive the configurations of the pod, and then collect the updated inventory. Finally, we will send a show CDP neighbor command to the equipment we have been assigned. 
+The story is the following: after orientation, we construct our design (hierarchy + settings + credentials), discover our pod devices, import templates from GitHub, build a network profile, and finally provision the devices.
 
-The use cases we will cover are the following which you can access via the links below:
+The use cases we will cover are the following — links open the first section of each module:
 
-1. [**Postman Orientation**](./catc-catcenter-0-orientation/01-intro.md)
+1. [**Orientation**](./catc-catcenter-0-orientation/01-intro.md)
 2. [**Building Hierarchy**](./catc-catcenter-1-hierarchy/01-intro.md)
-3. [**Assign Settings and Credentials**](./catc-catcenter-2-settings/01-intro.md)
-4. [**Device Discovery**](./catc-catcenter-3-discovery/01-intro.md)
-5. [**Template Deployment**](./catc-catcenter-4-templates/01-intro.md)
-6. [**Configuration Archive**](./catc-catcenter-5-archive/01-intro.md)
-7. [**Retrieving Network Inventory**](./catc-catcenter-6-inventory/01-intro.md)
-8. [**Running Show Commands**](./catc-catcenter-7-cmd-run/01-intro.md)
+3. [**Settings and Credentials**](./catc-catcenter-2-settings/01-intro.md)
+4. [**Device Discovery and Site Assignment**](./catc-catcenter-3-discovery/01-intro.md)
+5. [**Templates from GitHub**](./catc-catcenter-4-templates/01-intro.md)
+6. [**Network Profile**](./catc-catcenter-5-networkprofiles/01-intro.md)
+7. [**Provisioning Devices**](./catc-catcenter-6-provisioning/01-intro.md)
+
+> A companion playbook — [10.0 Backup My Configs](../Resources/Ansible/10.0-Backup-My-Configs/README.md) — archives running configurations from all IOS-XE and NX-OS devices via SSH. It is not part of the seven lab modules but is recommended as a periodic operational task.
 
 ## Preparation Notes
 
-The following section of the README contains information for DevNet Test Drive instructors.
+The following section of the README contains information for the lab.
 
 ### The DCLOUD Environment
 
-For DevNet Test Drive events, use this environment: [**Catalyst Center pods for DevNet Test Drives v4**]()
+Use this environment: [**Catalyst Center + ISE Lab for Automation & Orchestration**](https://dcloud2.cisco.com/demo/catalyst-center-ise-lab-for-automation-orchestration)
 
 The DCLOUD session includes the following equipment.
 
 * Virtual Machines:
   * Catalyst Center 2.3.7.10 or better
   * Identity Services Engine (ISE) 3.4 Patch 3 or better (deployed)
-  * Script Server - Ubuntu 20.04  or better
-  * Windows 10 Jump Host 
-  * Windows Server 2019 - Can be configured to provide identity, DHCP, DNS, etc.
+  * Script Server — Ubuntu 22.04 or 24.04 (this is where Ansible runs)
+  * Windows 10 Jump Host
+  * Windows Server 2019 — identity, DHCP, DNS
+  * vSphere 8.0 / ESXi Host
 
 * Virtual Networking Devices:
-  * Catalyst 8000v Router - 17.06.01a IOS-XE Code
-  * Catalyst 9300v Switch - 17.12.01 IOS-XE Code 
+  * Catalyst 8000v Router — 17.16.01a IOS-XE Code
+  * Catalyst 9000v Switch — 17.15.03 IOS-XE Code
+  * Cisco Nexus 9000v Switch — 10.5.3 Code
 
 The following diagram shows the DCLOUD topology.
 
-![DCLOUD LAB TOPOLOGY](../../ASSETS/COMMON/DCLOUD/DCLOUD_Topology_A.png?raw=true)
+![DCLOUD LAB TOPOLOGY](../images/common/DCLOUD_Topology_A.png?raw=true)
+
+### Access and Credentials:
+
+| Platform:       | IP Address:    | Username      | Password    |
+|-----------------|----------------|---------------|-------------|
+| Catalyst Center | 198.18.129.100 | admin         | C1sco12345  |
+| ISE             | 198.18.133.27  | admin         | C1sco12345  |
+| Windows AD      | 198.18.133.1   | admin         | C1sco12345  |
+| Script Server   | 198.18.133.28  | root          | C1sco12345  |
+| vSphere Server  | 198.18.134.80  | Administrator | C1sco12345! |
+| CML Server      | 198.18.128.11  | Guest         | C1sco12345  |
+
+> All Ansible playbooks in this lab are run from the **Script Server** (`198.18.133.28`). The `install-ansible.sh` bootstrap script bundled with the playbooks installs Python 3.9, the `cisco.catalystcenter` and `cisco.dnac` collections, and creates an isolated venv at `~/tecops-venv`.
+
+#### Large Branch Topology
 
 The following diagram shows one of the CML pods topology.
 
-![DCLOUD CML POD TOPOLOGY](../../ASSETS/COMMON/DCLOUD/DCLOUD_Topology_B.png?raw=true)
+![DCLOUD CML LARGE CAMPUS TOPOLOGY](../images/common/DCLOUD_Topology_B.png?raw=true)
 
-### Management IPs:
+| Platform:  | OOB Mgmt:      | Loopback 0: | Username  | Password   |
+|------------|----------------|-------------|-----------|------------|
+| Spine-01   | 198.18.128.101 | 198.19.1.1  | net-admin | C1sco12345 |
+| Spine-02   | 198.18.128.102 | 198.19.1.2  | net-admin | C1sco12345 |
+| Border-01  | 198.18.128.103 | 198.19.1.3  | netadmin  | C1sco12345 |
+| Border-02  | 198.18.128.104 | 198.19.1.4  | netadmin  | C1sco12345 |
+| Leaf-01    | 198.18.128.105 | 198.19.1.5  | netadmin  | C1sco12345 |
+| Leaf-02    | 198.18.128.106 | 198.19.1.6  | netadmin  | C1sco12345 |
 
-This is the pod IP addressing schema that will be used to discover devices within the lab.
-Your instructor will assign you a pod number:
+#### Small Branch Topology
 
-| Pod: | Router:     | gi 1         | Switch 1:   | gi 0/0      | Switch2:    | gi 0/0      |
-|------|-------------|--------------|-------------|-------------|-------------|-------------|
-| 0    | c8000v-p0-1 | 198.18.140.1 | c9000v-p0-1 | 198.18.10.2 | c9000v-p0-2 | 198.18.20.2 |
-| 1    | c8000v-p1-1 | 198.18.141.1 | c9000v-p1-1 | 198.18.11.2 | c9000v-p1-2 | 198.18.21.2 |
-| 2    | c8000v-p2-1 | 198.18.142.1 | c9000v-p2-1 | 198.18.12.2 | c9000v-p2-2 | 198.18.22.2 |
-| 3    | c8000v-p3-1 | 198.18.143.1 | c9000v-p3-1 | 198.18.13.2 | c9000v-p3-2 | 198.18.23.2 |
-| 4    | c8000v-p4-1 | 198.18.144.1 | c9000v-p4-1 | 198.18.14.2 | c9000v-p4-2 | 198.18.24.2 |
-| 5    | c8000v-p5-1 | 198.18.145.1 | c9000v-p5-1 | 198.18.15.2 | c9000v-p5-2 | 198.18.25.2 |
-| 6    | c8000v-p6-1 | 198.18.146.1 | c9000v-p6-1 | 198.18.16.2 | c9000v-p6-2 | 198.18.26.2 |
-| 7    | c8000v-p7-1 | 198.18.147.1 | c9000v-p7-1 | 198.18.17.2 | c9000v-p7-2 | 198.18.27.2 |
-| 8    | c8000v-p8-1 | 198.18.148.1 | c9000v-p8-1 | 198.18.18.2 | c9000v-p8-2 | 198.18.28.2 |
-| 9    | c8000v-p9-1 | 198.18.149.1 | c9000v-p9-1 | 198.18.19.2 | c9000v-p9-2 | 198.18.29.2 |
+The following diagram shows one of the CML pods topology.
 
-## Credentials:
+![DCLOUD CML SMALL BRANCH TOPOLOGY](../images/common/DCLOUD_Topology_C.png?raw=true)
 
-| Platform:       | IP Address:    | Username | Password   | 
-|-----------------|----------------|----------|------------|
-| Catalyst Center | 198.18.129.100 | admin    | C1sco12345 |
-| ISE             | 198.18.133.27  | admin    | C1sco12345 |
-| Windows AD      | 198.18.133.1   | admin    | C1sco12345 |
-| Script Server   | 198.18.133.28  | root     | C1sco12345 |
-| Router          | 198.18.14[X].1 | netadmin | C1sco12345 |
-| Switch 1        | 198.18.1[X].2  | netadmin | C1sco12345 |
-| Switch 2        | 198.18.2[X].2  | netadmin | C1sco12345 |
+| Platform: | IP Address:  | Username | Password   |
+|-----------|--------------|----------|------------|
+| Router    | 198.18.140.1 | netadmin | C1sco12345 |
+| Switch 1  | 198.18.10.2  | netadmin | C1sco12345 |
+| Switch 2  | 198.18.20.2  | netadmin | C1sco12345 |
 
 ### DCLOUD VPN Connection
 
 Use AnyConnect VPN to connect to DCLOUD. When connecting, look at the session details and copy the credentials from the session booked into the client to connect.
 
-![DCLOUD VPN CONNECTION](../../ASSETS/COMMON/DCLOUD/VPN-to-DCLOUD.png)
+![DCLOUD VPN CONNECTION](../images/common/VPN-to-DCLOUD.png?raw=true)
 
 ### Tools Required
 
-Please utilize the following tools to run the lab effectively and ensure they are installed on your workstation/laptop before attempting the lab.
+Please ensure the following tools are installed on your workstation/laptop before attempting the lab.
 
 1. Cisco AnyConnect VPN Client
-2. Postman
-3. Google Chrome
+2. Google Chrome
+3. An SSH client (built-in `ssh` on macOS/Linux; PuTTY or Windows Terminal on Windows)
 
 <details closed>
 <summary> Expand section for Tools Required </summary>
 
 #### Cisco AnyConnect VPN Client
 
-This software is required to connect your workstation to Cisco dCloud. For an explanation of AnyConnect and how to use it with dCloud, please visit the following URL: 
+Required to connect your workstation to Cisco dCloud. For an explanation of AnyConnect and how to use it with dCloud, please visit:
 
 - <a href="https://dcloud-cms.cisco.com/help/android_anyconnect" target="_blank">dCloud AnyConnect Documentation</a>
 
-If you do not have the AnyConnect client, please visit. 
+If you do not have the AnyConnect client, please visit:
 
 - <a href="https://dcloud-rtp-anyconnect.cisco.com" target="_blank">⬇︎AnyConnect Download Site⬇︎</a>
 
-#### Postman
-
-Postman is an API platform for building and using APIs. Postman simplifies each step of the API lifecycle and streamlines collaboration so you can create better APIs—faster.
-
-Once Postman has been downloaded to your desktop, it is advisable to set up an account and sign in so that all your changes can be used within any system with the client or a web browser, much in the same way as a chrome or firefox profile work. This additional capability I have found instrumental when working in multiple environments. 
-
-- <a href="https://www.postman.com/downloads/" target="_blank">⬇︎Postman Download⬇︎</a>
-
-##### Postman Documentation
-
-For an understanding of postman, please visit this site:
-
-- <a href="https://learning.postman.com/docs/getting-started/introduction/" target="_blank">Postman Documentation</a>
-
 #### Google Chrome
 
-Google Chrome is the optimal browser of choice when working in the Catalyst Center UI. 
-
-To download Google Chrome, please visit. 
+Google Chrome is the optimal browser when working in the Catalyst Center UI.
 
 - <a href="https://www.google.com/chrome/downloads/" target="_blank">⬇︎Chrome Download⬇︎</a>
+
+#### Ansible
+
+Ansible itself does **not** need to be installed on your laptop. The orientation module installs it on the DCLOUD Script Server via the bundled [`install-ansible.sh`](../Resources/Ansible/install-ansible.sh) script. If you want to inspect the playbook source locally, any text editor (VS Code recommended) works.
 
 </details>
 
@@ -144,11 +166,11 @@ To download Google Chrome, please visit.
 
 This lab is intended for educational purposes only. Use outside of a lab environment should be done at the operator's risk. Cisco assumes no liability for incorrect usage.
 
-This lab is intended to help drive the adoption of REST API and will be added to over time with various use cases. The Public Workspace will also mirror the changes and be kept up to date. We hope this set of labs helps explain how the REST API may be used and goes a little further in helping define and document them.
+This lab is intended to help drive the adoption of Infrastructure-as-Code patterns against Catalyst Center, and will be added to over time with additional use cases.
 
 > [!IMPORTANT]
-> **Feedback:** If you found this set of **labs** or **content** helpful, please fill in comments on this feedback form [give feedback](https://github.com/kebaldwi/DNAC-TEMPLATES/discussions/new?category=feedback-and-ideas).</br></br>
-**Content Problems and Issues:** If you found an **issue** on the **lab** or **content** please fill in an [issue](https://github.com/kebaldwi/DNAC-TEMPLATES/issues/new) include what file, along with the issue you ran into. 
+> **Feedback:** If you found this set of **labs** or **content** helpful, please fill in comments on the feedback form [give feedback](https://github.com/kebaldwi/TECOPS-2599/discussions/new?category=feedback-and-ideas).</br></br>
+> **Content Problems and Issues:** If you found an **issue** on the **lab** or **content** please open an [issue](https://github.com/kebaldwi/TECOPS-2599/issues/new) including the file path along with the issue you ran into.
 
 > [**Continue to Orientation Lab**](./catc-catcenter-0-orientation/01-intro.md)
 

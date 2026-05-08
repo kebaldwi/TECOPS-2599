@@ -1,36 +1,71 @@
-# Retrieve Device Inventory
+# Provisioning Devices
 
-In this module, we will use *Postman* to retrieve the device inventory of the hierarchy within Catalyst Center. 
+In this final module we run two playbooks. **8.0 Provision Devices** anchors each device to its site by pushing the site-level network settings (AAA, syslog, NTP, SNMP, netflow) and licensing — this is the prerequisite that allows Day-N templates to be applied. **9.0 Composite Deploy** then deploys the BGP-EVPN composite template (built in Module 4 and bound to sites in Module 5) to those provisioned devices.
 
-Catalyst Center uses hierarchy to align infrastructure needs logically against intent. This allows the network administrator to align change requests and outage windows to allow for changes and modifications to the network.
+> References:
+> * [8.0 Provision Devices — full as-built](../../../Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md)
+> * [9.0 Composite Deploy — full as-built](../../../Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md)
 
-##  Catalyst Center Inventory Background
+## Why Two Playbooks?
 
-Catalyst Center keeps a detailed inventory of the devices discovered or onboarded from the network. The inventory is used to reference devices in the Catalyst Center UI but also offers a place to see detailed information about the Product ID, Hostname, Software Image, and much more.
+Provisioning and template deployment are separate operations in Catalyst Center:
 
-The inventory could be used in reports to determine compliance or to reference the devices within the system for either deploying templates or issuing show commands with the command runner used earlier.
+| Concern | Catalyst Center API | Ansible playbook |
+|---------|---------------------|-------------------|
+| Push site settings + license + apply Network Profile binding | `POST /v1/sda/provisionDevices` | **8.0** `provision_devices.yml` |
+| Push Day-N composite template body to running config | `POST /v2/template-programmer/template/deploy` | **9.0** `deploy_composite_template.yml` |
 
-For example we may pull the device inventory to determine what we may need to upgrade for code, or to pull the Unique Identifier for a device that we may want to push a specific configuration to via template. There are many needs for this type of request.
+A device must be *provisioned* (8.0) before any template can be *deployed* (9.0) — Catalyst Center will refuse the deploy otherwise.
 
-> **Prerequisites**: **Completed** the previous section **Device Discovery**
+## What 8.0 Does
 
-## Postman and External Data Sources
+`provision_devices.yml` uses direct REST (`ansible.builtin.uri`) end-to-end because the v1 SDA `provisionDevices` endpoint is not yet wrapped by a Workflow Manager module. The flow is:
 
-Within Postman, we will utilize the collection `Template Deployment` to build projects within the `Template Editor` and add `Regular Templates` to them in order to `configure` devices. 
+| Step | API call |
+|------|----------|
+| Authenticate | `POST /dna/system/api/v1/auth/token` |
+| Resolve site UUID | `GET /v1/site?name=<encoded path>` |
+| Resolve device UUIDs | `GET /v1/network-device?managementIpAddress=<ip>` |
+| Check already-provisioned state (idempotency) | `GET /v1/sda/provisionDevices?siteId=<uuid>&limit=500` |
+| Submit provision batch | `POST /v1/sda/provisionDevices` |
+| Poll task | `GET /v1/task/<taskId>` until `endTime` set |
 
-This Collection may be run whenever you wish to `configure` or `modify` the **configuration** of a `device` within Catalyst Center. 
+Devices already provisioned at the target site are skipped via Jinja2 set-difference, so re-runs are no-ops.
 
-Accompanying the Collection is a **required** Comma Separated Value (CSV) file, which is essentially an `answer file` for the values used to build the design which we have previously edited. 
+## What 9.0 Does
 
-You will have already modified the 3rd line of the **CSV** with the correct POD information with the following: 
+`deploy_composite_template.yml` similarly uses direct REST against the v2 deploy endpoint because the `cisco.dnac.template_workflow_manager` does not yet handle composite deploy with `copyingConfig: true`. The flow is:
 
-So it looks like this but for your **POD** specific information.
+| Step | API call |
+|------|----------|
+| Authenticate | `POST /dna/system/api/v1/auth/token` |
+| List templates in the project (find latest version IDs) | `GET /v1/template-programmer/template?projectNames=<name>` |
+| Fetch composite detail (extract member templates) | `GET /v1/template-programmer/template/<id>` |
+| Resolve device UUIDs | `GET /v1/network-device?managementIpAddress=<ip>` |
+| Build `memberTemplateDeploymentInfo` | `set_fact` |
+| Deploy composite | `POST /v2/template-programmer/template/deploy` (with `copyingConfig: true`) |
+| Poll deploy task | `GET /v1/task/<taskId>` (parses `progress.failureReason` for the authoritative result) |
 
-![VS Code CSV edits for Hierarchy](./assets/csv-edit-hierarchy.png)
+Which composites get deployed is driven by `DayNTemplateNames` entries in `settings.json` that are marked `DeployTemplate: true`:
 
-![VS Code CSV edits for Devices](./assets/csv-edit-devices.png)
+```json
+"DayNTemplateNames": [
+  {
+    "TemplateName": "BGP-EVPN-BUILD",
+    "ProjectName": "TECOPS-2599",
+    "DeployTemplate": true,
+    "TargetDevices": ["198.18.10.2", "198.18.20.2"]
+  }
+]
+```
 
-> [**RETURN**](../catc-catcenter-0-orientation/04-externaldata.md)**:** If you have not done so please refer back to the previous section to edit the **CSV** accordingly [**link**](../catc-catcenter-0-orientation/04-externaldata.md)
+## What You Will Do
+
+1. Encrypt `vault.yml` in both `8.0-...-Provision-Devices` and `9.0-...-Provision-Composite` directories.
+2. Run `provision_devices.yml`. Verify in **Provision → Inventory** that each device's *Provisioning Status* turns green.
+3. Run `deploy_composite_template.yml`. Verify the Day-N config shows up on the device via `show running-config` and in CatC's deployment history.
+
+> **Prerequisites:** Modules 1–5 complete. Devices in inventory at their assigned sites; Network Profile bound; templates synced.
 
 > [**Next Section**](./02-deploy.md)
 

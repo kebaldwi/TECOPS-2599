@@ -1,10 +1,34 @@
 # TECOPS-2599 — Cisco Catalyst Center Network Orchestration
 
 > **As-Built Documentation**
-> **Authors:** Keith Baldwin — Solutions Engineer — Automation HyperSpecialist (kebaldwi@cisco.com), Igor Manassypov — Systems Engineer (imanassy@cisco.com)
-> **Copyright © 2024–2026 Cisco Systems, Inc. All rights reserved.**
+> **Authors:**<br>• Keith Baldwin — Solutions Engineer — Automation HyperSpecialist (kebaldwi@cisco.com)<br>• Igor Manassypov — Systems Engineer (imanassy@cisco.com)
+> <br>&nbsp;&nbsp;**Copyright © 2024–2026 Cisco Systems, Inc. All rights reserved.**
+
+## Network management is far too complex
+
+Complexities of network environments that involve multiple devices, configurations, and policies. These environments often include legacy systems, various hardware types, and differing compliance requirements, making management incredibly challenging.
+
+The Networking Landscape complexity is increased with islands of management planes, discontiguous implementation flows, especially where multiple controllers are involved. Double administration at times for monitoring leads to wasted time and an inability to track change across it all.
+
+![Managing Complex Environments](Support/Labs/images/ansible/readme/COMPLEX.png?raw=true "Complex Environment")
+
+## Complexity creates challenges for network and security teams
+
+<img src="Support/Labs/images/ansible/readme/COMPLEXITY.png" alt="Complexity Drivers" style="width:100%; height:auto;">
+
+Complexity leads to inaccuracy which leads to failures. Error-prone processes and troubleshooting cause a loss in time due to Management Plane sprawl, compounded by the growth and demand of the networks today.
+
+* *What if it didn't have to be that way.*
+* *What if a single declarative source of truth could drive the controller.*
+* *What if every change could be peer-reviewed in Git, replayed at will, and run unattended.*
+
+## Overview
 
 This repository contains the complete network orchestration suite for project **TECOPS-2599**, presented at **Cisco Live 2026**. It delivers a fully automated, GitOps-driven lifecycle for Cisco Catalyst Center — from initial site commissioning through Day-N template deployment — across three parallel tooling paths: Cisco Workflows, Ansible, and Python.
+
+<p align="center">
+  <img src="Support/Resources/images/devops_periodic_table.png" alt="TECOPS-2599 DevOps Periodic Table" width="85%">
+</p>
 
 ---
 
@@ -34,9 +58,9 @@ The repository provides three parallel tooling paths that all produce the same o
 
 | Path | Tooling | Best For |
 |------|---------|----------|
-| [Cisco Workflows](Support/Resources/Cisco%20Workflows/) | Cisco SecureX / XDR Workflow Manager | Platform-native, GUI-auditable operations |
-| [Ansible](Support/Resources/Ansible/) | Ansible + cisco.catalystcenter collection | CI/CD pipeline integration, fleet operations |
-| [Python](Support/Resources/Python/) | Pure Python REST | API learning, debugging, custom integrations |
+| [Cisco Workflows](Support/Resources/Cisco%20Workflows/README.md) | Cisco SecureX / XDR Workflow Manager | Platform-native, GUI-auditable operations |
+| [Ansible](Support/Resources/Ansible/README.md) | Ansible + cisco.catalystcenter collection | CI/CD pipeline integration, fleet operations |
+| [Python](Support/Resources/Python/README.md) | Pure Python REST | API learning, debugging, custom integrations |
 
 Teams choose the path that matches their operational model and skill set. All three paths reference the same `settings.json` and template source in GitHub, maintaining a single source of truth regardless of tooling choice.
 
@@ -59,13 +83,16 @@ TECOPS-2599/
 │       ├── DayNTemplates/         # Production Day-N Jinja2 templates
 │       └── Settings/              # settings.json and devices.json
 └── Support/
-    ├── Labs/                      # Guided lab exercises
-    │   ├── Lab - Ansible/         # Step-by-step Ansible lab
-    │   └── Lab - Cisco Workflows/ # Step-by-step Cisco Workflows lab
+    ├── Labs/                      # Guided lab exercises (7 modules each, 0–6)
+    │   ├── Ansible-Lab/           # Step-by-step Ansible lab track
+    │   ├── CiscoWorkflows-Lab/    # Step-by-step Cisco Workflows lab track
+    │   ├── images/                # Lab diagrams (DCLOUD topology, screenshots)
+    │   ├── DCLOUD.md              # DCLOUD lab environment preparation guide
+    │   └── README.md              # Labs index and module map
     └── Resources/                 # Automation tooling and reference content
-        ├── Ansible/               # Ansible playbook suite (9 playbooks)
+        ├── Ansible/               # Ansible playbook suite (10 playbooks)
         ├── Cisco Workflows/       # Cisco Workflow JSON suite (7 workflows)
-        ├── Python/                # Python REST reference scripts (11 scripts)
+        ├── Python/                # Python REST reference scripts (12 scripts)
         ├── CML/                   # Cisco Modeling Labs topology and configs
         ├── Docs/                  # Reference documentation
         └── images/                # Supporting diagrams
@@ -132,53 +159,57 @@ The `BUILD-MasterBuild.j2` template is the top-level composite entry point that 
 
 ## Support
 
-The `Support/` folder contains two parallel structures: guided **Labs** for hands-on learning and step-by-step exercises, and **Resources** providing the full automation tooling implementations.
+The [Support/](Support/) folder contains two parallel structures: guided [**Labs**](Support/Labs/README.md) for hands-on learning and step-by-step exercises, and [**Resources**](Support/Resources/README.md) providing the full automation tooling implementations.
+
+**Full documentation:** [Support/README.md](Support/README.md)
 
 ### Labs
 
-**Path:** [Support/Labs/](Support/Labs/)
+**Path:** [Support/Labs/](Support/Labs/README.md)
 
-The Labs folder provides structured, guided exercises that walk through the full Catalyst Center automation lifecycle using both tooling approaches. Labs are aligned with DCLOUD sandbox environments for safe, reproducible practice.
+The Labs folder provides structured, guided exercises that walk through the full Catalyst Center automation lifecycle using both tooling approaches. Both tracks follow the same seven-module story (modules 0–6) and are aligned with the Cisco DCLOUD **Catalyst Center + ISE Lab for Automation & Orchestration** sandbox.
 
-> **Important:** Lab content in this repository is aligned with specific DCLOUD demonstrations that must be set up by a **Cisco Employee** or **Cisco Partner**. Contact your **Local Cisco Account Team** to schedule a DCLOUD session before starting a lab.
+<p align="center">
+  <img src="Support/Labs/images/common/DCLOUD_Topology_A.png" alt="DCLOUD Topology" width="85%">
+</p>
 
-#### Lab — Cisco Workflows
+> **Important:** Lab content in this repository is aligned with specific DCLOUD demonstrations that must be set up by a **Cisco Employee** or **Cisco Partner**. Contact your **Local Cisco Account Team** to schedule a DCLOUD session before starting a lab. See [Support/Labs/DCLOUD.md](Support/Labs/DCLOUD.md) for full lab preparation steps.
 
-**Path:** [Support/Labs/Lab - Cisco Workflows/](Support/Labs/Lab%20-%20Cisco%20Workflows/)
+#### CiscoWorkflows-Lab
 
-A structured, step-by-step lab that guides engineers through setting up and executing the Cisco Workflows automation suite against a DCLOUD or CML lab environment.
+**Path:** [Support/Labs/CiscoWorkflows-Lab/](Support/Labs/CiscoWorkflows-Lab/README.md)
 
-| Module | Topic |
-|--------|-------|
-| Orientation | Catalyst Center orientation, UI navigation, and API access setup |
-| Hierarchy | Building site hierarchy via the Cisco Workflow |
-| Settings | Assigning network settings and credentials via the Cisco Workflow |
-| Discovery | Running device discovery via the Cisco Workflow |
-| Templates | Synchronizing templates from GitHub via the Cisco Workflow |
-| Archive | Configuration archiving and inventory review |
-| Inventory | Retrieving and verifying network inventory |
-| Command Run | Executing show commands against managed devices |
+A seven-module guided lab that teaches Catalyst Center automation using the Cisco Workflows GitOps suite against the DCLOUD environment.
+
+| # | Module | Lab Walkthrough | Workflow Reference |
+|---|--------|-----------------|--------------------|
+| 0 | Orientation | [Module 0](Support/Labs/CiscoWorkflows-Lab/catc-catcenter-0-orientation/01-intro.md) | — |
+| 1 | Building Hierarchy | [Module 1](Support/Labs/CiscoWorkflows-Lab/catc-catcenter-1-hierarchy/01-intro.md) | [1.0 Site Hierarchy](Support/Resources/Cisco%20Workflows/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) |
+| 2 | Settings & Credentials | [Module 2](Support/Labs/CiscoWorkflows-Lab/catc-catcenter-2-settings/01-intro.md) | [2.0 Settings & Credentials](Support/Resources/Cisco%20Workflows/2.0-Cisco-Catalyst-Center-Settings-and-Credentials/README.md) |
+| 3 | Device Discovery | [Module 3](Support/Labs/CiscoWorkflows-Lab/catc-catcenter-3-discovery/01-intro.md) | [3.0 Discovery & Assign](Support/Resources/Cisco%20Workflows/3.0-Cisco-Catalyst-Center-Device-Discovery-and-Assign/README.md) |
+| 4 | Templates (Import + Composite) | [Module 4](Support/Labs/CiscoWorkflows-Lab/catc-catcenter-4-templates/01-intro.md) | [4.0 Templates GitHub](Support/Resources/Cisco%20Workflows/4.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) · [5.0 Composite Template](Support/Resources/Cisco%20Workflows/5.0-Cisco-Catalyst-Center-Templates-Composite/README.md) |
+| 5 | Network Profiles | [Module 5](Support/Labs/CiscoWorkflows-Lab/catc-catcenter-5-networkprofiles/01-intro.md) | [6.0 Network Profile](Support/Resources/Cisco%20Workflows/6.0-Cisco-Catalyst-Center-Network-Profile/README.md) |
+| 6 | Device Provisioning | [Module 6](Support/Labs/CiscoWorkflows-Lab/catc-catcenter-6-provisioning/01-intro.md) | [7.0 Provision Composite](Support/Resources/Cisco%20Workflows/7.0-Cisco-Catalyst-Center-Provision-Composite/README.md) |
 
 **Outcome:** Engineers can operate the full seven-workflow GitOps suite end-to-end against a live or simulated environment.
 
-#### Lab — Ansible
+#### Ansible-Lab
 
-**Path:** [Support/Labs/Lab - Ansible/](Support/Labs/Lab%20-%20Ansible/)
+**Path:** [Support/Labs/Ansible-Lab/](Support/Labs/Ansible-Lab/README.md)
 
-A structured, step-by-step lab that guides engineers through executing the Ansible playbook suite against a DCLOUD or CML lab environment.
+A seven-module guided lab that teaches the same Catalyst Center automation use cases using the `cisco.catalystcenter` Ansible collection.
 
-| Module | Topic |
-|--------|-------|
-| Orientation | Ansible control node setup, inventory, and Catalyst Center connectivity |
-| Hierarchy | Running `site_hierarchy.yml` to build site structure |
-| Settings | Running `network_settings.yml` to apply site network settings |
-| Discovery | Running `device_discovery.yml` to discover and import devices |
-| Templates | Running `ansible-git-catc.yml` to synchronize GitHub templates |
-| Archive | Configuration archiving and state review |
-| Inventory | Querying and verifying managed device inventory |
-| Command Run | Executing ad-hoc commands via Ansible against managed devices |
+| # | Module | Lab Walkthrough | Playbook Reference |
+|---|--------|-----------------|--------------------|
+| 0 | Orientation | [Module 0](Support/Labs/Ansible-Lab/catc-catcenter-0-orientation/01-intro.md) | — |
+| 1 | Building Hierarchy | [Module 1](Support/Labs/Ansible-Lab/catc-catcenter-1-hierarchy/01-intro.md) | [1.0 Site Hierarchy](Support/Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) |
+| 2 | Settings & Credentials | [Module 2](Support/Labs/Ansible-Lab/catc-catcenter-2-settings/01-intro.md) | [2.0 Settings](Support/Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings/README.md) · [3.0 Credentials](Support/Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials/README.md) |
+| 3 | Device Discovery | [Module 3](Support/Labs/Ansible-Lab/catc-catcenter-3-discovery/01-intro.md) | [4.0 Device Discovery](Support/Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) · [5.0 Assign To Site](Support/Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) |
+| 4 | Templates (Import + Composite) | [Module 4](Support/Labs/Ansible-Lab/catc-catcenter-4-templates/01-intro.md) | [6.0 Templates GitHub](Support/Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) |
+| 5 | Network Profiles | [Module 5](Support/Labs/Ansible-Lab/catc-catcenter-5-networkprofiles/01-intro.md) | [7.0 Network Profile](Support/Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) |
+| 6 | Device Provisioning | [Module 6](Support/Labs/Ansible-Lab/catc-catcenter-6-provisioning/01-intro.md) | [8.0 Provision Devices](Support/Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) · [9.0 Provision Composite](Support/Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) |
 
-**Outcome:** Engineers can execute the full nine-playbook Ansible suite end-to-end and understand how each step interacts with the Catalyst Center API.
+**Outcome:** Engineers can execute the full ten-playbook Ansible suite end-to-end and understand how each step interacts with the Catalyst Center API. Companion playbook [10.0 Backup My Configs](Support/Resources/Ansible/10.0-Backup-My-Configs/README.md) archives running configurations (no matching lab module).
 
 #### DCLOUD Lab Environment
 
@@ -196,12 +227,12 @@ Both labs are tested against the Cisco Enterprise Networks Hardware Sandbox in D
 | Script Server | Ubuntu 20.04 or later |
 | Windows Jump Host | Windows 10 |
 | Windows Server | 2019 (DNS, DHCP, AD) |
-| Catalyst Switch | 9300 — IOS-XE 17.06.01 with EWC |
-| Router | ISR 4451 — IOS-XE 17.06.01a |
+| Virtual Router | Catalyst 8000v — IOS-XE 17.06.01a |
+| Virtual Switch | Catalyst 9300v — IOS-XE 17.12.01 |
 
 ### Resources
 
-**Path:** [Support/Resources/](Support/Resources/)
+**Path:** [Support/Resources/](Support/Resources/README.md)
 
 The Resources folder is the complete automation implementation suite. It contains three parallel tooling paths, a shared CML lab environment, reference documentation, and supporting imagery.
 
@@ -209,12 +240,51 @@ The Resources folder is the complete automation implementation suite. It contain
 
 | Folder | Tooling | Contents |
 |--------|---------|---------|
-| [Ansible/](Support/Resources/Ansible/) | Ansible playbooks | 9 ordered playbooks covering the full provisioning lifecycle |
-| [Cisco Workflows/](Support/Resources/Cisco%20Workflows/) | Cisco Workflow JSON | 7 GitOps workflows importable into Catalyst Center Workflow Manager |
-| [Python/](Support/Resources/Python/) | Python REST scripts | 11 numbered scripts mirroring the Ansible operations with raw API calls |
-| [CML/](Support/Resources/CML/) | CML topology and configs | EVPN campus topology files, startup configs, and normalization script |
+| [Ansible/](Support/Resources/Ansible/README.md) | Ansible playbooks | 10 ordered playbooks covering the full provisioning lifecycle plus config backup |
+| [Cisco Workflows/](Support/Resources/Cisco%20Workflows/README.md) | Cisco Workflow JSON | 7 GitOps workflows importable into Catalyst Center Workflow Manager |
+| [Python/](Support/Resources/Python/README.md) | Python REST scripts | 12 numbered scripts mirroring the Ansible operations with raw API calls |
+| [CML/](Support/Resources/CML/README.md) | CML topology and configs | EVPN campus topology files, startup configs, and normalization script |
 | [Docs/](Support/Resources/Docs/) | Reference documentation | Session reference materials |
-| [images/](Support/Resources/images/) | Diagrams | CML topology and workflow diagrams |
+| [images/](Support/Resources/images/) | Diagrams | CML topology and DevOps periodic table |
+
+#### Ansible Playbooks
+
+| # | Playbook | Catalyst Center Outcome |
+|---|----------|------------------------|
+| 1.0 | [Site Hierarchy](Support/Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) | Areas, Buildings, and Floors created in correct parent-before-child order |
+| 2.0 | [Settings](Support/Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings/README.md) | DNS, NTP, Syslog, SNMP, AAA, and banner applied per site |
+| 3.0 | [Credentials](Support/Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials/README.md) | CLI, SNMP v2c R/W, and NETCONF global credentials created and assigned |
+| 4.0 | [Device Discovery](Support/Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) | Devices discovered and added to inventory |
+| 5.0 | [Assign To Site](Support/Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) | Devices placed under their designated site in the hierarchy |
+| 6.0 | [Templates GitHub](Support/Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) | Jinja2 and composite templates synced from GitHub into the Template Hub |
+| 7.0 | [Network Profile](Support/Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) | Switching Network Profile created and bound to sites with Day-N templates |
+| 8.0 | [Provision Devices](Support/Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) | Devices provisioned to site; idempotent skip for already-provisioned devices |
+| 9.0 | [Provision Composite](Support/Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) | Composite Day-N templates deployed with async task verification |
+| 10.0 | [Backup My Configs](Support/Resources/Ansible/10.0-Backup-My-Configs/README.md) | Running configurations archived from Catalyst Center–managed devices |
+
+#### Cisco Workflows
+
+| # | Workflow | Catalyst Center Outcome |
+|---|----------|------------------------|
+| 1.0 | [Build Hierarchy](Support/Resources/Cisco%20Workflows/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) | Areas, Buildings, and Floors created from GitHub settings |
+| 2.0 | [Settings & Credentials](Support/Resources/Cisco%20Workflows/2.0-Cisco-Catalyst-Center-Settings-and-Credentials/README.md) | Network settings and credentials applied per site |
+| 3.0 | [Discovery & Assign](Support/Resources/Cisco%20Workflows/3.0-Cisco-Catalyst-Center-Device-Discovery-and-Assign/README.md) | Discovery jobs executed and devices assigned to sites |
+| 4.0 | [Templates GitHub](Support/Resources/Cisco%20Workflows/4.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) | Day-N Jinja2 templates synchronized from GitHub into Template Hub |
+| 5.0 | [Composite Templates](Support/Resources/Cisco%20Workflows/5.0-Cisco-Catalyst-Center-Templates-Composite/README.md) | Composite template built, assembled, and committed |
+| 6.0 | [Network Profile](Support/Resources/Cisco%20Workflows/6.0-Cisco-Catalyst-Center-Network-Profile/README.md) | Switching profile created and bound to sites with template IDs |
+| 7.0 | [Provision Composite](Support/Resources/Cisco%20Workflows/7.0-Cisco-Catalyst-Center-Provision-Composite/README.md) | Devices provisioned via SDA and composite template deployed |
+
+#### Python Scripts
+
+12 numbered REST API reference scripts in [Support/Resources/Python/](Support/Resources/Python/README.md), mirroring the Ansible playbooks step-for-step (`1.0 site_hierarchy.py` through `8.0 deploy_composite.py`, plus authentication and template helpers under `6.x`). Shared HTTP, auth, and task-polling logic lives in `common/helpers.py`.
+
+#### CML Lab Topology
+
+<p align="center">
+  <img src="Support/Resources/images/cml_v2_topology.png" alt="CML EVPN Campus Topology" width="75%">
+</p>
+
+A pre-built EVPN campus fabric (spine, leaf, border, core, firewall, DHCP, DMZ) shipped under [Support/Resources/CML/](Support/Resources/CML/README.md) for safe automation practice without DCLOUD.
 
 ---
 
@@ -236,7 +306,8 @@ The Resources folder is the complete automation implementation suite. It contain
 | Already use Ansible and want CI/CD integration | [Ansible suite](Support/Resources/Ansible/README.md) |
 | Prefer GUI-driven, platform-native automation | [Cisco Workflows](Support/Resources/Cisco%20Workflows/README.md) |
 | Want to learn the raw API or debug issues | [Python scripts](Support/Resources/Python/README.md) |
-| Are new to the project and want a learning path | [CML lab](Support/Resources/CML/README.md) → Python → Ansible → Workflows |
+| Are new to the project and want guided learning | [Labs](Support/Labs/README.md) → Resources |
+| Need a safe lab environment to test against | [CML lab](Support/Resources/CML/README.md) |
 
 ### Selecting a Project
 
@@ -270,7 +341,7 @@ Each tooling path implements this sequence using its own execution model. See th
 
 ## Lab Environment
 
-For teams without a production Catalyst Center instance, the [CML resources](Support/Resources/CML/) provide a complete virtualized EVPN campus fabric for safe automation practice.
+For teams without a production Catalyst Center instance, the [CML resources](Support/Resources/CML/README.md) provide a complete virtualized EVPN campus fabric for safe automation practice.
 
 The CML lab provides:
 
