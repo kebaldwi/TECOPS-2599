@@ -8,7 +8,7 @@ The workflow is part of the GitOps provisioning suite and **must run first** in 
 
 The workflow follows a simple GitOps pattern: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match.
 
-<img src="../../images/workflows/hierarchy/settingsJson.png" alt="Cisco Workflows Canvas" style="width:100%; height:auto;">
+<img src="../../images/common/gitops/settingsJson.png" alt="Cisco Workflows Canvas" style="width:100%; height:auto;">
 
 ### High-level Steps
 
@@ -35,7 +35,7 @@ Each level (Parent → Area → Building → Floor) is checked with a `Find Stri
 
 1. From the Meraki / Cisco Workflows dashboard, navigate to **Workflows** in the sidebar.
 
-   <img src="../../images/workflows/hierarchy/gitops-workflows.png" alt="Cisco Workflows" style="width:100%; height:auto;">
+   <img src="../../images/common/gitops/gitops-workflows.png" alt="Cisco Workflows" style="width:100%; height:auto;">
 
 2. Locate **`GitOps-BuildHierarchy-v3`** in the workflow list and click to open it.
 3. Review the canvas — you should see the six high-level activities listed above. Click any activity to inspect its **Properties** (input/output mapping, JSONPath queries, target accounts).
@@ -90,21 +90,21 @@ A successful run reports each hierarchy record processed, with totals for create
 
 1. Open a browser and navigate to [**Catalyst Center**](https://198.18.129.100). If an SSL warning is displayed, click **Proceed to `https://198.18.129.100` (unsafe)** to continue.
 
-   ![SSL Error](../../images/workflows/hierarchy/catc-SSLERROR.png?raw=true)
+   ![SSL Error](../../images/common/platform/catc-SSLERROR.png?raw=true)
 
 2. Log in with:
     - **username:** `admin`
     - **password:** `C1sco12345`
 
-   ![Login](../../images/workflows/hierarchy/catc-Login.png?raw=true)
+   ![Login](../../images/common/platform/catc-Login.png?raw=true)
 
 3. When the Catalyst Center Dashboard is displayed, click the **&#8801;** icon to display the menu.
 
-   ![Hamburger](../../images/workflows/hierarchy/catc-Menu.png?raw=true)
+   ![Hamburger](../../images/common/platform/catc-Menu.png?raw=true)
 
 4. Select **Design → Network Hierarchy** from the menu to continue.
 
-   ![Menu](../../images/workflows/hierarchy/catc-Menu-Hierarchy.png?raw=true)
+   ![Menu](../../images/common/platform/catc-Menu-Hierarchy.png?raw=true)
 
 5. Expand the hierarchy on the left and confirm that the Area / Building / Floor entries from `settings.json` are present.
 

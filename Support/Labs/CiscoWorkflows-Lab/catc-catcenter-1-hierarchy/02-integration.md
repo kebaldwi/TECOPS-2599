@@ -13,17 +13,17 @@ PxGrid integration allows configuration automation by Catalyst Center within ISE
    * username: `admin`
    * password: `C1sco12345`
 
-   ![ISE Dashboard](../../images/workflows/hierarchy/ise-dashboard.png?raw=true)
+   ![ISE Dashboard](../../images/common/ise/ise-dashboard.png?raw=true)
 
 2. From the system menu under Administration, select PxGrid Settings
 
-   ![ISE Menu](../../images/workflows/hierarchy/ise-menu.png?raw=true)
+   ![ISE Menu](../../images/common/ise/ise-menu.png?raw=true)
 
 3. On the PxGrid Settings page, verify both options have been selected and saved to allow for Catalyst Center to integration.
 
-   ![ISE PxGrid](../../images/workflows/hierarchy/ise-pxgrid-settings.png?raw=true)
+   ![ISE PxGrid](../../images/common/ise/ise-pxgrid-settings.png?raw=true)
    
-   ![ISE PxGrid](../../images/workflows/hierarchy/ise-pxgrid-setup.png?raw=true)
+   ![ISE PxGrid](../../images/common/ise/ise-pxgrid-setup.png?raw=true)
 
 ## Step 2: Verify Catalyst Center and ISE Integration
 
@@ -32,15 +32,15 @@ PxGrid integration allows configuration automation by Catalyst Center within ISE
    * username: `admin`
    * password: `C1sco12345`
 
-   ![Catalyst Center Settings](../../images/workflows/hierarchy/catc-system-settings.png?raw=true)
+   ![Catalyst Center Settings](../../images/common/platform/catc-system-settings.png?raw=true)
 
 2. Within the System Settings page, navigate down the list on the left and select the Authentication and Policy Server section.
 
-   ![Catalyst Center AAA Settings](../../images/workflows/hierarchy/catc-system-settings-aaa.png?raw=true)
+   ![Catalyst Center AAA Settings](../../images/common/platform/catc-system-settings-aaa.png?raw=true)
 
 3. On the page, you will see the ISE node integrated with Catalyst Center as shown below.
 
-   ![Catalyst Center ISE Integrated](../../images/workflows/hierarchy/catc-system-settings-aaa-ise-complete.png?raw=true)
+   ![Catalyst Center ISE Integrated](../../images/common/platform/catc-system-settings-aaa-ise-complete.png?raw=true)
 
 > [**Next Section**](./03-deploy.md)
 

@@ -8,7 +8,7 @@ This workflow is the **second** in the GitOps provisioning suite and depends on 
 
 The workflow follows the same GitOps pattern as the hierarchy build: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match — but instead of creating sites, it applies **network settings** (DNS, DHCP, NTP, AAA, SNMP, Syslog, Netflow, Timezone, MOTD) and **device credentials** (CLI, SNMP v2c read/write, NETCONF) per site.
 
-<img src="../../images/workflows/settings/settingsJson.png" alt="settings.json structure" style="width:100%; height:auto;">
+<img src="../../images/common/gitops/settingsJson.png" alt="settings.json structure" style="width:100%; height:auto;">
 
 ### High-level Steps
 
@@ -35,18 +35,16 @@ Before any credential is created, the workflow queries `GET /dna/intent/api/v1/g
 
 1. From the Cisco Workflows dashboard, navigate to **Workflows** in the sidebar.
 
-   <img src="../../images/workflows/settings/gitops-workflows.png" alt="Cisco Workflows" style="width:100%; height:auto;">
+   <img src="../../images/common/gitops/gitops-workflows.png" alt="Cisco Workflows" style="width:100%; height:auto;">
 
 2. Locate **`GitOps-BuildSettings-v3`** in the workflow list and click to open it.
 3. Review the canvas — you should see the six high-level activities listed above. Click any activity to inspect its **Properties** (input/output mapping, JSONPath queries, target accounts).
 
-   <img src="../../images/workflows/settings/buildsettings-workflow-v2.png" alt="BuildSettings workflow canvas" style="width:100%; height:auto;">
+   <img src="../../images/workflows/settings/BuildSettings-workflow.png" alt="BuildSettings workflow canvas" style="width:100%; height:auto;">
 
 4. In the **Properties** panel of the workflow itself, confirm that the configured **Targets** include both:
     - **GitHub Target** (`api.github.com`) — set up in the orientation module
     - **Catalyst Center Target** (`https://198.18.129.100`) — set up in the orientation module
-
-      <img src="../../images/workflows/settings/buildsettings-workflow-targets.png" alt="BuildSettings workflow targets" style="width:100%; height:auto;">
 
    - That matches
 
@@ -57,7 +55,7 @@ Before any credential is created, the workflow queries `GET /dna/intent/api/v1/g
 1. Click **Run** on the workflow. The input form opens.
 2. Fill in (or accept the defaults for) the following parameters:
 
-   <img src="../../images/workflows/settings/buildsettings-workflow-runner.png" alt="BuildSettings workflow runner" style="width:100%; height:auto;">
+   <img src="../../images/workflows/settings/BuildSettings-runner.png" alt="BuildSettings workflow runner" style="width:100%; height:auto;">
 
    | Parameter                | Value for this Lab           |
    |--------------------------|------------------------------|
@@ -75,7 +73,7 @@ Before any credential is created, the workflow queries `GET /dna/intent/api/v1/g
 1. Open **More Actions → View Runs** for the workflow.
 2. Click the most recent run to expand the **Execution Details** view.
 
-   <img src="../../images/workflows/settings/buildsettings-workflow-monitor.png" alt="BuildSettings execution details" style="width:100%; height:auto;">
+   <img src="../../images/workflows/settings/BuildSettings-monitoring.png" alt="BuildSettings execution details" style="width:100%; height:auto;">
 
 3. Step through each activity and inspect its **Input** and **Output**:
     - **Step 1** — confirms a list of files was returned from the GitHub directory.
@@ -91,33 +89,33 @@ A successful run reports each hierarchy row processed, with totals for created /
 
 1. Open a browser and navigate to [**Catalyst Center**](https://198.18.129.100). If an SSL warning is displayed, click **Proceed to `https://198.18.129.100` (unsafe)** to continue.
 
-   ![SSL Error](./assets/catc-SSLERROR.png?raw=true)
+   ![SSL Error](../../images/common/platform/catc-SSLERROR.png?raw=true)
 
 2. Log in with:
     - **username:** `admin`
     - **password:** `C1sco12345`
 
-   ![Login](./assets/catc-Login.png?raw=true)
+   ![Login](../../images/common/platform/catc-Login.png?raw=true)
 
 3. When the Catalyst Center Dashboard is displayed, click the **&#8801;** icon to display the menu.
 
-   ![Hamburger](./assets/catc-Menu.png?raw=true)
+   ![Hamburger](../../images/common/platform/catc-Menu.png?raw=true)
 
 4. Select **Design → Network Settings** from the menu to continue.
 
-   ![Network Settings](./assets/catc-Menu-Settings.png?raw=true)
+   ![Network Settings](../../images/workflows/settings/catc-Menu-Settings.png?raw=true)
 
 5. Expand the hierarchy on the left, select your `Area` (or specific Building/Floor), and scroll through the **Network** tab to confirm DNS, DHCP, NTP, SNMP, Syslog, Netflow, Timezone, MOTD, and AAA values match `settings.json`.
 
-   ![Verify Settings](./assets/catc-Settings-Verify1.gif?raw=true)
+   ![Verify Settings](../../images/workflows/settings/catc-Settings-Verify1.gif?raw=true)
 
 6. Open the **Device Credentials** tab and confirm CLI, SNMP v2c read/write, and NETCONF entries match the `device_credentials` section of `settings.json` and are assigned to the selected site.
 
-   ![Verify Credentials](./assets/catc-Settings-Verify2.png?raw=true)
+   ![Verify Credentials](../../images/workflows/settings/catc-Settings-Verify2.png?raw=true)
 
 7. Open the **Telemetry** tab and confirm Syslog, SNMP, and Netflow collectors are configured as expected.
 
-   ![Verify Telemetry](./assets/catc-Settings-Verify3.gif?raw=true)
+   ![Verify Telemetry](../../images/workflows/settings/catc-Settings-Verify3.gif?raw=true)
 
 ## Summary
 

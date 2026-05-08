@@ -30,7 +30,7 @@ The workflow we will run in this module — `GitOps-BuildSettings-v3` — is a g
 | **1. List** | Lists all files in a GitHub directory (`Get-GitHub-Directory-v2`) |
 | **2. Match** | Filters down to the target `settings.json` file |
 | **3. Read** | Pulls the raw contents of `settings.json` (`Get-GitHub-File-v2`) |
-| **4. Parse** | Converts the JSON array into hierarchy rows (Parent / Area / Building / Floor) and extracts up to 35 settings/credential fields per row |
+| **4. Parse** | Converts the JSON array into hierarchy rows (Parent / Area / Building / Floor)</br> and extracts up to 35 settings/credential fields per row |
 | **5. Apply** | For each row, `CATC-AssignSettings-v2`:<br>• Applies network settings — `POST /dna/intent/api/v1/network/{siteId}`<br>• Checks credentials — `GET /dna/intent/api/v1/global-credential`<br>• Creates credentials — `POST /dna/intent/api/v1/global-credential`<br>• Assigns credentials — `POST /dna/intent/api/v2/site/{siteId}/credential` |
 | **6. Verify** | Resultant settings and credentials reflected in the workflow output |
 
@@ -83,7 +83,7 @@ For this lab, the file lives at `Projects/BGP_EVPN/Settings/settings.json` in th
 ## What You Will Do in This Module
 
 1. Open the **Cisco Workflows** dashboard and locate the `GitOps-BuildSettings-v3` workflow.
-2. Review the input parameters (`GITHUB-OWNER`, `GITHUB-REPO`, `GITHUB-PATH`, `GITHUB-FILE`, `FORCE Update`, `TemplateHubProjectName`).
+2. Review the input parameters:</br> (`GITHUB-OWNER`, `GITHUB-REPO`, `GITHUB-PATH`, `GITHUB-FILE`, `FORCE Update`, `TemplateHubProjectName`).
 3. Run the workflow and observe each step from the **View Runs** panel.
 4. Verify that **Network Settings**, **Device Credentials**, and **Telemetry** were applied correctly in Catalyst Center under **Design → Network Settings**.
 
