@@ -1,82 +1,82 @@
-# Settings and Credentials Deployment
+# Run the Settings and Credentials Playbooks
 
-At this point, we have reviewed the settings within the environment and ensured we will be targeting the correct hierarchy. We are ready to continue pushing the settings and credentials to our newly created hierarchy.
+This section runs both playbooks (2.0 then 3.0) and walks through the verification screens.
 
-We will now `assign` the settings, credentials, and telemetry settings using the CSV variables provided in the previous step.
+> All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
 
-Follow these steps:
+## Part A — Network Settings (2.0)
 
-## Open the Collection Runner
+### Step 1 — Encrypt the Vault
 
-Navigate and open the desired collection runner through the following:
+```bash
+cd ~/TECOPS-2599/Support/Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings
+cp vault.yml.example vault.yml
+ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+```
 
-   1. Within Postman, click on the collection shortcut in the sidebar
-   2. Hover over the collection `Catalyst Center API LAB 101 - Assign Settings Creds`
-   3. Click the `Run Collection` submenu option
+### Step 2 — Run the Playbook
 
-      ![Open Run Collection](./assets/Postman-Collection-Settings.png?raw=true)
+```bash
+ansible-playbook -i inventory.yml network_settings.yml \
+    --vault-password-file ~/.vault_pass
+```
 
-## Run the Collection
+Expect tasks for *Authenticate*, *Resolve site UUIDs*, *Build settings payload*, *PUT settings per site*, and *Poll execution status*. The recap should report `failed=0`.
 
-To run the collection, do the following:
+### Step 3 — Verify in Catalyst Center
 
-   1. Ensure all the sub-components of the `Runner` are selected
-   2. On the right under data, click *select* 
-   3. Browse and select the CSV using explorer
-   4. Click Open to select the file to be used
+1. Open Catalyst Center → click the **&#8801;** menu → **Design → Network Settings**.
 
-      ![Select File](./assets/Postman-Collection-Settings-Run-CSV.png?raw=true)
+   ![Settings Menu](../../images/ansible/settings/catc-Menu-Settings.png?raw=true)
 
-   5. Click  the `Run Catalyst Center API LAB 101 - Assign Settings Creds` button
+2. Confirm DNS/NTP/Syslog/SNMP entries match `settings.json`.
 
-      ![Run the Collection](./assets/Postman-Collection-Settings-Runner.png?raw=true)
+   ![Settings Verify 1](../../images/ansible/settings/catc-Settings-Verify1a.png?raw=true)
 
-3. The following summary will slowly appear as the collection is processed
+   ![Settings Verify 1b](../../images/ansible/settings/catc-Settings-Verify1b.png?raw=true)
 
-   ![Results](./assets/Postman-Collection-Settings-Summary.png?raw=true)
+3. Switch to **Telemetry** and confirm the SNMP / Syslog server bindings.
 
-## Verifying Settings and Credentials
+   ![Settings Verify 2](../../images/ansible/settings/catc-Settings-Verify2.png?raw=true)
 
-To verify that the settings were assigned successfully, we will inspect the site within Catalyst Center.
+4. Switch to **Device Controllability / AAA** and confirm the AAA server entry.
 
-Follow these steps:
+   ![Settings Verify 3a](../../images/ansible/settings/catc-Settings-Verify3a.png?raw=true)
 
-1. Open a browser and navigate to [**Catalyst Center**](https://198.18.129.100), where an SSL Error is displayed as depicted. Click the **Proceed to `https://192.18.129.100` (unsafe)** link to continue
+   ![Settings Verify 3b](../../images/ansible/settings/catc-Settings-Verify3b.png?raw=true)
 
-   ![SSL Error](./assets/catc-SSLERROR.png?raw=true)
+## Part B — Device Credentials (3.0)
 
-2. Log into Catalyst Center using 
+### Step 4 — Encrypt the Vault
 
-   * username: `admin`
-   * password: `C1sco12345`
+```bash
+cd ~/TECOPS-2599/Support/Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials
+cp vault.yml.example vault.yml
+ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+```
 
-   ![Login](./assets/catc-Login.png?raw=true)
+### Step 5 — Run the Playbook
 
-3. When the Catalyst Center Dashboard is displayed, Click the **&#8801;** icon to display the menu'
+```bash
+ansible-playbook -i inventory.yml credentials.yml \
+    --vault-password-file ~/.vault_pass
+```
 
-   ![Hamburger](./assets/catc-Menu.png?raw=true)
+This run takes longer than 2.0 because it walks three credential types and assigns them to every site touched by `assign_credentials`. The Workflow Manager module batches its calls, so most tasks report `changed=true` once and `changed=false` on every subsequent run.
 
-4. Select `Design>Network Settings` from the menu to continue.
-   
-   ![Network Settings](./assets/catc-Menu-Settings.png?raw=true)
+### Step 6 — Verify in Catalyst Center
 
-5. Expand the Hierarchy on the left to show all specific `Area` select it and scroll through the settings.
+In **Design → Network Settings → Device Credentials** you should see:
 
-   ![Verify Settings](./assets/catc-Settings-Verify1.gif?raw=true)
+* CLI Credentials — one or more rows matching the `name` values in `device_credentials`.
+* SNMPv2c Read and Write rows.
+* NETCONF row with the configured port (830 by default).
 
-5. Expand the Hierarchy on the left to show all specific `Area` select it and scroll through the credentials.
-
-   ![Verify Credentials](./assets/catc-Settings-Verify2.png?raw=true)
-
-5. Expand the Hierarchy on the left to show all specific `Area` select it and scroll through the telemetry settings.
-
-   ![Verify Telemetry](./assets/catc-Settings-Verify3.gif?raw=true)
+Each site in the hierarchy should now show the assigned credentials in its detail panel.
 
 ## Summary
 
-At this point, we have assigned settings, credentials, and telemetry settings to the Hierarchy utilizing environment variables and REST-API's within the collection runner. 
-
-> **Note**: If there is time, look at the results of the Credentials and Telemetry tabs with Catalyst Center and the various pre and post-scripts within Postman.
+You have completed the **design** phase of Catalyst Center. Sites have settings and credentials. Catalyst Center now has everything it needs to log in to a real device — which is exactly what we do in the next module.
 
 > [**Next Module**](../catc-catcenter-3-discovery/01-intro.md)
 

@@ -1,39 +1,46 @@
 {
-   "items":[
-      {
-         "title":"Introduction",
-         "content":"01-intro.md"
-      },
-      {
-         "title":"Retrieving Device Inventory",
-         "content":"02-deploy.md"
-      }
-   ],
+	"items": [
+		{
+			"title": "Provisioning Devices",
+			"content": "01-intro.md"
+		},
+		{
+			"title": "Run the Provision and Composite Deploy Playbooks",
+			"content": "02-deploy.md"
+		}
+	],
 	"meta": {
-		"code_name": "dntd-catcenter-6-inventory",
+		"code_name": "catc-catcenter-6-provisioning",
 		"tags": [
 			{
 				"title": "Cisco Catalyst Center"
+			},
+			{
+				"title": "Ansible"
 			}
 		],
-		"time": "15",
+		"time": "25",
 		"poweredBy": "",
 		"authors": [
 			{
 				"name": "Keith Baldwin",
 				"email": "kebaldwie@cisco.com"
+			},
+			{
+				"name": "Igor Manassypov",
+				"email": "imanassy@cisco.com"
 			}
 		],
-		"slug": "Get Started Cisco Catalyst Center Platform",
+		"slug": "catc-catcenter-6-provisioning",
 		"moduleOnly": false,
 		"hasResources": false,
 		"byod": true,
 		"access": "public"
 	},
 	"config": {
-		"id": "dntd-catcenter-6-inventory",
+		"id": "catc-catcenter-6-provisioning",
 		"devEnv": {},
 		"sandbox": {},
 		"video": {}
 	}
- }
+}
