@@ -1,7 +1,5 @@
 # TECOPS-2599 Labs
 
-<img src="./images/workflows/readme/VISION.png" alt="Automation & Orchestration Vision" style="width:100%; height:auto;">
-
 ## Overview
 
 This section of the repository contains hands-on labs that walk you through automating and orchestrating **Cisco Catalyst Center** end-to-end from a single source of truth in GitHub. Each lab follows the same GitOps pattern: structured intent (`settings.json` and Jinja2 templates) is read from a Git repository, parsed, and applied to Catalyst Center via the Intent API — first to build the design, then to discover, then to deploy templates, build network profiles, and finally to provision devices.
@@ -63,7 +61,7 @@ The labs run on top of the Cisco DCLOUD demo **Catalyst Center + ISE Lab for Aut
 DCLOUD allows access via web-based VPN-less browser client or via the Cisco AnyConnect VPN client. Sessions are hosted out of the Cisco San Jose and RTP facilities — choose the US East or US West region when scheduling. Adhere to DCLOUD best practices when using the environment.
 
 > [!TIP]
-> Before starting any module, walk through the [**DCLOUD Lab Preparation**](./DCLOUD.md) guide. It is the single source of truth for the topology, IP plan, credentials, VPN setup, and required client tools (AnyConnect, Postman, Google Chrome). Do not duplicate those values into the lab modules — link to DCLOUD.md instead.
+> Before starting any module, walk through the [**DCLOUD Lab Preparation**](./DCLOUD.md) guide. It is the single source of truth for the topology, IP plan, credentials, VPN setup, and required client tools (AnyConnect, Google Chrome). Do not duplicate those values into the lab modules — link to DCLOUD.md instead.
 
 ## Disclaimer
 

@@ -1,16 +1,16 @@
 {
-   "items":[
-      {
-         "title":"Introduction",
-         "content":"01-intro.md"
-      },
-      {
-         "title":"Template Deployment",
-         "content":"02-deploy.md"
-      }
-   ],
+	"items": [
+		{
+			"title": "Importing Templates and Building Composites",
+			"content": "01-intro.md"
+		},
+		{
+			"title": "Examine and Run the Templates Workflows",
+			"content": "02-deploy.md"
+		}
+	],
 	"meta": {
-		"code_name": "dntd-catcenter-4-templates",
+		"code_name": "catc-catcenter-4-templates",
 		"tags": [
 			{
 				"title": "Cisco Catalyst Center"
@@ -22,18 +22,22 @@
 			{
 				"name": "Keith Baldwin",
 				"email": "kebaldwie@cisco.com"
+			},
+			{
+				"name": "Igor Manassypov",
+				"email": "imanassy@cisco.com"
 			}
 		],
-		"slug": "Get Started Cisco Catalyst Center Platform",
+		"slug": "catc-catcenter-4-templates",
 		"moduleOnly": false,
 		"hasResources": false,
 		"byod": true,
 		"access": "public"
 	},
 	"config": {
-		"id": "dntd-catcenter-4-templates",
+		"id": "catc-catcenter-4-templates",
 		"devEnv": {},
 		"sandbox": {},
 		"video": {}
 	}
- }
+}

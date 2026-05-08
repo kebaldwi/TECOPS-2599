@@ -1,16 +1,16 @@
 {
-   "items":[
-      {
-         "title":"Introduction",
-         "content":"01-intro.md"
-      },
-      {
-         "title":"Settings Deployment",
-         "content":"02-deploy.md"
-      }
-   ],
+	"items": [
+		{
+			"title": "Assigning Settings and Credentials",
+			"content": "01-intro.md"
+		},
+		{
+			"title": "Examine and Run Build Settings Workflow",
+			"content": "02-deploy.md"
+		}
+	],
 	"meta": {
-		"code_name": "dntd-catcenter-2-settings",
+		"code_name": "catc-catcenter-2-settings",
 		"tags": [
 			{
 				"title": "Cisco Catalyst Center"
@@ -22,18 +22,22 @@
 			{
 				"name": "Keith Baldwin",
 				"email": "kebaldwie@cisco.com"
+			},
+			{
+				"name": "Igor Manassypov",
+				"email": "imanassy@cisco.com"
 			}
 		],
-		"slug": "Get Started Cisco Catalyst Center Platform",
+		"slug": "catc-catcenter-2-settings",
 		"moduleOnly": false,
 		"hasResources": false,
 		"byod": true,
 		"access": "public"
 	},
 	"config": {
-		"id": "dntd-catcenter-2-settings",
+		"id": "catc-catcenter-2-settings",
 		"devEnv": {},
 		"sandbox": {},
 		"video": {}
 	}
- }
+}
