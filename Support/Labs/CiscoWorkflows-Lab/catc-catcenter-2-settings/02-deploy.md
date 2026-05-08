@@ -18,7 +18,7 @@ The workflow follows the same GitOps pattern as the hierarchy build: read struct
 | 2 | **Match target file** | JSONPath filters the listing for the file matching `GITHUB-FILE` |
 | 3 | **Read `settings.json`** | `Get-GitHub-File-v2` → raw JSON pulled with `Accept: application/vnd.github.raw+json` |
 | 4 | **Parse hierarchy table** | JSONPath + Read Table → one row per Parent / Area / Building / Floor; null values sanitised to `""` before per-row queries |
-| 5 | **Apply per row** | `CATC-AssignSettings-v2` issues, in order: `POST /dna/intent/api/v1/network/{siteId}` (network settings), `GET /dna/intent/api/v1/global-credential` (existing creds), `POST /dna/intent/api/v1/global-credential` (create missing creds), `POST /dna/intent/api/v2/site/{siteId}/credential` (assign creds to site) |
+| 5 | **Apply per row** | `CATC-AssignSettings-v2` issues, in order:<br>• `POST /dna/intent/api/v1/network/{siteId}` (network settings)<br>• `GET /dna/intent/api/v1/global-credential` (existing creds)<br>• `POST /dna/intent/api/v1/global-credential` (create missing creds)<br>• `POST /dna/intent/api/v2/site/{siteId}/credential` (assign creds to site) |
 | 6 | **Return result** | Resultant settings and credential assignments returned in workflow output |
 
 The full decision and loop structure (including the sub-flow that extracts 35 fields per row and the API invocation sequence) is shown below:
@@ -80,7 +80,7 @@ Before any credential is created, the workflow queries `GET /dna/intent/api/v1/g
     - **Step 2** — confirms `settings.json` matched and the loop proceeded.
     - **Step 3** — shows the raw `settings.json` contents.
     - **Step 4** — shows the parsed table of hierarchy rows and the 35 fields extracted for the current row.
-    - **Step 5** — shows, per row: the `POST /dna/intent/api/v1/network/{siteId}` request body and response, the `GET /dna/intent/api/v1/global-credential` snapshot, any `POST /dna/intent/api/v1/global-credential` creates, and the final `POST /dna/intent/api/v2/site/{siteId}/credential` assignment.
+    - **Step 5** — shows, per row:<br>• the `POST /dna/intent/api/v1/network/{siteId}` request body and response<br>• the `GET /dna/intent/api/v1/global-credential` snapshot<br>• any `POST /dna/intent/api/v1/global-credential` creates<br>• and the final `POST /dna/intent/api/v2/site/{siteId}/credential` assignment.
     - **Step 6** — workflow output reflects the resultant settings and credential assignments.
 
 A successful run reports each hierarchy row processed, with totals for created / skipped / errors at the end.
