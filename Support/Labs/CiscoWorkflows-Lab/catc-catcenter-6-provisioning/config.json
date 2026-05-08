@@ -5,12 +5,12 @@
          "content":"01-intro.md"
       },
       {
-         "title":"Retrieving Device Inventory",
+         "title":"Provisioning Deployment",
          "content":"02-deploy.md"
       }
    ],
 	"meta": {
-		"code_name": "dntd-catcenter-6-inventory",
+		"code_name": "dntd-catcenter-6-provisioning",
 		"tags": [
 			{
 				"title": "Cisco Catalyst Center"
@@ -31,7 +31,7 @@
 		"access": "public"
 	},
 	"config": {
-		"id": "dntd-catcenter-6-inventory",
+		"id": "dntd-catcenter-6-provisioning",
 		"devEnv": {},
 		"sandbox": {},
 		"video": {}
