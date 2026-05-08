@@ -1,28 +1,20 @@
 {
    "items":[
       {
-         "title":"Introduction",
+         "title":"Building Hierarchy",
          "content":"01-intro.md"
       },
       {
-         "title":"ISE Integration",
+         "title":"Review ISE Integration",
          "content":"02-integration.md"
       },
       {
-       "title":"Postman & External Data",
-       "content":"03-postman.md"
-      },
-      {
-       "title":"Collection",
-       "content":"04-collection.md"
-      },
-      {
-         "title":"Hierarchy Deployment",
-         "content":"05-deploy.md"
+         "title":"Examine and Run Build Hierarchy Workflow",
+         "content":"03-deploy.md"
       }
    ],
 	"meta": {
-		"code_name": "dntd-catcenter-1-hierarchy",
+		"code_name": "catc-catcenter-1-hierarchy",
 		"tags": [
 			{
 				"title": "Cisco Catalyst Center"
@@ -34,16 +26,20 @@
 			{
 				"name": "Keith Baldwin",
 				"email": "kebaldwie@cisco.com"
+			},
+			{
+				"name": "Igor Manassypov",
+				"email": "imanassy@cisco.com"
 			}
 		],
-		"slug": "Get Started Cisco Catalyst Center Platform",
+		"slug": "catc-catcenter-1-hierarchy",
 		"moduleOnly": false,
 		"hasResources": false,
 		"byod": true,
 		"access": "public"
 	},
 	"config": {
-		"id": "dntd-catcenter-1-hierarchy",
+		"id": "catc-catcenter-1-hierarchy",
 		"devEnv": {},
 		"sandbox": {},
 		"video": {}

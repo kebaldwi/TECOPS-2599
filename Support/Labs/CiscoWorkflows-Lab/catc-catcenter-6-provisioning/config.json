@@ -1,16 +1,16 @@
 {
-   "items":[
-      {
-         "title":"Introduction",
-         "content":"01-intro.md"
-      },
-      {
-         "title":"Provisioning Deployment",
-         "content":"02-deploy.md"
-      }
-   ],
+	"items": [
+		{
+			"title": "Provisioning Devices and Deploying the Composite",
+			"content": "01-intro.md"
+		},
+		{
+			"title": "Examine and Run the Device Provisioning Workflow",
+			"content": "02-deploy.md"
+		}
+	],
 	"meta": {
-		"code_name": "dntd-catcenter-6-provisioning",
+		"code_name": "catc-catcenter-6-provisioning",
 		"tags": [
 			{
 				"title": "Cisco Catalyst Center"
@@ -22,18 +22,22 @@
 			{
 				"name": "Keith Baldwin",
 				"email": "kebaldwie@cisco.com"
+			},
+			{
+				"name": "Igor Manassypov",
+				"email": "imanassy@cisco.com"
 			}
 		],
-		"slug": "Get Started Cisco Catalyst Center Platform",
+		"slug": "catc-catcenter-6-provisioning",
 		"moduleOnly": false,
 		"hasResources": false,
 		"byod": true,
 		"access": "public"
 	},
 	"config": {
-		"id": "dntd-catcenter-6-provisioning",
+		"id": "catc-catcenter-6-provisioning",
 		"devEnv": {},
 		"sandbox": {},
 		"video": {}
 	}
- }
+}

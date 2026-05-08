@@ -39,7 +39,7 @@ If you can use Microsoft Visio, you can use Workflows.
 
 In this lab, we will use a complete set of Cisco Workflows which use REST API requests to automate and orchestrate network devices through Catalyst Center. This lab will focus on Catalyst Center orchestrations to build intent and templates to drive configuration.
 
-This set of Labs is developed around a set of simple use cases to show both the power of Catalyst Center, the REST APIs, and easy methodologies for execution through Postman.
+This set of Labs is developed around a set of simple use cases to show both the power of Catalyst Center, the REST APIs, and easy methodologies for execution through Cisco Workflows.
 
 The lab will utilize a set of Cisco Workflows publicly shared on Cisco Workflows Exchange and those workflows may be installed and customized for your own use.
 
@@ -52,7 +52,7 @@ The Story we will use will be the following, after orientation, we will first co
 
 The use cases we will cover are the following which you can access via the links below:
 
-1. [**Postman Orientation**](./catc-catcenter-0-orientation/01-intro.md)
+1. [**Orientation**](./catc-catcenter-0-orientation/01-intro.md)
 2. [**Building Hierarchy**](./catc-catcenter-1-hierarchy/01-intro.md)
 3. [**Assign Settings and Credentials**](./catc-catcenter-2-settings/01-intro.md)
 4. [**Device Discovery**](./catc-catcenter-3-discovery/01-intro.md)
@@ -137,8 +137,7 @@ Use AnyConnect VPN to connect to DCLOUD. When connecting, look at the session de
 Please utilize the following tools to run the lab effectively and ensure they are installed on your workstation/laptop before attempting the lab.
 
 1. Cisco AnyConnect VPN Client
-2. Postman
-3. Google Chrome
+2. Google Chrome
 
 <details closed>
 <summary> Expand section for Tools Required </summary>
@@ -152,20 +151,6 @@ This software is required to connect your workstation to Cisco dCloud. For an ex
 If you do not have the AnyConnect client, please visit. 
 
 - <a href="https://dcloud-rtp-anyconnect.cisco.com" target="_blank">⬇︎AnyConnect Download Site⬇︎</a>
-
-#### Postman
-
-Postman is an API platform for building and using APIs. Postman simplifies each step of the API lifecycle and streamlines collaboration so you can create better APIs—faster.
-
-Once Postman has been downloaded to your desktop, it is advisable to set up an account and sign in so that all your changes can be used within any system with the client or a web browser, much in the same way as a chrome or firefox profile work. This additional capability I have found instrumental when working in multiple environments. 
-
-- <a href="https://www.postman.com/downloads/" target="_blank">⬇︎Postman Download⬇︎</a>
-
-##### Postman Documentation
-
-For an understanding of postman, please visit this site:
-
-- <a href="https://learning.postman.com/docs/getting-started/introduction/" target="_blank">Postman Documentation</a>
 
 #### Google Chrome
 

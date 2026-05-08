@@ -1,16 +1,16 @@
 {
-   "items":[
-      {
-         "title":"Introduction",
-         "content":"01-intro.md"
-      },
-      {
-         "title":"Discovery Task Deployment",
-         "content":"02-deploy.md"
-      }
-   ],
+	"items": [
+		{
+			"title": "Discovering Devices and Assigning to Sites",
+			"content": "01-intro.md"
+		},
+		{
+			"title": "Examine and Run Device Discovery Workflow",
+			"content": "02-deploy.md"
+		}
+	],
 	"meta": {
-		"code_name": "dntd-catcenter-3-discovery",
+		"code_name": "catc-catcenter-3-discovery",
 		"tags": [
 			{
 				"title": "Cisco Catalyst Center"
@@ -22,18 +22,22 @@
 			{
 				"name": "Keith Baldwin",
 				"email": "kebaldwie@cisco.com"
+			},
+			{
+				"name": "Igor Manassypov",
+				"email": "imanassy@cisco.com"
 			}
 		],
-		"slug": "Get Started Cisco Catalyst Center Platform",
+		"slug": "catc-catcenter-3-discovery",
 		"moduleOnly": false,
 		"hasResources": false,
 		"byod": true,
 		"access": "public"
 	},
 	"config": {
-		"id": "dntd-catcenter-3-discovery",
+		"id": "catc-catcenter-3-discovery",
 		"devEnv": {},
 		"sandbox": {},
 		"video": {}
 	}
- }
+}
