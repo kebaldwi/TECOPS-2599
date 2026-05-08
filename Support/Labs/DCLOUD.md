@@ -1,638 +1,132 @@
 # DCLOUD LAB Preparation
 
-## DCLOUD VPN Connection
+## Overview
+
+Welcome to the Catalyst Center + ISE Lab for Automation & Orchestration in DCLOUD! This lab is designed to provide hands-on experience with Ansible and Cisco Workflows, a powerful tool for automating and orchestrating network operations through Catalyst Center.
+
+In this lab, we will use a complete set of Cisco Workflows which use REST API requests to automate and orchestrate network devices through Catalyst Center. This lab will focus on Catalyst Center orchestrations to build intent and templates to drive configuration.
+
+> [!IMPORTANT] 
+> Please note that LAB content in this Repository is aligned with specific DCLOUD Demonstrations that have to be set up by either a **Cisco Employee** or a **Cisco Partner**. If you are having trouble accessing the DCLOUD content please get in touch with your **Local Cisco Account Team**.
+
+## The DCLOUD Environment
+
+Use this environment: [**Catalyst Center + ISE lab for Automation & Orchestration**](https://dcloud2.cisco.com/demo/catalyst-center-ise-lab-for-automation-orchestration)
+
+The DCLOUD session includes the following equipment.
+
+* Virtual Machines:
+  * Catalyst Center 2.3.7.10 or better
+  * Identity Services Engine (ISE) 3.4 Patch 3 or better (deployed)
+  * Script Server - Ubuntu 20.04  or better
+  * Windows 10 Jump Host 
+  * Windows Server 2019 - Can be configured to provide identity, DHCP, DNS, etc.
+  * vSphere 8.0 - For hosting Workflows Remote AO
+  * ESXi Host - For hosting Workflows Remote AO
+
+* Virtual Networking Devices:
+  * Catalyst 8000v Router - 17.16.01a IOS-XE Code
+  * Catalyst 9000v Switch - 17.15.03 IOS-XE Code 
+  * Cisco Nexus 9000v Switch - 10.5.3 Code
+
+The following diagram shows the DCLOUD topology.
+
+![DCLOUD LAB TOPOLOGY](./images/common/DCLOUD_Topology_A.png?raw=true)
+
+### Access and Credentials:
+
+| Platform:       | IP Address:    | Username      | Password    | 
+|-----------------|----------------|---------------|-------------|
+| Catalyst Center | 198.18.129.100 | admin         | C1sco12345  |
+| ISE             | 198.18.133.27  | admin         | C1sco12345  |
+| Windows AD      | 198.18.133.1   | admin         | C1sco12345  |
+| Script Server   | 198.18.133.28  | root          | C1sco12345  |
+| vSphere Server  | 198.18.134.80  | Administrator | C1sco12345! |
+| CML Server      | 198.18.128.11  | Guest         | C1sco12345  |
+
+#### Large Branch Topology
+
+The following diagram shows one of the CML pods topology.
+
+![DCLOUD CML LARGE CAMPUS TOPOLOGY](./images/common/DCLOUD_Topology_B.png?raw=true)
+
+| Platform:  | OOB Mgmt:      | Loopback 0: | Username  | Password   |
+|------------|----------------|-------------|-----------|------------|
+| Spine-01   | 198.18.128.101 | 198.19.1.1  | net-admin | C1sco12345 |
+| Spine-02   | 198.18.128.102 | 198.19.1.2  | net-admin | C1sco12345 |
+| Border-01  | 198.18.128.103 | 198.19.1.3  | netadmin  | C1sco12345 |
+| Border-02  | 198.18.128.104 | 198.19.1.4  | netadmin  | C1sco12345 |
+| Leaf-01    | 198.18.128.105 | 198.19.1.5  | netadmin  | C1sco12345 |
+| Leaf-02    | 198.18.128.106 | 198.19.1.6  | netadmin  | C1sco12345 |
+
+#### Small Branch Topology
+
+The following diagram shows one of the CML pods topology.
+
+![DCLOUD CML SMALL BRANCH TOPOLOGY](./images/common/DCLOUD_Topology_C.png?raw=true)
+
+| Platform:       | IP Address:    | Username | Password   | 
+|-----------------|----------------|----------|------------|
+| Router          | 198.18.140.1   | netadmin | C1sco12345 |
+| Switch 1        | 198.18.10.2    | netadmin | C1sco12345 |
+| Switch 2        | 198.18.20.2    | netadmin | C1sco12345 |
+
+### DCLOUD VPN Connection
 
 Use AnyConnect VPN to connect to DCLOUD. When connecting, look at the session details and copy the credentials from the session booked into the client to connect.
 
-![json](../ASSETS/COMMON/DCLOUD/VPN-into-DCLOUD.png?raw=true "Import JSON")
+![DCLOUD VPN CONNECTION](./images/common/VPN-to-DCLOUD.png?raw=true)
 
-<!-- This is commented out as its currently not required -->
-<!-- 
-## DCLOUD Service Optimization 
+### Tools Required
 
-The DCLOUD environment used in the lab need to be optimized prior to the session, and to do this we need to disable the following:
+Please utilize the following tools to run the lab effectively and ensure they are installed on your workstation/laptop before attempting the lab.
 
-<p align="center"><img src="../ASSETS/COMMON/DCLOUD/ShutdownUnused.png" width="500" height="690"></p>
+1. Cisco AnyConnect VPN Client
+2. Postman
+3. Google Chrome
 
-In order to accomplish this, use the drop down menu item by each that is shutdown in the image and click the shutdown link.
--->
+<details closed>
+<summary> Expand section for Tools Required </summary>
 
-## DCLOUD Topology
+#### Cisco AnyConnect VPN Client
 
-There is now a **single** DCLOUD topology which you will encounter in DCLOUD. You will notice a third switch **Catalyst 9300 - 3** has been added. This needs now to be modified to allow the labs to continue to run as they always have. 
+This software is required to connect your workstation to Cisco dCloud. For an explanation of AnyConnect and how to use it with dCloud, please visit the following URL: 
 
-This is the **new** Topology:
+- <a href="https://dcloud-cms.cisco.com/help/android_anyconnect" target="_blank">dCloud AnyConnect Documentation</a>
 
-![json](../ASSETS/COMMON/DCLOUD/DCLOUD_Topology3.png?raw=true "Import JSON")
+If you do not have the AnyConnect client, please visit. 
 
-### Original Topology:
+- <a href="https://dcloud-rtp-anyconnect.cisco.com" target="_blank">⬇︎AnyConnect Download Site⬇︎</a>
 
-This topology is the **older** topology that we have always used in the lab. We will need to make modifications to the new **Catalyst 9300 - 3** to ensure that the lab will work for the lab exercises.
+#### Postman
 
-This is the **old** Topology:
+Postman is an API platform for building and using APIs. Postman simplifies each step of the API lifecycle and streamlines collaboration so you can create better APIs—faster.
 
-![json](../ASSETS/COMMON/DCLOUD/DCLOUD_Topology2.png?raw=true "Import JSON")
+Once Postman has been downloaded to your desktop, it is advisable to set up an account and sign in so that all your changes can be used within any system with the client or a web browser, much in the same way as a chrome or firefox profile work. This additional capability I have found instrumental when working in multiple environments. 
 
-### SJC and RTP DC's:
+- <a href="https://www.postman.com/downloads/" target="_blank">⬇︎Postman Download⬇︎</a>
 
-When using both the **RTP - EAST DC** and **SJC - WEST DC** you will need to ensure the topology is logically aligned to the **old** Topology above. To do that we will utilize **802.1q Tunneling** to essentially hide the **Catalyst 9300 - 3** in the **new** Topology diagram below.  
+##### Postman Documentation
 
-![json](../ASSETS/COMMON/DCLOUD/DCLOUD_Topology3_QnQ.png?raw=true "Import JSON")
+For an understanding of postman, please visit this site:
 
-#### DC LAB Links
+- <a href="https://learning.postman.com/docs/getting-started/introduction/" target="_blank">Postman Documentation</a>
 
-[Cisco Enterprise Networks Hardware Sandbox East DC](https://dcloud2-rtp.cisco.com/content/catalogue?search=Enterprise%20Networks%20Hardware%20Sandbox&screenCommand=openFilterScreen)
+#### Google Chrome
 
-[Cisco Enterprise Networks Hardware Sandbox West DC](https://dcloud2-sjc.cisco.com/content/catalogue?search=Enterprise%20Networks%20Hardware%20Sandbox&screenCommand=openFilterScreen)
+Google Chrome is the optimal browser of choice when working in the Catalyst Center UI. 
 
-## DCLOUD LAB Readiness Checks and Troubleshooting
+To download Google Chrome, please visit. 
 
-Open a connection to the console for the following:
+- <a href="https://www.google.com/chrome/downloads/" target="_blank">⬇︎Chrome Download⬇︎</a>
 
-- **[ISR 4331](#isr-4331-readiness)**
-- **[Catalyst 9300 - 3](#catalyst-9300---3-readiness)**
-- **[Catalyst 9300 - 2](#catalyst-9300---2-readiness)**
-- **[Catalyst 9300 - 1](#catalyst-9300---1-readiness)**
-- **[AP 1](#ap-1-and-ap-2-readiness)**
-- **[AP 2](#ap-1-and-ap-2-readiness)**
+</details>
 
-### **ISR 4331** Readiness
+## Summary
 
-1. Log into the **ISR 4331** router with the following credentials and enter privileged mode:
+This lab is intended for educational purposes only. Use of any material outside of a lab environment should be done at the operator's risk. Cisco assumes no liability for incorrect usage.
 
-   - username: netadmin
-   - password: C1sco12345
-   - enable:   C1sco12345
-
-1. Paste the following into the terminals for the router and switches:
-
-   ```
-   sh cdp neigh
-   sh ip ospf ne
-   sh run | s username|snmp|netconf
-   
-   ```
-
-1. You should see on the **ISR 4331** the following:
-
-   ![json](../ASSETS/COMMON/DCLOUD/ISR4331-Prep.png?raw=true "Import JSON")
-
-   If successful then you can skip step 4 and go to **[here](#catalyst-9300---1-readiness)**
-
-1. Should you not see the expected output in any way expand the section below and do the following:
-
-   <details closed>
-   <summary> Expand this section if required </summary></br>
-   
-   1. See if the reset script exists on the **ISR 4331** by doing the following:
-
-      ```
-
-      dir *.cfg
-
-      ```
-   
-   1. If you see the following file **base4331.cfg** in the filesystem then do the following:
-
-      ```
-      copy base4331.cfg start
-
-      
-      reload
-
-
-      ```
-
-      Then proceed to the next **[section](#catalyst-9300---3-readiness)** 
-
-   1. If you do not see the following file **base4331.cfg** in the filesystem then paste the following:
-
-      ```
-      del /force base4331.cfg 
-      !
-      tclsh                            
-      puts [open "flash:base4331.cfg" w+] {
-      !
-      service timestamps debug datetime msec
-      service timestamps log datetime msec
-      no platform punt-keepalive disable-kernel-core
-      !
-      hostname isr4331
-      !
-      aaa new-model
-      aaa authentication login default local
-      aaa authentication login CONSOLE none
-      aaa authorization exec default local 
-      aaa session-id common
-      !
-      ip domain name dcloud.cisco.com
-      !
-      enable password C1sco12345
-      !
-      username admin privilege 15 password 0 C1sco12345
-      username netadmin privilege 15 password C1sco12345
-      !
-      router ospf 1
-      no passive-interface default
-      !
-      interface GigabitEthernet0/0/0
-       ip address 198.18.133.145 255.255.192.0
-       media-type rj45
-       negotiation auto
-       ip ospf 1 area 0
-       no shut
-      !
-      interface GigabitEthernet0/0/1
-       description Connection to 9300-1
-       no switchport
-       ip address 198.19.1.1 255.255.255.252
-       ip ospf 1 area 0
-       no shut
-      !
-      interface GigabitEthernet0/0/2
-       description Connection to 9300-2
-       no switchport
-       ip address 198.19.2.1 255.255.255.252
-       ip ospf 1 area 0
-       no shut
-      !
-      ip route 0.0.0.0 0.0.0.0 198.18.128.1
-      ip ssh version 2
-      ip http secure-server
-      ip http authentication local
-      ip tftp source-interface g0/0/0
-      snmp-server community ro RO
-      snmp-server community rw RW
-      !
-      line con 0
-       login authentication CONSOLE
-      line vty 0 4
-       password C1sco12345
-      !
-      iox
-      netconf-yang
-      !
-      end
-      }
-      tclquit
-      
-      copy base4331.cfg startup-config
-      
-      
-      reload
-      
-      
-      ```
-
-   1. Then proceed to the next **[section](#catalyst-9300---3-readiness)** 
-
-   </details>
-
-### **Catalyst 9300 - 3** Readiness
-
-1. Log into the **Catalyst 9300 - 3** switch with the following credentials and enter privileged mode:
-
-   - username: netadmin
-   - password: C1sco12345
-   - enable:   C1sco12345
-
-1. See if the reset script exists on the **Catalyst 9300 - 3** by doing the following:
-
-   ```
-
-   dir *.cfg
-
-   ```
-
-1. If you see the following file **base9300-3.cfg** in the filesystem then do the following:
-
-   ```
-   copy base9300-3.cfg start
-
-      
-   reload
-
-
-   ```
-
-   Then proceed to the next **[section](#catalyst-9300---2-readiness)** 
-
-1. If you do not see the following file **base9300-3.cfg** in the filesystem expand the section below and do the following:
-
-   <details closed>
-   <summary> Expand this section if required </summary></br>
-
-   1. Paste the following into the terminal    
-
-      ```
-      term length 0
-      tclsh                            
-      puts [open "flash:base9300-3.cfg" w+] {
-      version 17.9
-      service timestamps debug datetime msec
-      service timestamps log datetime msec
-      no platform punt-keepalive disable-kernel-core
-      hostname c9300-3
-      vrf definition Mgmt-vrf
-       address-family ipv4
-       exit-address-family
-       address-family ipv6
-       exit-address-family
-      no logging console
-      enable password C1sco12345
-      aaa new-model
-      aaa authentication login default local
-      aaa authentication login CONSOLE none
-      aaa authorization exec default local 
-      aaa session-id common
-      ip routing
-      ip domain name dcloud.cisco.com
-      username admin privilege 15 password 0 C1sco12345
-      username netadmin privilege 15 password 0 C1sco12345
-      vlan 123
-      name dot1qtunnel
-      interface GigabitEthernet0/0
-       vrf forwarding Mgmt-vrf
-       ip address 198.18.128.24 255.255.255.0
-       negotiation auto
-      int gi 1/0/1
-       shut
-      interface range GigabitEthernet1/0/2, GigabitEthernet1/0/48
-       switchport access vlan 123
-       switchport mode dot1q-tunnel
-       no cdp enable
-       l2protocol-tunnel cdp
-       l2protocol-tunnel stp
-       l2protocol-tunnel vtp
-       l2protocol-tunnel lldp
-       l2protocol-tunnel point-to-point pagp
-       l2protocol-tunnel point-to-point lacp
-       l2protocol-tunnel point-to-point udld
-      interface Vlan1
-       no ip address
-      ip http server
-      ip http authentication local
-      ip http secure-server
-      ip http client source-interface GigabitEthernet0/0
-      ip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 198.18.128.1
-      ip ssh version 2
-      snmp-server community public RO
-      snmp-server community private RW
-      line con 0
-       login authentication CONSOLE
-       stopbits 1
-      line vty 0 4
-       password C1sco12345
-      iox
-      end
-      }
-      tclquit
-      !
-      copy base9300-3.cfg run
-      
-      
-      ```
-   </details>
-
-
-1. Ensure the following configuration appears on ports Gi 1/0/1, Gi 1/0/2 and Gi 1/0/48.
-
-   ```
-   interface GigabitEthernet1/0/1
-    shutdown
-   !
-   interface GigabitEthernet1/0/2
-    switchport access vlan 123
-    switchport mode dot1q-tunnel
-    no cdp enable
-    l2protocol-tunnel cdp
-    l2protocol-tunnel stp
-    l2protocol-tunnel vtp
-    l2protocol-tunnel lldp
-    l2protocol-tunnel point-to-point pagp
-    l2protocol-tunnel point-to-point lacp
-    l2protocol-tunnel point-to-point udld
-   !
-   interface GigabitEthernet1/0/48
-    switchport access vlan 123
-    switchport mode dot1q-tunnel
-    no cdp enable
-    l2protocol-tunnel cdp
-    l2protocol-tunnel stp
-    l2protocol-tunnel vtp
-    l2protocol-tunnel lldp
-    l2protocol-tunnel point-to-point pagp
-    l2protocol-tunnel point-to-point lacp
-    l2protocol-tunnel point-to-point udld   
-    ```
-
-1. After 5 minutes check the **CDP** relationship on all devices **except** the **C9300-3** to verify that the lab is set up logically like this, by utilizing the following show commands below on the **ISR 4331**:
-
-   ![json](../ASSETS/COMMON/DCLOUD/DCLOUD_Topology2.png?raw=true "Import JSON")
-
-   ```
-   sh cdp neigh
-   sh ip ospf ne
-   sh ip int br | ex un 
-   
-   ```
-1. If the expected configuration is not on ports Gi1/0/1, Gi1/0/2 and Gi1/0/48 and or the CDP neighbor does not show after **5 mins** reapply the config snippet above.
-
-1. Then proceed to the next **[section](#catalyst-9300---2-readiness)** 
-
-### **Catalyst 9300 - 2** Readiness
-
-1. Log into the **Catalyst 9300 - 2** switch with the following credentials and enter privileged mode:
-
-   - username: netadmin
-   - password: C1sco12345
-   - enable:   C1sco12345
-
-2. Paste the following into the terminals for the router and switches:
-
-   ```
-   sh cdp neigh
-   sh ip ospf ne
-   sh run | s username|snmp|netconf
-
-   ```
-
-3. You should see on the **Catalyst 9300 - 2** the following:
-   
-   ![json](../ASSETS/COMMON/DCLOUD/C9300-2-Prep.png?raw=true "Import JSON")
-
-   If successful then you can skip step 4 and go to **[here](#ap-1-and-ap-2-readiness)**
-
-1. Should you not see the expected output in any way expand the section below and do the following:
-
-   <details closed>
-   <summary> Expand this section if required </summary></br>
-   
-   1. See if the reset script exists on the **Catalyst 9300 - 2** by doing the following:
-
-      ```
-
-      dir *.cfg
-
-      ```
-   
-   1. If you see the following file **base9300-2.cfg** in the filesystem then do the following:
-
-      ```
-      copy base9300-2.cfg start
-
-      
-      reload
-
-
-      ```
-
-      Then proceed to the next **[section](#catalyst-9300---1-readiness)** 
-
-   1. If you do not see the following file **base9300-2.cfg** in the filesystem then paste the following:
-
-      ```
-      del /force base9300-2.cfg 
-      !
-      tclsh                            
-      puts [open "flash:base9300-2.cfg" w+] {
-      !
-      version 16.6
-      no service pad
-      service timestamps debug datetime msec
-      service timestamps log datetime msec
-      no platform punt-keepalive disable-kernel-core
-      !
-      hostname c9300-2
-      !
-      no system ignore startupconfig switch all
-      !
-      vrf definition Mgmt-vrf
-       address-family ipv4
-       exit-address-family
-       address-family ipv6
-       exit-address-family
-      no logging console
-      enable password C1sco12345
-      !
-      aaa new-model
-      aaa session-id common
-      aaa authentication login default local
-      aaa authentication login CONSOLE none
-      aaa authorization exec default local 
-      !
-      ip routing
-      ip domain name dcloud.cisco.com
-      !
-      interface GigabitEthernet0/0
-       vrf forwarding Mgmt-vrf
-       ip address 198.18.128.23 255.255.192.0
-       speed 1000
-       negotiation auto
-       no shut
-      !
-      username admin privilege 15 password 0 C1sco12345
-      username netadmin privilege 15 password C1sco12345
-      !
-      interface GigabitEthernet1/0/48
-       no switchport
-       description Connection to 4451 - Gi0/0/2
-       ip address 198.19.2.2 255.255.255.252
-       no shut
-       ip ospf 1 area 0
-      !
-      router ospf 1
-      ip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 198.18.128.1
-      ip http secure-server
-      ip http authentication local
-      snmp-server community ro RO
-      snmp-server community rw RW
-      !
-      line con 0
-       login authentication CONSOLE
-       stopbits 1
-      line vty 0 4
-       password C1sco12345
-      !
-      iox
-      netconf-yang
-      !
-      end
-      }
-      tclquit
-      
-      copy base9300-2.cfg startup-config
-      
-      
-      reload
-      
-      
-      ```
-   
-   1. Then proceed to the next **[section](#catalyst-9300---1-readiness)** 
-
-   </details>
-
-### **Catalyst 9300 - 1** Readiness
-
-1. Log into the **Catalyst 9300 - 1** switch with the following credentials and enter privileged mode:
-
-   - username: netadmin
-   - password: C1sco12345
-   - enable:   C1sco12345
-
-1. Paste the following into the terminals for the router and switches:
-
-   ```
-   sh cdp neigh
-   sh ip ospf ne
-   sh run | s username|snmp|netconf
-
-   ```
-
-1. You should see on the **Catalyst 9300 - 1** the following:
-
-   ![json](../ASSETS/COMMON/DCLOUD/C9300-1-Prep.png?raw=true "Import JSON")
-   
-   If successful then you can skip step 4 and go to **[here](#catalyst-9300---2-readiness)**
-
-1. Should you not see the expected output in any way expand the section below and do the following:
-
-   <details closed>
-   <summary> Expand this section if required </summary></br>
-   
-   1. See if the reset script exists on the **Catalyst 9300 - 1** by doing the following:
-
-      ```
-
-      dir *.cfg
-
-      ```
-   
-   1. If you see the following file **base9300-1.cfg** in the filesystem then do the following:
-
-      ```
-      copy base9300-1.cfg start
-
-      
-      reload
-
-
-      ```
-
-   1. Then proceed to the next **[section](#ap-1-and-ap-2-readiness)** 
-
-   1. If you do not see the following file **base9300-1.cfg** in the filesystem then paste the following:
-
-      ```
-      del /force base9300-1.cfg 
-      !
-      tclsh                            
-      puts [open "flash:base9300-1.cfg" w+] {
-      !
-      version 16.6
-      no service pad
-      service timestamps debug datetime msec
-      service timestamps log datetime msec
-      no platform punt-keepalive disable-kernel-core
-      !
-      hostname c9300-1
-      !
-      no system ignore startupconfig switch all
-      !
-      vrf definition Mgmt-vrf
-       address-family ipv4
-       exit-address-family
-       address-family ipv6
-       exit-address-family
-      no logging console
-      enable password C1sco12345
-      !
-      aaa new-model
-      aaa session-id common
-      aaa authentication login default local
-      aaa authentication login CONSOLE none
-      aaa authorization exec default local 
-      !
-      ip routing
-      ip domain name dcloud.cisco.com
-      !
-      interface GigabitEthernet0/0
-       vrf forwarding Mgmt-vrf
-       ip address 198.18.128.22 255.255.192.0
-       speed 1000
-       negotiation auto
-       no shut
-      !
-      username admin privilege 15 password 0 C1sco12345
-      username netadmin privilege 15 password C1sco12345
-      !
-      interface GigabitEthernet1/0/48
-       no switchport
-       description Connection to 4451 - Gi0/0/1
-       ip address 198.19.1.2 255.255.255.252
-       no shut
-       ip ospf 1 area 0
-      !
-      router ospf 1
-      ip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 198.18.128.1
-      ip http secure-server
-      ip http authentication local
-      snmp-server community ro RO
-      snmp-server community rw RW
-      !
-      line con 0
-       login authentication CONSOLE
-       stopbits 1
-      line vty 0 4
-       password C1sco12345
-      !
-      iox
-      netconf-yang
-      !
-      end
-      }
-      tclquit
-      
-      copy base9300-1.cfg startup-config
-      
-      
-      reload
-      
-      
-      ```
-
-   1. Then proceed to the next **[section](#ap-1-and-ap-2-readiness)** 
-
-   </details>
-
-### **AP 1** and **AP 2** Readiness
-
-> [!CAUTION]
-> During this section wait until the Catalyst 9300 - 1 and Catalyst 9300 - 2 are both in an up state and not in a reboot of some kind.
-
-1. Log into the **AP 1** and **AP 2** access points with the following credentials and enter privileged mode:
-
-   - username: Cisco
-   - password: Cisco
-   - enable:   Cisco
-
-   1. If successful move to the next step
-   1. If unsuccessful then please use these alternate credentials.   
-
-      - username: admin
-      - password: C1sco12345
-      - enable:   C1sco12345
-
-1. Enter the following command and **Confirm**, **Yes** or **Enter** at any prompt to begin the **reset** sequence.
-   
-   ```
-   capwap ap erase all
-   ```
-      
-1. The Access Point will **reset** and should at this point be ready for the lab.
-   
-   </details>
+This lab is intended to help drive the adoption of REST API and will be added to over time with various use cases. The Public Workspace will also mirror the changes and be kept up to date. We hope this set of labs helps explain how the REST API may be used and goes a little further in helping define and document them.
 
 ## Summary
 

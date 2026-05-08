@@ -57,7 +57,7 @@ The use cases we will cover are the following which you can access via the links
 3. [**Assign Settings and Credentials**](./catc-catcenter-2-settings/01-intro.md)
 4. [**Device Discovery**](./catc-catcenter-3-discovery/01-intro.md)
 5. [**Import Templates**](./catc-catcenter-4-templates/01-intro.md)
-6. [**Build Network Profile**](./catc-catcenter-5-network-profile/01-intro.md)
+6. [**Build Network Profile**](./catc-catcenter-5-networkprofiles/01-intro.md)
 7. [**Provisioning Devices**](./catc-catcenter-6-provisioning/01-intro.md)
 
 ## Preparation Notes

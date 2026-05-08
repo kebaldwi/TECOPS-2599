@@ -1,98 +1,76 @@
-# TECOPS-2599 LABS 
+# TECOPS-2599 Labs
+
+<img src="./images/workflows/readme/VISION.png" alt="Automation & Orchestration Vision" style="width:100%; height:auto;">
 
 ## Overview
 
-This section of the repository is built out in LAB form to guide you through the typical steps required to enable the various automation tasks delivered by Catalyst Center. This lab will give examples of templates used in Catalyst Center that can be modified for your use and tested on equipment within the LAB environment. Additional information within the lab provides a well-rounded explanation of Automation methods with Templates. Lastly, the lab allows for customers to use Catalyst Center workflows to practice deploying Onboarding, DayN Templates, and Application Policy automation on both Wired and Wireless Platforms.
+This section of the repository contains hands-on labs that walk you through automating and orchestrating **Cisco Catalyst Center** end-to-end from a single source of truth in GitHub. Each lab follows the same GitOps pattern: structured intent (`settings.json` and Jinja2 templates) is read from a Git repository, parsed, and applied to Catalyst Center via the Intent API — first to build the design, then to discover, then to deploy templates, build network profiles, and finally to provision devices.
 
-The goal of this lab is for it to be a practical guide to aid engineers to rapidly begin using Catalyst Center automation and help them work towards a template strategy. Additionally, this lab will give customers a permanent place to try out the templates and include configurations for various use cases. This environment will enable engineers to reduce the time and effort needed to instantiate the network.
+The goal is to give engineers a practical, repeatable path from an empty Catalyst Center to a fully provisioned fabric — all driven from version-controlled JSON.
 
-As a result, customers will gain experience setting up Plug and Play onboarding and templates. Additionally, they will use advanced velocity templating and troubleshooting tools, which may help during faultfinding to determine what is failing in a deployment.
+## Lab Tracks
 
-## Labs
+Two parallel tracks deliver the same seven-module story using different orchestration tooling. Pick the track that matches the toolchain you intend to use in production.
 
-Please use this menu to navigate the various sections of this Github repository. Within the multiple folders are examples, explanation readme files for reference.
+| Track | Tooling | Status | Entry Point |
+|-------|---------|--------|-------------|
+| **Ansible** | Catalyst Center Ansible Collection | In Development | [Ansible-Lab](./Ansible-Lab/README.md) |
+| **Cisco Workflows** | Cisco Workflows | Current | [CiscoWorkflows-Lab](./CiscoWorkflows-Lab/README.md) |
 
-**IMPORTANT:** Please note that LAB content in this Repository is aligned with specific DCLOUD Demonstrations that have to be set up by either a **Cisco Employee** or a **Cisco Parter**. If you are having trouble accessing the DCLOUD content please get in touch with your **Local Cisco Account Team**.
+> [!IMPORTANT]
+> Lab content in this repository is aligned with a specific **Cisco DCLOUD** demonstration that has to be scheduled by either a **Cisco Employee** or a **Cisco Partner**. If you have trouble accessing the DCLOUD content, please contact your **Local Cisco Account Team**.
 
-### New Catalyst Center Lab Content
+## Module Map
 
-This newer and more modular lab approach is designed to deal with and includes concepts from the legacy labs in a newer more modular format.
+Both tracks follow the same seven-module story. The Cisco Workflows track is fully written; the Ansible track is being rewritten to match. Each module links to the lab walkthrough and to the underlying workflow / playbook reference under [Support/Resources](../Resources).
 
-1. [Lab 1 Wired Automation](https://github.com/kebaldwi/TECOPS-2599/tree/master/LABS/LAB-1-Wired-Automation) - Covers green and brown field use cases **(allow 4.0 hrs)**
-2. [Lab 2 Wireless Automation](https://github.com/kebaldwi/TECOPS-2599/tree/master/LABS/LAB-2-Wireless-Automation) - Covers traditional wireless automation  **(allow 4.0 hrs)**
-2. [Lab 3 Advanced Automation](https://github.com/kebaldwi/TECOPS-2599/tree/master/LABS/LAB-3-Advanced-Automation) - Covers how to build templates and logic  **(allow 4.0 hrs)**
-4. [Lab 4 Rest-API Orchestration](https://github.com/kebaldwi/TECOPS-2599/tree/master/LABS/LAB-4-Rest-API-Orchestration/) - Covers [Postman](https://www.postman.com) automation and orchestration of Catalyst Center **(allow 2.0 hrs)**
-5. Lab 5 Python Orchestration - In Development - Covers Python automation and orchestration of Catalyst Center **(allow 3.0 hrs)**
-6. Lab 6 Ansible Orchestration - In Development - Covers Ansible automation and orchestration Catalyst Center **(allow 3.0 hrs)**
-7. [Lab 7 CICD Orchestration](https://github.com/kebaldwi/TECOPS-2599/tree/master/LABS/LAB-7-CICD-Orchestration/) - Covers [Python](https://www.python.org) with [JENKINS](https://www.jenkins.io) orchestration via REST-API **(allow 4.0 hrs)**
-8. [Lab 8 Cisco Workflows](https://github.com/kebaldwi/TECOPS-2599/tree/master/LABS/LAB-8-Cisco-Workflows/) - Covers orchestration via REST-API **(allow TBD hrs)**
-9. [Lab 9 ISE Automation](  https://github.com/kebaldwi/TECOPS-2599/tree/master/LABS/LAB-9-ISE-Automation) - Covers how to automate ISE **(allow 4.0 hrs)**
+### Cisco Workflows Track
 
-## DCLOUD as a LAB
+Reference index: [Support/Resources/Cisco Workflows/README.md](../Resources/Cisco%20Workflows/README.md)
 
-### Overview
+| # | Module | Lab Walkthrough | Workflow Reference |
+|---|--------|-----------------|--------------------|
+| 0 | Orientation | [01-intro.md](./CiscoWorkflows-Lab/catc-catcenter-0-orientation/01-intro.md) | — |
+| 1 | Building Hierarchy | [01-intro.md](./CiscoWorkflows-Lab/catc-catcenter-1-hierarchy/01-intro.md) | [1.0 Site Hierarchy](../Resources/Cisco%20Workflows/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) |
+| 2 | Settings & Credentials | [01-intro.md](./CiscoWorkflows-Lab/catc-catcenter-2-settings/01-intro.md) | [2.0 Settings & Credentials](../Resources/Cisco%20Workflows/2.0-Cisco-Catalyst-Center-Settings-and-Credentials/README.md) |
+| 3 | Device Discovery | [01-intro.md](./CiscoWorkflows-Lab/catc-catcenter-3-discovery/01-intro.md) | [3.0 Discovery & Assign](../Resources/Cisco%20Workflows/3.0-Cisco-Catalyst-Center-Device-Discovery-and-Assign/README.md) |
+| 4 | Templates (Import + Composite) | [01-intro.md](./CiscoWorkflows-Lab/catc-catcenter-4-templates/01-intro.md) | [4.0 Templates GitHub](../Resources/Cisco%20Workflows/4.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) · [5.0 Composite Template](../Resources/Cisco%20Workflows/5.0-Cisco-Catalyst-Center-Templates-Composite/README.md) |
+| 5 | Network Profiles | [01-intro.md](./CiscoWorkflows-Lab/catc-catcenter-5-networkprofiles/01-intro.md) | [6.0 Network Profile](../Resources/Cisco%20Workflows/6.0-Cisco-Catalyst-Center-Network-Profile/README.md) |
+| 6 | Device Provisioning | [01-intro.md](./CiscoWorkflows-Lab/catc-catcenter-6-provisioning/01-intro.md) | [7.0 Provision Composite](../Resources/Cisco%20Workflows/7.0-Cisco-Catalyst-Center-Provision-Composite/README.md) |
 
-This section will explain which lab to utilize within the **DCLOUD** environment to run these labs. It will also discuss a customer POC environment and the steps necessary to successfully run these sections within a customer environment for localized testing.
+### Ansible Track
 
-### DCLOUD Labs
+Reference index: [Support/Resources/Ansible/README.md](../Resources/Ansible/README.md)
 
-This lab environment has been tested on the following DCLOUD session
+| # | Module | Lab Walkthrough | Playbook Reference |
+|---|--------|-----------------|--------------------|
+| 0 | Orientation | [01-intro.md](./Ansible-Lab/catc-catcenter-0-orientation/01-intro.md) | — |
+| 1 | Building Hierarchy | [01-intro.md](./Ansible-Lab/catc-catcenter-1-hierarchy/01-intro.md) | [1.0 Site Hierarchy](../Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) |
+| 2 | Settings & Credentials | [01-intro.md](./Ansible-Lab/catc-catcenter-2-settings/01-intro.md) | [2.0 Settings](../Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings/README.md) · [3.0 Credentials](../Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials/README.md) |
+| 3 | Device Discovery | [01-intro.md](./Ansible-Lab/catc-catcenter-3-discovery/01-intro.md) | [4.0 Device Discovery](../Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) · [5.0 Assign To Site](../Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) |
+| 4 | Templates (Import + Composite) | [01-intro.md](./Ansible-Lab/catc-catcenter-4-templates/01-intro.md) | [6.0 Templates GitHub](../Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) |
+| 5 | Network Profiles | [01-intro.md](./Ansible-Lab/catc-catcenter-5-networkprofiles/01-intro.md) | [7.0 Network Profile](../Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) |
+| 6 | Device Provisioning | [01-intro.md](./Ansible-Lab/catc-catcenter-6-provisioning/01-intro.md) | [8.0 Provision Devices](../Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) · [9.0 Provision Composite](../Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) |
 
-#### Overview
+> Additional Ansible reference: [10.0 Backup My Configs](../Resources/Ansible/10.0-Backup-My-Configs/README.md) — companion playbook for archiving running configurations (no matching lab module).
 
-As a quick start with Catalyst Center Automation, you may utilize the above labs in conjuction with DCLOUD's sandbox:
+## DCLOUD as a Lab
 
-1. [Cisco Enterprise Networks Hardware Sandbox West DC](https://DCLOUD2-sjc.cisco.com/content/catalogue?search=Enterprise%20Networks%20Hardware%20Sandbox&screenCommand=openFilterScreen)
-2. [Cisco Enterprise Networks Hardware Sandbox East DC](https://DCLOUD2-rtp.cisco.com/content/catalogue?search=Enterprise%20Networks%20Hardware%20Sandbox&screenCommand=openFilterScreen)
+The labs run on top of the Cisco DCLOUD demo **Catalyst Center + ISE Lab for Automation & Orchestration**, which provides a fully built-out Catalyst Center, ISE, vSphere/ESXi, Windows AD, a script server, and CML-based virtual devices (Catalyst 8000v routers, Catalyst 9000v switches, Nexus 9000v switches).
 
-This allows you to run these labs and gives not only an environment to try the various code samples, but also to develop and export your own code for use in your production environment. DCLOUD  provides for rapid and safe POC/POV on-demand environment without impacting production environments. DCLOUD also negates the need for shipping equipment, associated lead times, and licensing issues associated with setting up your own private testing environment. Please do adhere to the best practices for the DCLOUD environment when using it.
+<img src="./images/common/DCLOUD_Topology_A.png" alt="DCLOUD Topology" style="width:100%; height:auto;">
 
-DCLOUD allows for use with a web-based browser client for VPN-less connectivity, as well as AnyConnect VPN client connectivity for those who prefer it. The labs are hosted in Cisco San Jose Facility (Select US East or US West Region when scheduling in DCLOUD). Choose the Cisco Enterprise Network Sandbox version you prefer. 
-
->**Note:** To access this or any other content, including demonstrations, labs, and training in DCLOUD please work with your Cisco Account team or Cisco Partner Account Team directly. Your Account teams will make sure the session is scheduled and shared for you to use. Once booked follow the guide within Github to complete the tasks adhering to the best practices of the DCLOUD environment.
-
-#### Components
-
-The DCLOUD session includes the following equipment:
-
-Virtual Machines:
-
-    Catalyst Center 2.3.7.10 or better
-    Identity Services Engine (ISE) 3.4 Patch 3 or better (deployed)
-    Script Server - Ubuntu 20.04  or better
-    Windows 10 Jump Host 
-    Windows Server 2019 - Can be configured to provide identity, DHCP, DNS, etc.
-
-Virtual Devices:
-
-    ISR 4451 Router - 17.06.01a IOS-XE Code
-    Catalyst 9300 Switch - 17.06.01 IOS-XE Code with Embedded Wireless Controller (EWC) and ThousandEyes Enterprise Agent
-
-The lab envionment that is available is depicted here:
-
-![json](../ASSETS/COMMON/DCLOUD/DCLOUD_Topology3.png?raw=true "Import JSON")
-
-#### DCLOUD VPN Connection
-
-Use AnyConnect VPN to connect to DCLOUD. When connecting, look at the session details and copy the credentials from the session booked into the client to connect.
-
-![json](../ASSETS/COMMON/DCLOUD/VPN-to-DCLOUD.png?raw=true "Import JSON")
-
-#### DCLOUD LAB Preparation
-
-In order to prepare the lab for use with this section of the repository please ensure that you prepare the lab according to the information detailed in the [DCLOUD LAB PREPARATION](../DCLOUD.md) section.
+DCLOUD allows access via web-based VPN-less browser client or via the Cisco AnyConnect VPN client. Sessions are hosted out of the Cisco San Jose and RTP facilities — choose the US East or US West region when scheduling. Adhere to DCLOUD best practices when using the environment.
 
 > [!TIP]
-> If this is the first time you have used these labs it is worth going through the LAB preparation documentation to ensure that the lab is functioning correctly. Please consider checking the readiness of the lab in this [DCLOUD LAB PREPARATION](../DCLOUD.md) section.
+> Before starting any module, walk through the [**DCLOUD Lab Preparation**](./DCLOUD.md) guide. It is the single source of truth for the topology, IP plan, credentials, VPN setup, and required client tools (AnyConnect, Postman, Google Chrome). Do not duplicate those values into the lab modules — link to DCLOUD.md instead.
 
 ## Disclaimer
 
-Various labs are designed for use in the **DCLOUD** environment but can but are for use elsewhere. What is important to realize is the impact of each type of test. For instance, in the ***PnP Preparation*** lab, we go through discovery methods such as ***option 43*** and ***DNS Discovery***. If we were to use the DHCP option 43 and place that in the server options on the DHCP server, it would affect multiple scopes. **Care** is required, therefore, to ensure you do not get unexpected results. Similarly with ***DNS Discovery***, if the sub domain used was available to all devices, more than one device would discover Catalyst Center. Changes like this may be suitable for production in the future but detrimental during testing.
-
-The environment allows for use with a web-based browser client for VPN-less connectivity, access as well as AnyConnect VPN client connectivity for those who prefer it. The labs are hosted out of our San Jose and RTP Facilities and so you would choose sessions from either US East or US West. Choose the Cisco Enterprise Network Sandbox v3 or v4. To access this or any other content, including demonstrations, labs, and training in Cloud please work with your Cisco Account team or Cisco Partner Account Team directly. Your Account teams will make sure the session is scheduled and shared for you to use. Once booked follow the guide within Github to complete the tasks adhering to the best practices of the DCLOUD environment.
+These labs are intended for educational purposes only. Use of any material outside of a lab environment is at the operator's risk; Cisco assumes no liability for incorrect usage. Be careful when adapting lab steps to a production environment — actions such as setting DHCP option 43 server-wide or publishing a Catalyst Center sub-domain in production DNS will have effects beyond the lab pod.
 
 > [!IMPORTANT]
-> **Feedback:** If you found this set of **labs** or **content** helpful, please fill in comments on this feedback form [give feedback](https://github.com/kebaldwi/TECOPS-2599/discussions/new?category=feedback-and-ideas).</br></br>
-**Content Problems and Issues:** If you found an **issue** on the **lab** or **content** please fill in an [issue](https://github.com/kebaldwi/TECOPS-2599/issues/new) include what file, along with the issue you ran into. 
+> **Feedback:** If you found these labs helpful, please share comments via the [feedback form](https://github.com/kebaldwi/TECOPS-2599/discussions/new?category=feedback-and-ideas).</br></br>
+> **Content Problems and Issues:** If you found a problem in a lab or in the content, please open an [issue](https://github.com/kebaldwi/TECOPS-2599/issues/new) and include the file path along with the issue you ran into.
 
-> [**Return to Main Menu**](../README.md)
+> [**Return to Main Menu**](../../README.md)
