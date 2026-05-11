@@ -1,5 +1,10 @@
 # Run the Settings and Credentials Playbooks
 
+## Overview Video
+
+[![Assign Settings and Credentials](https://img.youtube.com/vi/aJj658dfiws/0.jpg)](https://www.youtube.com/watch?v=aJj658dfiws)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 This section runs both playbooks (2.0 then 3.0) and walks through the verification screens.
 
 > All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.

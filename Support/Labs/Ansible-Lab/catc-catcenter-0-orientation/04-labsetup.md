@@ -2,6 +2,11 @@
 
 This section explains the **execution pattern** that every later module follows. Once you understand it here, the per-module deploy guides become very short — they are mostly just `cd <directory>` and `ansible-playbook ...`.
 
+## Overview Video
+
+[![Preparing Ansible](https://img.youtube.com/vi/SP1f1ISY76Y/0.jpg)](https://www.youtube.com/watch?v=SP1f1ISY76Y)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 ## The Repeating Pattern
 
 Each playbook directory under [`Support/Resources/Ansible`](../../../Resources/Ansible/README.md) follows the same shape:

@@ -4,6 +4,11 @@ In this section we will open the **`GitOps-BuildHierarchy-v3`** workflow in the 
 
 The workflow is part of the GitOps provisioning suite and **must run first** in the lab — every later module (Settings & Credentials, Discovery, Templates, Network Profiles, Provisioning) depends on the hierarchy it creates.
 
+## Overview Video
+
+[![Build Site Hierarchy](https://img.youtube.com/vi/KWbqkbAEHSk/0.jpg)](https://www.youtube.com/watch?v=KWbqkbAEHSk)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 ## Examine the Workflow
 
 The workflow follows a simple GitOps pattern: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match.

@@ -1,5 +1,13 @@
 # Run the Provision and Composite Deploy Playbooks
 
+## Overview Video
+
+[![Device Provisioning pt 1](https://img.youtube.com/vi/S7bYW1pY90A/0.jpg)](https://www.youtube.com/watch?v=S7bYW1pY90A)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
+[![Device Provisioning pt 2](https://img.youtube.com/vi/l3niI5GUvTs/0.jpg)](https://www.youtube.com/watch?v=l3niI5GUvTs)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 > All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
 
 ## Part A — Provision Devices (8.0)

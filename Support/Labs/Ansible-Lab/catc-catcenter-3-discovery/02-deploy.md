@@ -1,5 +1,10 @@
 # Run the Discovery and Assign-to-Site Playbooks
 
+## Overview Video
+
+[![Device Discovery](https://img.youtube.com/vi/x6ELVGKPJe8/0.jpg)](https://www.youtube.com/watch?v=x6ELVGKPJe8)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 > All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
 
 ## Part A — Device Discovery (4.0)

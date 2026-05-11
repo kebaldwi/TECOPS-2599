@@ -4,6 +4,11 @@ In this section we will open the **`GitOps-BuildSettings-v3`** workflow in the *
 
 This workflow is the **second** in the GitOps provisioning suite and depends on the site hierarchy created by `GitOps-BuildHierarchy-v3` in the previous module. Every later module (Discovery, Templates, Network Profiles, Provisioning) depends on the settings and credentials it applies.
 
+## Overview Video
+
+[![Assign Settings and Credentials](https://img.youtube.com/vi/hanv9BTXzzI/0.jpg)](https://www.youtube.com/watch?v=hanv9BTXzzI)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 ## Examine the Workflow
 
 The workflow follows the same GitOps pattern as the hierarchy build: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match — but instead of creating sites, it applies **network settings** (DNS, DHCP, NTP, AAA, SNMP, Syslog, Netflow, Timezone, MOTD) and **device credentials** (CLI, SNMP v2c read/write, NETCONF) per site.

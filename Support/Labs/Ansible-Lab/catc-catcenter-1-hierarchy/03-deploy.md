@@ -1,5 +1,10 @@
 # Run the Site Hierarchy Playbook
 
+## Overview Video
+
+[![Build Site Hierarchy](https://img.youtube.com/vi/e7lGFKs2i1w/0.jpg)](https://www.youtube.com/watch?v=e7lGFKs2i1w)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 In this section we encrypt the playbook's vault, run `site_hierarchy.yml`, and verify the resulting hierarchy in the Catalyst Center UI.
 
 > All commands run on the **Script Server** (`ssh root@198.18.133.28`) inside the activated `~/tecops-venv` from the orientation module.
