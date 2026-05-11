@@ -119,8 +119,4 @@ At this point the lab should be operational. You may now proceed with the lab of
 
 If you have any issues please reach out and create a Support Ticket in DCLOUD and remember to include your session information from DCLOUD.
 
-> [!IMPORTANT]
-> **Feedback:** If you found this set of **labs** or **content** helpful, please fill in comments on this feedback form [give feedback](https://github.com/kebaldwi/DNAC-TEMPLATES/discussions/new?category=feedback-and-ideas).</br></br>
-**Content Problems and Issues:** If you found an **issue** on the **lab** or **content** please fill in an [issue](https://github.com/kebaldwi/DNAC-TEMPLATES/issues/new) include what file, along with the issue you ran into. 
-
 > [**Return to Lab Menu**](./README.md)
