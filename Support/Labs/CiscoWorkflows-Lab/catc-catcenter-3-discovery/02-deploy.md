@@ -4,6 +4,11 @@ In this section we will open the **`GitOps-DeviceDiscovery`** workflow in the **
 
 This workflow is the **third** in the GitOps provisioning suite and depends on the site hierarchy created by `GitOps-BuildHierarchy-v3` and the global credentials applied by `GitOps-BuildSettings-v3` in the previous modules. Every later module (Templates, Network Profiles, Provisioning) depends on the inventory it onboards.
 
+## Overview Video
+
+[![Device Discovery](https://img.youtube.com/vi/xV_aJue9im4/0.jpg)](https://www.youtube.com/watch?v=xV_aJue9im4)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 ## Examine the Workflow
 
 The workflow follows the same GitOps pattern as the hierarchy and settings builds: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match — but instead of creating sites or applying settings, it **discovers devices** by IP range and **assigns** them to the correct site in the inventory.

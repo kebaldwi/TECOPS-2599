@@ -82,6 +82,11 @@ After login you will see the Catalyst Center dashboard. Leave this browser tab o
 
 ![Login](../../images/common/platform/catc-Login.png?raw=true)
 
+## Overview Video
+
+[![Prepping Lab](https://img.youtube.com/vi/2vaBbtkBpYc/0.jpg)](https://www.youtube.com/watch?v=2vaBbtkBpYc)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 > [**Next Section**](./03-orientation.md)
 
 > [**Return to LAB Menu**](../README.md)

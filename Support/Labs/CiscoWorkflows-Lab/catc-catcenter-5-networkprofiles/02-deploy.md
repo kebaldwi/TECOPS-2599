@@ -4,6 +4,11 @@ In this section we will open the **`GitOps-BuildNetworkProfile`** workflow in th
 
 This workflow is the **sixth** in the GitOps provisioning suite and depends on the site hierarchy created by `GitOps-BuildHierarchy-v3`, the network settings applied by `GitOps-BuildSettings-v3`, and the templates published by `GitOps-ImportTemplates` (and optionally the composite assembled by `GitOps-BuildCompositeTemplate`) in the previous modules. The provisioning module that follows depends on the profile this workflow assigns.
 
+## Overview Video
+
+[![Build Network Profile](https://img.youtube.com/vi/wHiLnspnE2w/0.jpg)](https://www.youtube.com/watch?v=wHiLnspnE2w)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 ## Examine the Workflow
 
 The workflow follows the same GitOps pattern as the previous modules: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match — but instead of building hierarchy, applying settings, discovering devices, or importing templates, it **creates a switching profile** and **binds** it to a site.

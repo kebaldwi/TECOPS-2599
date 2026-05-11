@@ -4,6 +4,11 @@ In this section we will open the **`GitOps-DeviceProvisioning`** workflow in the
 
 This workflow is the **seventh and final** workflow in the GitOps provisioning suite and depends on every preceding module: the site hierarchy, network settings, device discovery, imported templates, the published composite template, and the assigned switching network profile.
 
+## Overview Video
+
+[![Device Provisioning](https://img.youtube.com/vi/kvBSSeRWRfk/0.jpg)](https://www.youtube.com/watch?v=kvBSSeRWRfk)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 ## Examine the Workflow
 
 The workflow follows the same GitOps pattern as the previous modules: read structured intent (`settings.json`) from GitHub, then drive the Catalyst Center Intent API to make reality match — but instead of building hierarchy, applying settings, discovering devices, importing templates, or creating profiles, it **provisions devices to their site** and **deploys the composite template** to each one.

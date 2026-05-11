@@ -1,5 +1,10 @@
 # Run the Template GitHub Sync Playbook
 
+## Overview Video
+
+[![Import Templates](https://img.youtube.com/vi/WcByI5TBV2Q/0.jpg)](https://www.youtube.com/watch?v=WcByI5TBV2Q)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 > All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
 
 ## Step 1 — Inspect the Playbook Directory

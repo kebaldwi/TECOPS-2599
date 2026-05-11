@@ -1,5 +1,10 @@
 # Run the Network Profile Playbook
 
+## Overview Video
+
+[![Build Network Profile](https://img.youtube.com/vi/Id4XFi3-OK4/0.jpg)](https://www.youtube.com/watch?v=Id4XFi3-OK4)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 > All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
 
 ## Step 1 — Encrypt the Vault

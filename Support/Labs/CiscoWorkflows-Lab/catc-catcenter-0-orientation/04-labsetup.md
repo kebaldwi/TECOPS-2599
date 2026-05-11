@@ -1,5 +1,10 @@
 # Lab Setup - Remote Target, Account Keys, Targets, and Workflows
 
+## Overview Video
+
+[![Preparing Cisco Workflows](https://img.youtube.com/vi/5uqKz-QzppE/0.jpg)](https://www.youtube.com/watch?v=5uqKz-QzppE)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 ## Overview
 
 Cisco Workflows is a cloud-hosted automation engine. To drive on-premises systems

@@ -4,6 +4,11 @@ In this section we will open the **`GitOps-ImportTemplates`** workflow in the **
 
 These workflows are the **fourth** and **fifth** in the GitOps provisioning suite. The import workflow depends only on the site hierarchy created by `GitOps-BuildHierarchy-v3`; the composite workflow depends on the import workflow having published every member template it references.
 
+## Overview Video
+
+[![Import Templates](https://img.youtube.com/vi/3LTJMfiKDzw/0.jpg)](https://www.youtube.com/watch?v=3LTJMfiKDzw)
+> 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
+
 ## Examine the Import Templates Workflow
 
 The workflow follows the same GitOps pattern as the previous modules: read structured intent from GitHub, then drive the Catalyst Center Intent API to make reality match — but instead of creating sites, applying settings, or discovering devices, it **imports raw Jinja2/Velocity template files** directly into the Template Hub and **publishes** them.
