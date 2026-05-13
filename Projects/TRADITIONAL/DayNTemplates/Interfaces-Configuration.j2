@@ -13,10 +13,10 @@ B = 20,30,40,50,99
     - voice_number (STRING)
 #}
 {# Interface Configurations #}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/Interfaces-Macros" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/VLAN-Configuration" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/IBNS2.0-Configuration" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/APP-Hosting-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/Interfaces-Macros" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/VLAN-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/IBNS2.0-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/APP-Hosting-Configuration" %}
 !
 {% set vlanArray = [] %}
 {% if Site == "A" %}
@@ -54,7 +54,7 @@ B = 20,30,40,50,99
 {{ autoconf_workstation(vlanArray[2], vlanArray[3]) }}
 {{ autoconf_baseconfig(vlanArray[1]) }}
 !
-{% include "DCLOUD CATC Template Lab DayN Jinja2/AutoConf-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/AutoConf-Configuration" %}
 !
 {# Interface Interations #}
 !

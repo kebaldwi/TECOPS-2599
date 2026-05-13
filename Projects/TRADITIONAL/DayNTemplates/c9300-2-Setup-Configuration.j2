@@ -11,16 +11,16 @@
     - __interface (STRING, required, array)
 #}
 {# Global Modification #}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/AAA-Configuration" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/SystemManagement-Configuration" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/Security-AAA-Configuration" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/Stacking-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/AAA-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/SystemManagement-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/Security-AAA-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/Stacking-Configuration" %}
 !
 {# Interface Configurations #}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/Interfaces-Macros" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/VLAN-Configuration" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/IBNS2.0-Configuration" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/APP-Hosting-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/Interfaces-Macros" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/VLAN-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/IBNS2.0-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/APP-Hosting-Configuration" %}
 !
 {% set uplink_portarray = [] %}
 !
@@ -53,7 +53,7 @@
 {{ autoconf_workstation(vlanArray[2], vlanArray[3]) }}
 {{ autoconf_baseconfig(vlanArray[1]) }}
 !
-{% include "DCLOUD CATC Template Lab DayN Jinja2/AutoConf-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/AutoConf-Configuration" %}
 !
 {# Interface Interations #}
 !
@@ -129,4 +129,4 @@ event manager applet POST_CTS_MANUAL authorization bypass
  action 2.7 cli command "exit"
 !
 {# Autonaming Configuration #}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/AutoNaming-EEM-Scripting" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/AutoNaming-EEM-Scripting" %}

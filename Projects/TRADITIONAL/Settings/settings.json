@@ -67,19 +67,33 @@
                 "profile_name": "Traditional-Switching",
                 "DayNTemplateNames": [
                     {
+                        "TemplateName": "c9300-2-Setup-Configuration.j2",
+                        "TemplateTag": "DEMO",
+                        "Project": "Building P1",
+                        "TemplateTarget": ["198.18.20.2"],
+                        "DeployTemplate": true
+                    },
+                    {
                         "TemplateName": "BUILD-MasterBuild.j2",
                         "TemplateTag": "DEMO",
                         "Project": "Building P1",
-                        "TemplateTarget": ["198.18.10.2","198.18.20.2"],
+                        "TemplateTarget": ["198.18.10.2"],
                         "DeployTemplate": true
                     }
                 ],
                 "Day0TemplateNames": [
                     {
+                        "TemplateName": "Titanium-L3-PnP-Template.j2",
+                        "TemplateTag": "DEMO",
+                        "Project": "Building P1",
+                        "TemplateTarget": ["198.18.20.2"],
+                        "DeployTemplate": true
+                    },
+                    {
                         "TemplateName": "Titanium-L2-PnP-Jinja-Template.j2",
                         "TemplateTag": "DEMO",
                         "Project": "Building P1",
-                        "TemplateTarget": ["198.18.10.2","198.18.20.2"],
+                        "TemplateTarget": ["198.18.10.2"],
                         "DeployTemplate": true
                     }
                 ]
