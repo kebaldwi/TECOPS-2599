@@ -3,8 +3,8 @@
     - snmpLocation (STRING, required)
 #}
 {# System Management for Catalyst Only #}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/Sensitive-Info" %}
-{% include "DCLOUD CATC Template Lab DayN Jinja2/VLAN-Configuration" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/Sensitive-Info" %}
+{% include "{{ TEMPLATE_PROJECT_NAME }}/VLAN-Configuration" %}
 
 no service pad
 service tcp-keepalives-in
@@ -28,7 +28,7 @@ logging buffered 64000 debug
 no logging console
 logging trap notifications
 !
-{%- include "DCLOUD CATC Template Lab DayN Jinja2/ACL-Configuration" -%}
+{%- include "{{ TEMPLATE_PROJECT_NAME }}/ACL-Configuration" -%}
 !
 snmp-server location {{ snmpLocation }} 
 {# snmp-server location {{ __device.snmpLocation }} #}
