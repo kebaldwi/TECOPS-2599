@@ -1,6 +1,6 @@
-{#- General Interface Macro Section-#}
+{# General Interface Macro Section#}
 !
-{#- Interface Access Macro -#}
+{# Interface Access Macro #}
 {% macro access_interface(vlan_number) %}
   switchport access vlan {{ vlan_number }}
   switchport mode access
@@ -9,7 +9,7 @@
   spanning-tree portfast
 {% endmacro %}
 !
-{#- Interface Access Point Macro for AP's -#}
+{# Interface Access Point Macro for AP's #}
 {% macro accesspoint(vlan_number) %} 
    description Access Point Interface
    switchport access vlan {{ vlan_number }}
@@ -17,7 +17,7 @@
    spanning-tree portfast
 {% endmacro %}
 !
-{#- Interface FLex-Access Point Macro for Flex AP's -#}
+{# Interface FLex-Access Point Macro for Flex AP's #}
 {% macro flexaccesspoint(vlan_number, data_number, voice_number, guest_number) %} 
    description Flex Access Point Interface
    switchport mode trunk
@@ -26,7 +26,7 @@
    spanning-tree portfast trunk
 {% endmacro %}
 !
-{#- Interface Workstations with Voice Macro -#}
+{# Interface Workstations with Voice Macro #}
 {% macro workstation_interface(vlan_number, voice_number) %}
   description Workstation Interface
   switchport access vlan {{ vlan_number }}
@@ -37,10 +37,10 @@
   spanning-tree portfast
 {% endmacro %}
 
-{#- --------------------------------------------------------------- -#}
+{# --------------------------------------------------------------- #}
 
-{#- AutoConf Macro Section -#}
-{#- AutoConf Base Configuration Macro -#}
+{# AutoConf Macro Section #}
+{# AutoConf Base Configuration Macro #}
 {% macro baseconf_interface() %}
      switchport mode access
      snmp trap mac-notification change added
@@ -48,7 +48,7 @@
      source template BASE_AUTOCONF
 {% endmacro %}
 !
-{#- Interface Access Point Template to be used with Autoconf for AP's -#}
+{# Interface Access Point Template to be used with Autoconf for AP's #}
 {% macro autoconf_accesspoint(vlan_number) %} 
   template ACCESS_POINT
    description Access Point Interface
@@ -57,7 +57,7 @@
    spanning-tree portfast
 {% endmacro %}
 !
-{#- Interface FLex-Access Point Template to be used with Autoconf for Flex AP's -#}
+{# Interface FLex-Access Point Template to be used with Autoconf for Flex AP's #}
 {% macro autoconf_flexaccesspoint(vlan_number, data_number, voice_number, guest_number) %} 
   template FLEX_ACCESS_POINT
    description Flex Access Point Interface
@@ -67,7 +67,7 @@
    spanning-tree portfast trunk
 {% endmacro %}
 !
-{#- Interface Workstation Template to be used with Autoconf for AP's -#}
+{# Interface Workstation Template to be used with Autoconf for AP's #}
 {% macro autoconf_workstation(vlan_number, voice_number) %} 
   template WORKSTATION
    description Workstation Interface
@@ -77,7 +77,7 @@
    spanning-tree portfast
 {% endmacro %}
 !
-{#- Interface Base Configuration Template to be used with Autoconf for baseconfig's -#}
+{# Interface Base Configuration Template to be used with Autoconf for baseconfig's #}
 {% macro autoconf_baseconfig(vlan_number) %} 
   template BASE_AUTOCONF
    description Base Config
@@ -86,10 +86,10 @@
    spanning-tree portfast
 {% endmacro %}
 
-{#- --------------------------------------------------------------- -#}
+{# --------------------------------------------------------------- #}
 
-{#- IBNS2.0 Macro Section -#}
-{#- Interface Base Configuration IBNS2.0 Template Macro -#}
+{# IBNS2.0 Macro Section #}
+{# Interface Base Configuration IBNS2.0 Template Macro #}
 {% macro ibns_baseconf_interface() %}
   description BASE CONFIG
   switchport mode access
@@ -100,7 +100,7 @@
   source template BASE_IBNS
 {% endmacro %}
 !
-{#- Interface Access Point IBNS2.0 Template Macro -#}
+{# Interface Access Point IBNS2.0 Template Macro #}
 {% macro ibns_accesspoint(vlan_number) %} 
   template ACCESS_POINT_IBNS
    description Access Point Interface
@@ -112,11 +112,11 @@
    access-session port-control auto
    authentication periodic
    authentication timer reauthenticate server
-   {#-ip access-group ACL-DEFAULT in-#}
+   {#ip access-group ACL-DEFAULT in#}
    service-policy type control subscriber PMAP_DefaultWiredDot1xClosedAuth_MAB_1X
 {% endmacro %}
 !
-{#- Interface FLex-Access Point IBNS2.0 Template Macro -#}
+{# Interface FLex-Access Point IBNS2.0 Template Macro #}
 {% macro ibns_flexaccesspoint(vlan_number, data_number, voice_number, guest_number) %} 
   template FLEX_ACCESS_POINT_IBNS
    description Flex Access Point Interface
@@ -131,11 +131,11 @@
    access-session port-control auto
    authentication periodic
    authentication timer reauthenticate server
-   {#-ip access-group ACL-DEFAULT in-#}
+   {#ip access-group ACL-DEFAULT in#}
    service-policy type control subscriber PMAP_DefaultWiredDot1xClosedAuth_MAB_1X
 {% endmacro %}
 !
-{#- Interface Workstation Access IBNS2.0 Template Macro -#}
+{# Interface Workstation Access IBNS2.0 Template Macro #}
 {% macro ibns_workstation(vlan_number, voice_number) %} 
   template WORKSTATION_IBNS
    description Workstation
@@ -153,7 +153,7 @@
    service-policy type control subscriber PMAP_DefaultWiredDot1xClosedAuth_1X_MAB
 {% endmacro %}
 !
-{#- Interface Guest Access IBNS2.0 Template Macro -#}
+{# Interface Guest Access IBNS2.0 Template Macro #}
 {% macro ibns_guest(vlan_number) %} 
   template GUEST_IBNS
    description Guest Interface
@@ -170,7 +170,7 @@
    service-policy type control subscriber PMAP_DefaultWiredDot1xClosedAuth_1X_MAB
 {% endmacro %}
 !
-{#- Interface Base Configuration IBNS2.0 Template Macro -#}
+{# Interface Base Configuration IBNS2.0 Template Macro #}
 {% macro ibns_baseconfig(vlan_number) %} 
   template BASE_IBNS
    description BASE CONFIG
@@ -187,6 +187,6 @@
    service-policy type control subscriber PMAP_DefaultWiredDot1xClosedAuth_1X_MAB
 {% endmacro %}
 
-{#- --------------------------------------------------------------- -#}
+{# --------------------------------------------------------------- #}
 
 

@@ -1,8 +1,6 @@
-{#- IBNS configurations build -#}
-{#- This module adds AAA configuration in local mode when TACACS is not used from the Settings UI -#}
-
-{% macro IbnsConfig() %}
-{#- Classifications -#}
+{# IBNS configurations build #}
+!
+{# Classifications #}
 class-map type control subscriber match-all AAA_SVR_DOWN_AUTHD_HOST
  match authorization-status authorized
  match result-type aaa-timeout
@@ -54,8 +52,8 @@ class-map type control subscriber match-none NOT_IN_CRITICAL_AUTH_CLOSED_MODE
  match activated-service-template DefaultCriticalAuthVlan_SRV_TEMPLATE
  match activated-service-template DefaultCriticalVoice_SRV_TEMPLATE
 !
-{#- Policy Maps -#}
-{#- CLOSED 1X then MAB Template -#}
+{# Policy Maps #}
+{# CLOSED 1X then MAB Template #}
 policy-map type control subscriber PMAP_DefaultWiredDot1xClosedAuth_1X_MAB
  event session-started match-all
   10 class always do-until-failure
@@ -103,7 +101,7 @@ policy-map type control subscriber PMAP_DefaultWiredDot1xClosedAuth_1X_MAB
   10 class AUTHC_SUCCESS-AUTHZ_FAIL do-until-failure
    10 authentication-restart 60
 !
-{#- CLOSED MAB then 1X Template -#}
+{# CLOSED MAB then 1X Template #}
 policy-map type control subscriber PMAP_DefaultWiredDot1xClosedAuth_MAB_1X
  event session-started match-all
   10 class always do-until-failure
@@ -151,7 +149,7 @@ policy-map type control subscriber PMAP_DefaultWiredDot1xClosedAuth_MAB_1X
   10 class AUTHC_SUCCESS-AUTHZ_FAIL do-until-failure
    10 authentication-restart 60
 !
-{#- LOW IMPACT 1X then MAB Template -#}
+{# LOW IMPACT 1X then MAB Template #}
 policy-map type control subscriber PMAP_DefaultWiredDot1xLowImpactAuth_1X_MAB
  event session-started match-all
   10 class always do-until-failure
@@ -200,7 +198,7 @@ policy-map type control subscriber PMAP_DefaultWiredDot1xLowImpactAuth_1X_MAB
   10 class AUTHC_SUCCESS-AUTHZ_FAIL do-until-failure
    10 authentication-restart 60
 !
-{#- LOW IMPACT MAB then 1X Template -#}
+{# LOW IMPACT MAB then 1X Template #}
 policy-map type control subscriber PMAP_DefaultWiredDot1xLowImpactAuth_MAB_1X
  event session-started match-all
   10 class always do-until-failure
@@ -249,7 +247,7 @@ policy-map type control subscriber PMAP_DefaultWiredDot1xLowImpactAuth_MAB_1X
   10 class AUTHC_SUCCESS-AUTHZ_FAIL do-until-failure
    10 authentication-restart 60
 !
-{#- Open 1X then MAB Template -#}
+{# Open 1X then MAB Template #}
 policy-map type control subscriber PMAP_DefaultWiredDot1xOpenAuth_1X_MAB
  event session-started match-all
   10 class always do-until-failure
@@ -297,7 +295,7 @@ policy-map type control subscriber PMAP_DefaultWiredDot1xOpenAuth_1X_MAB
   10 class AUTHC_SUCCESS-AUTHZ_FAIL do-until-failure
    10 authentication-restart 60
 !
-{#- Open MAB then 1X Template -#}
+{# Open MAB then 1X Template #}
 policy-map type control subscriber PMAP_DefaultWiredDot1xOpenAuth_MAB_1X
  event session-started match-all
   10 class always do-until-failure
@@ -344,29 +342,11 @@ policy-map type control subscriber PMAP_DefaultWiredDot1xOpenAuth_MAB_1X
  event authorization-failure match-all
   10 class AUTHC_SUCCESS-AUTHZ_FAIL do-until-failure
    10 authentication-restart 60
-{% endmacro %}
 !
-{#- CTS SGACL Enforcement -#}
+{# CTS SGACL Enforcement #}
+dot1x system-auth-control
+cts role-based enforcement
 {% macro configure_cts(vlanpairs) %}
-  dot1x system-auth-control
-  cts role-based enforcement
   cts role-based enforcement vlan-list 1,{{ vlanpairs|join(',', attribute='vlan') }}
-{% endmacro %}
-
-{#-- Automated Script for cts manual disruptive config --#}
-{#-- This will always ensure the uplink get the cts manual for with  --#}
-{#-- timed self deleting EEM script  --#}
-{% macro propagate_cts(uplink_portarray) %}
-event manager applet POST_CTS_MANUAL authorization bypass
- event timer countdown time 30
- action 1.0 cli command "enable"
- action 1.1 cli command "config t"
- action 2.0 cli command "interface range {{ uplink_portarray|join(',') }}"
- action 2.1 cli command "cts manual"
- action 2.2 cli command "policy static sgt 2 trusted"
- action 2.3 cli command "propagate sgt"
- action 2.4 cli command "no event manager applet POST_CTS_MANUAL"
- action 2.5 cli command "end"
- action 2.6 cli command "wr"
- action 2.7 cli command "exit"
-{% endmacro %}
+{% endmacro %} 
+!
