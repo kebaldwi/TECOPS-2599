@@ -1,12 +1,11 @@
-{#- AutoConf Configurations -#}
-{% macro AutoConf() %}
+{# AutoConf Configurations #}
 !
-{#- Enabling Autoconf on switch with interactive command -#}
+{# Enabling Autoconf on switch with interactive command #}
 #INTERACTIVE
 autoconf enable<IQ>yes<R>y
 #END_INTERACTIVE 
 !
-{#- Augmenting existing hidden parameter map with modifications -#}
+{# Augmenting existing hidden parameter map with modifications #}
 parameter-map type subscriber attribute-to-service BUILTIN_DEVICE_TO_TEMPLATE
  10 map device-type regex "Cisco-IP-Phone"
   20 interface-template WORKSTATION
@@ -33,4 +32,3 @@ parameter-map type subscriber attribute-to-service BUILTIN_DEVICE_TO_TEMPLATE
  120 map oui eq "00.24.9b"
   10 interface-template WORKSTATION 
 !
-{% endmacro %}

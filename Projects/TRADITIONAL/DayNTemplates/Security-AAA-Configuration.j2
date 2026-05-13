@@ -1,13 +1,11 @@
-{#- This module adds Security configuration -#}
-{% macro SecurityConfig() %}
-{#- Additional AAA commands not added by DNA Center Automation (uncomment if needed below)-#}
-{#- aaa authorization config-commands -#}
-{#- aaa authorization commands 0 default group tacacs+ local  -#}
-{#- aaa authorization commands 1 default group tacacs+ local  -#}
-{#- aaa authorization commands 15 default group tacacs+ local  -#}
+{# Additional AAA commands not added by DNA Center Automation #}
+{# aaa authorization config-commands #}
+{# aaa authorization commands 0 default group tacacs+ local  #}
+{# aaa authorization commands 1 default group tacacs+ local  #}
+{# aaa authorization commands 15 default group tacacs+ local  #}
 !
-{#- Default Parameters -#}
-{#- ip arp entry learn 10240 -#}
+{# Default Parameters #}
+{# ip arp entry learn 10240 #}
 ip domain retry 1
 ip domain timeout 5
 login on-success log
@@ -17,7 +15,7 @@ no ip http authentication local
 no ip http secure-server
 ip ssh version 2
 !
-{#- Banner Configuration -#}
+{# Banner Configuration #}
 <MLTCMD>
 banner login ^
  ******************************************************************
@@ -42,4 +40,17 @@ banner login ^
  ******************************************************************
  ^
 </MLTCMD>
-{% endmacro %}
+!
+netconf-yang
+!
+{# VTY and Console Line Modifications #}
+line con 0
+ exec-timeout 0 0
+ logging synchronous
+ stopbits 1
+line vty 0 15
+ {# access-class 20 in #}
+ exec-timeout 30 0
+ logging synchronous
+ {# timeout login response 300 #}
+ {# transport input ssh #}

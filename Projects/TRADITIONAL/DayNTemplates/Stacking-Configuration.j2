@@ -1,8 +1,11 @@
-{#- This module adds 9300 Stack Power and 9300, 9200 Priority configuration -#}
-{% macro StackwiseConfig(__device.platformId) %}
+{#
+  Template Parameters (bind variables):
+    - __device (STRING, required)
+#}
+{#- 9300 Stack Power and 9300, 9200 Priority -#}
 {% set StackCount = __device.platformId | split(",")  %}
 {% set StackMemberCount =  StackCount | length  -%}
-!
+
 {% if StackMemberCount > 1 && ("C93" in __device.platformId || "C92" in __device.platformId) %}
   {% if "C93" in __device.platformId %}
      stack-power stack Powerstack1
@@ -32,4 +35,3 @@
   {% endfor %}
   #MODE_END_ENABLE
 {% endif %}
-{% endmacro %}
