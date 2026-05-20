@@ -9,6 +9,12 @@
       ansible.builtin.set_fact:
         backup_timestamp: "{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
 
+    - name: Ensure timestamped backup directory exists on controller
+      ansible.builtin.file:
+        path: "{{ backup_root_dir }}/{{ backup_timestamp }}"
+        state: directory
+        mode: "0750"
+
 - name: Backup running-config from IOS-XE devices
   hosts: iosxe
   gather_facts: false
@@ -18,14 +24,6 @@
     backup_output_dir: "{{ backup_root_dir }}/{{ hostvars['localhost']['backup_timestamp'] }}"
 
   tasks:
-    - name: Ensure timestamped backup directory exists on controller
-      ansible.builtin.file:
-        path: "{{ backup_output_dir }}"
-        state: directory
-        mode: "0750"
-      delegate_to: localhost
-      run_once: true
-
     - name: Collect running configuration from IOS-XE
       cisco.ios.ios_command:
         commands:
@@ -52,14 +50,6 @@
     backup_output_dir: "{{ backup_root_dir }}/{{ hostvars['localhost']['backup_timestamp'] }}"
 
   tasks:
-    - name: Ensure timestamped backup directory exists on controller
-      ansible.builtin.file:
-        path: "{{ backup_output_dir }}"
-        state: directory
-        mode: "0750"
-      delegate_to: localhost
-      run_once: true
-
     - name: Collect running configuration from NX-OS
       cisco.nxos.nxos_command:
         commands:
