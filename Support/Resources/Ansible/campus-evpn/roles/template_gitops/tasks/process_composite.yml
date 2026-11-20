@@ -48,7 +48,7 @@
         composite: true
         language: "JINJA"
         template_content: ""
-        template_description: "Composite template synced from Git repository"
+        template_description: "Composite template synced from {{ template_source | default('git') }} source"
         device_types: "{{ default_device_types }}"
         software_type: "{{ default_software_type }}"
         software_variant: "{{ default_software_variant }}"

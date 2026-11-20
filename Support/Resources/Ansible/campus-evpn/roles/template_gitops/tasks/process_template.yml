@@ -17,8 +17,8 @@
     template_gitops_template_content_raw: "{{ template_file.content | replace('{{ TEMPLATE_PROJECT_NAME }}', project_name) }}"
     template_gitops_commit_message: "{{ template_file.commit_message }}"
     template_gitops_diff_content_raw: >-
-      {{ template_file.diff_content | regex_replace('([^\\n]+)', '{## \\1 ##}')
-         + '\\n'
+      {{ template_file.diff_content | regex_replace('([^\n]+)', '{## \1 ##}')
+         + '\n'
          if include_diff_header and template_file.diff_content
          else '' }}
 
@@ -37,7 +37,10 @@
         language: "JINJA"
         template_content: "{{ template_gitops_template_content }}"
         # template_content_file_path: "{{ processed_template_path }}"
-        template_description: "Template synced from Git {{ git_repo }} repository, branch {{ git_branch }}"
+        template_description: >-
+          {{ 'Template synced from local folder ' + (template_local_dir | basename)
+             if template_source | default('git') == 'local'
+             else 'Template synced from Git ' + git_repo + ' repository, branch ' + git_branch }}
         device_types: "{{ default_device_types }}"
         software_type: "{{ default_software_type }}"
         software_variant: "{{ default_software_variant }}"

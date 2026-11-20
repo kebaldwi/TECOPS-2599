@@ -46,178 +46,255 @@
       ansible.builtin.set_fact:
         start_timestamp: "{{ ansible_date_time }}"
 
-    # starting with example repo url: "https://github.com/org/repo.git"
-    # step 1: regex_replace('https://github\\.com/', '') - strips the https://github.com/ prefix.
-    # step 2: regex_replace('\\.git$', '') - strips the .git suffix.
-    - name: Parse GitHub repository slug from git_repo URL
-      ansible.builtin.set_fact:
-        git_repo_slug: "{{ git_repo | regex_replace('https://github\\.com/', '') | regex_replace('\\.git$', '') }}"
-        git_api_base: "{{ git_api_base_url | default('https://api.github.com') }}"
+    # ── Template source ────────────────────────────────────────────────────────
+    # template_source: local → read templates from template_local_dir (no GitHub
+    #                          API calls, so no rate limits).
+    # template_source: git   → read templates from git_repo via the GitHub API.
+    - name: Load templates from the local folder
+      when: template_source | default('git') == 'local'
+      block:
+        - name: Find local template and composite files
+          ansible.builtin.find:
+            paths: "{{ template_local_dir }}"
+            patterns:
+              - "*.{{ template_extension }}"
+              - "*.yml"
+          register: local_template_find
 
-    # git_token is optional for public repositories.
-    # When defined (private repos or to raise API rate limits), an Authorization header is included.
-    # When absent, requests are made unauthenticated (GitHub allows ~60 requests/hour for public repos).
-    - name: Build GitHub auth header
-      ansible.builtin.set_fact:
-        git_auth_header: "{{ {'Authorization': 'Bearer ' + git_token} if (git_token is defined and git_token | length > 0) else {} }}"
+        - name: Build enriched template file objects from local folder
+          ansible.builtin.set_fact:
+            enriched_template_files: "{{ enriched_template_files | default([]) + [enriched] }}"
+          vars:
+            enriched:
+              name: "{{ item.path | basename }}"
+              path: "{{ item.path }}"
+              content: "{{ lookup('ansible.builtin.file', item.path, rstrip=False) }}"
+              commit_message: "Synced from local folder {{ template_local_dir | basename }}"
+              diff_content: ""
+          loop: "{{ local_template_find.files | sort(attribute='path') | selectattr('path', 'search', '[.]' + template_extension + '$') | list }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
 
-    - name: Verify GitHub repository is accessible
-      ansible.builtin.uri:
-        url: "{{ git_api_base }}/repos/{{ git_repo_slug }}"
-        method: GET
-        headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}) }}"
-        status_code: [200, 404]
-      register: git_repo_check
+        - name: Build enriched composite file objects from local folder
+          ansible.builtin.set_fact:
+            enriched_composite_files: "{{ enriched_composite_files | default([]) + [enriched] }}"
+          vars:
+            enriched:
+              name: "{{ item.path | basename }}"
+              path: "{{ item.path }}"
+              content: "{{ lookup('ansible.builtin.file', item.path, rstrip=False) }}"
+          loop: "{{ local_template_find.files | sort(attribute='path') | selectattr('path', 'search', '[.]yml$') | list }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
 
-    - name: Fail if GitHub repository not found
-      ansible.builtin.fail:
-        msg: "Repository not found: '{{ git_repo_slug }}'. Verify git_repo in inventory (HTTP {{ git_repo_check.status }})."
-      when: git_repo_check.status != 200
+        - name: Set project name for local templates
+          ansible.builtin.set_fact:
+            project_name: >-
+              {{ projectName
+                 if (projectName | default('') | length > 0)
+                 else (template_local_dir | basename) }}
 
-    - name: Verify Git branch exists in repository
-      ansible.builtin.uri:
-        url: "{{ git_api_base }}/repos/{{ git_repo_slug }}/branches/{{ git_branch | default('HEAD') }}"
-        method: GET
-        headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}) }}"
-        status_code: [200, 404]
-      register: git_branch_check
+    - name: Load templates from GitHub
+      when: template_source | default('git') == 'git'
+      block:
+        # starting with example repo url: "https://github.com/org/repo.git"
+        # step 1: regex_replace('https://github\\.com/', '') - strips the https://github.com/ prefix.
+        # step 2: regex_replace('\\.git$', '') - strips the .git suffix.
+        - name: Parse GitHub repository slug from git_repo URL
+          ansible.builtin.set_fact:
+            git_repo_slug: "{{ git_repo | regex_replace('https://github\\.com/', '') | regex_replace('\\.git$', '') }}"
+            git_api_base: "{{ git_api_base_url | default('https://api.github.com') }}"
 
-    - name: Fail if Git branch not found in repository
-      ansible.builtin.fail:
-        msg: >-
-          Branch '{{ git_branch | default('HEAD') }}' not found in
-          '{{ git_repo_slug }}'. Verify git_branch in inventory
-          (HTTP {{ git_branch_check.status }}).
-      when: git_branch_check.status != 200
+        # git_token is optional for public repositories.
+        # When defined (private repos or to raise API rate limits), an Authorization header is included.
+        # When absent, requests are made unauthenticated (GitHub allows ~60 requests/hour for public repos).
+        - name: Build GitHub auth header
+          ansible.builtin.set_fact:
+            git_auth_header: "{{ {'Authorization': 'Bearer ' + git_token} if (git_token is defined and git_token | length > 0) else {} }}"
 
-    - name: Fetch repository file tree from GitHub API
-      ansible.builtin.uri:
-        url: "{{ git_api_base }}/repos/{{ git_repo_slug }}/git/trees/{{ git_branch | default('HEAD') }}?recursive=1"
-        method: GET
-        headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}) }}"
-        status_code: 200
-      register: repo_tree_response
+        - name: Verify GitHub repository is accessible
+          ansible.builtin.uri:
+            url: "{{ git_api_base }}/repos/{{ git_repo_slug }}"
+            method: GET
+            headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}) }}"
+            status_code: [200, 404]
+          register: git_repo_check
 
-    - name: Build subfolder prefix filter
-      ansible.builtin.set_fact:
-        git_tree_prefix: "{{ (git_repo_subfolder + '/') if (git_repo_subfolder is defined and git_repo_subfolder | length > 0) else '' }}"
+        - name: Fail if GitHub repository not found
+          ansible.builtin.fail:
+            msg: "Repository not found: '{{ git_repo_slug }}'. Verify git_repo in inventory (HTTP {{ git_repo_check.status }})."
+          when: git_repo_check.status != 200
 
-    - name: Build template and composite file lists from repository tree
-      ansible.builtin.set_fact:
-        api_template_files: >-
-          {{ repo_tree_response.json.tree
-             | selectattr('type', 'eq', 'blob')
-             | selectattr('path', 'search', '^' + git_tree_prefix)
-             | selectattr('path', 'search', '\\.' + template_extension + '$')
-             | list }}
-        api_composite_files: >-
-          {{ repo_tree_response.json.tree
-             | selectattr('type', 'eq', 'blob')
-             | selectattr('path', 'search', '^' + git_tree_prefix)
-             | selectattr('path', 'search', '\\.yml$')
-             | list }}
+        - name: Verify Git branch exists in repository
+          ansible.builtin.uri:
+            url: "{{ git_api_base }}/repos/{{ git_repo_slug }}/branches/{{ git_branch | default('HEAD') }}"
+            method: GET
+            headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}) }}"
+            status_code: [200, 404]
+          register: git_branch_check
 
-    - name: Get Project name from template folder
-      ansible.builtin.set_fact:
-        project_name: "{{ projectName | default(api_template_files[0].path | dirname | basename) }}"
+        - name: Fail if Git branch not found in repository
+          ansible.builtin.fail:
+            msg: >-
+              Branch '{{ git_branch | default('HEAD') }}' not found in
+              '{{ git_repo_slug }}'. Verify git_branch in inventory
+              (HTTP {{ git_branch_check.status }}).
+          when: git_branch_check.status != 200
 
-    - name: Fetch template file contents from GitHub
-      ansible.builtin.uri:
-        url: "https://raw.githubusercontent.com/{{ git_repo_slug }}/{{ git_branch | default('HEAD') }}/{{ item.path | replace(' ', '%20') }}"
-        method: GET
-        headers: "{{ git_auth_header }}"
-        return_content: true
-        status_code: 200
-      loop: "{{ api_template_files }}"
-      loop_control:
-        label: "{{ item.path | basename }}"
-      register: template_content_results
+        - name: Fetch repository file tree from GitHub API
+          ansible.builtin.uri:
+            url: "{{ git_api_base }}/repos/{{ git_repo_slug }}/git/trees/{{ git_branch | default('HEAD') }}?recursive=1"
+            method: GET
+            headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}) }}"
+            status_code: 200
+          register: repo_tree_response
 
-    - name: Fetch last commit info for each template file
-      ansible.builtin.uri:
-        url: "{{ git_api_base }}/repos/{{ git_repo_slug }}/commits?path={{ item.path | replace(' ', '%20') }}&per_page=1&sha={{ git_branch | default('HEAD') }}"
-        method: GET
-        headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json'}) }}"
-        status_code: 200
-      loop: "{{ api_template_files }}"
-      loop_control:
-        label: "{{ item.path | basename }}"
-      register: template_commit_results
+        - name: Build subfolder prefix filter
+          ansible.builtin.set_fact:
+            git_tree_prefix: "{{ (git_repo_subfolder + '/') if (git_repo_subfolder is defined and git_repo_subfolder | length > 0) else '' }}"
 
-    - name: Fetch commit diff for each template file
-      when: include_diff_header and template_commit_results.results[diff_idx].json | length > 0
-      ansible.builtin.uri:
-        url: "{{ git_api_base }}/repos/{{ git_repo_slug }}/commits/{{ template_commit_results.results[diff_idx].json[0].sha }}"
-        method: GET
-        headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json'}) }}"
-        status_code: 200
-      loop: "{{ api_template_files }}"
-      loop_control:
-        index_var: diff_idx
-        label: "{{ item.path | basename }}"
-      register: template_diff_results
+        - name: Build template and composite file lists from repository tree
+          ansible.builtin.set_fact:
+            api_template_files: >-
+              {{ repo_tree_response.json.tree
+                 | selectattr('type', 'eq', 'blob')
+                 | selectattr('path', 'search', '^' + git_tree_prefix)
+                 | selectattr('path', 'search', '[.]' + template_extension + '$')
+                 | list }}
+            api_composite_files: >-
+              {{ repo_tree_response.json.tree
+                 | selectattr('type', 'eq', 'blob')
+                 | selectattr('path', 'search', '^' + git_tree_prefix)
+                 | selectattr('path', 'search', '[.]yml$')
+                 | list }}
 
-    - name: Build enriched template file objects
-      ansible.builtin.set_fact:
-        enriched_template_files: "{{ enriched_template_files | default([]) + [enriched] }}"
-      vars:
-        _commit_list: "{{ template_commit_results.results[tmpl_idx].json }}"
-        _commit: "{{ _commit_list[0] if _commit_list | length > 0 else {} }}"
-        _commit_message: >-
-          {{ (
-            _commit.commit.author.date | default('')
-            + ' | '
-            + _commit.commit.message | default('')
-            + ' ['
-            + _commit.commit.author.name | default('')
-            + ']'
-          ) | truncate(catc_template_summary_maxchar | int, true, '', 0)
-             if _commit else 'Synced from Git' }}
-        _diff_files: >-
-          {{ template_diff_results.results[tmpl_idx].json.files | default([])
-             if include_diff_header and template_diff_results is defined
-             and not (template_diff_results.results[tmpl_idx].skipped | default(false))
-             else [] }}
-        _file_patch: >-
-          {{ (_diff_files | selectattr('filename', 'eq', item.path) | list | first).patch
-             | default('') if _diff_files | length > 0 else '' }}
-        enriched:
-          name: "{{ item.path | basename }}"
-          path: "{{ item.path }}"
-          content: "{{ template_content_results.results[tmpl_idx].content }}"
-          commit_message: "{{ _commit_message }}"
-          diff_content: "{{ _file_patch }}"
-      loop: "{{ api_template_files }}"
-      loop_control:
-        index_var: tmpl_idx
-        label: "{{ item.path | basename }}"
+        - name: Require template files in the configured repository folder
+          ansible.builtin.assert:
+            that: api_template_files | length > 0
+            fail_msg: >-
+              No '.{{ template_extension }}' files found under
+              '{{ git_tree_prefix | default('/', true) }}' in {{ git_repo_slug }}
+              ({{ git_branch | default('HEAD') }}). Check git_repo_subfolder and
+              template_extension in the inventory.
+            success_msg: "Found {{ api_template_files | length }} templates and {{ api_composite_files | length }} composite definitions."
 
-    - name: Fetch composite definition file contents from GitHub
-      when: api_composite_files | length > 0
-      ansible.builtin.uri:
-        url: "https://raw.githubusercontent.com/{{ git_repo_slug }}/{{ git_branch | default('HEAD') }}/{{ item.path | replace(' ', '%20') }}"
-        method: GET
-        headers: "{{ git_auth_header }}"
-        return_content: true
-        status_code: 200
-      loop: "{{ api_composite_files }}"
-      loop_control:
-        label: "{{ item.path | basename }}"
-      register: composite_content_results
+        - name: Get Project name from template folder
+          ansible.builtin.set_fact:
+            project_name: >-
+              {{ projectName
+                 if (projectName | default('') | length > 0)
+                 else (api_template_files[0].path | dirname | basename) }}
 
-    - name: Build enriched composite file objects
-      when: api_composite_files | length > 0
-      ansible.builtin.set_fact:
-        enriched_composite_files: "{{ enriched_composite_files | default([]) + [enriched] }}"
-      vars:
-        enriched:
-          name: "{{ item.path | basename }}"
-          path: "{{ item.path }}"
-          content: "{{ composite_content_results.results[comp_idx].content }}"
-      loop: "{{ api_composite_files }}"
-      loop_control:
-        index_var: comp_idx
-        label: "{{ item.path | basename }}"
+        - name: Fetch template file contents from GitHub
+          ansible.builtin.uri:
+            url: "https://raw.githubusercontent.com/{{ git_repo_slug }}/{{ git_branch | default('HEAD') }}/{{ item.path | replace(' ', '%20') }}"
+            method: GET
+            headers: "{{ git_auth_header }}"
+            return_content: true
+            status_code: 200
+          loop: "{{ api_template_files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+          register: template_content_results
+
+        - name: Fetch last commit info for each template file
+          ansible.builtin.uri:
+            url: >-
+              {{ git_api_base }}/repos/{{ git_repo_slug }}/commits?path={{ item.path | replace(' ', '%20') }}&per_page=1&sha={{ git_branch | default('HEAD') }}
+            method: GET
+            headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json'}) }}"
+            status_code: 200
+          loop: "{{ api_template_files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+          register: template_commit_results
+
+        - name: Fetch commit diff for each template file
+          when: include_diff_header and template_commit_results.results[diff_idx].json | length > 0
+          ansible.builtin.uri:
+            url: "{{ git_api_base }}/repos/{{ git_repo_slug }}/commits/{{ template_commit_results.results[diff_idx].json[0].sha }}"
+            method: GET
+            headers: "{{ git_auth_header | combine({'Accept': 'application/vnd.github+json'}) }}"
+            status_code: 200
+          loop: "{{ api_template_files }}"
+          loop_control:
+            index_var: diff_idx
+            label: "{{ item.path | basename }}"
+          register: template_diff_results
+
+        - name: Build enriched template file objects
+          ansible.builtin.set_fact:
+            enriched_template_files: "{{ enriched_template_files | default([]) + [enriched] }}"
+          vars:
+            _commit_list: "{{ template_commit_results.results[tmpl_idx].json }}"
+            _commit: "{{ _commit_list[0] if _commit_list | length > 0 else {} }}"
+            _commit_message: >-
+              {{ (
+                _commit.commit.author.date | default('')
+                + ' | '
+                + _commit.commit.message | default('')
+                + ' ['
+                + _commit.commit.author.name | default('')
+                + ']'
+              ) | truncate(catc_template_summary_maxchar | int, true, '', 0)
+                 if _commit else 'Synced from Git' }}
+            _diff_files: >-
+              {{ template_diff_results.results[tmpl_idx].json.files | default([])
+                 if include_diff_header and template_diff_results is defined
+                 and not (template_diff_results.results[tmpl_idx].skipped | default(false))
+                 else [] }}
+            _file_patch: >-
+              {{ (_diff_files | selectattr('filename', 'eq', item.path) | list | first).patch
+                 | default('') if _diff_files | length > 0 else '' }}
+            enriched:
+              name: "{{ item.path | basename }}"
+              path: "{{ item.path }}"
+              content: "{{ template_content_results.results[tmpl_idx].content }}"
+              commit_message: "{{ _commit_message }}"
+              diff_content: "{{ _file_patch }}"
+          loop: "{{ api_template_files }}"
+          loop_control:
+            index_var: tmpl_idx
+            label: "{{ item.path | basename }}"
+
+        - name: Fetch composite definition file contents from GitHub
+          when: api_composite_files | length > 0
+          ansible.builtin.uri:
+            url: "https://raw.githubusercontent.com/{{ git_repo_slug }}/{{ git_branch | default('HEAD') }}/{{ item.path | replace(' ', '%20') }}"
+            method: GET
+            headers: "{{ git_auth_header }}"
+            return_content: true
+            status_code: 200
+          loop: "{{ api_composite_files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+          register: composite_content_results
+
+        - name: Build enriched composite file objects
+          when: api_composite_files | length > 0
+          ansible.builtin.set_fact:
+            enriched_composite_files: "{{ enriched_composite_files | default([]) + [enriched] }}"
+          vars:
+            enriched:
+              name: "{{ item.path | basename }}"
+              path: "{{ item.path }}"
+              content: "{{ composite_content_results.results[comp_idx].content }}"
+          loop: "{{ api_composite_files }}"
+          loop_control:
+            index_var: comp_idx
+            label: "{{ item.path | basename }}"
+
+    - name: Require templates to synchronize
+      ansible.builtin.assert:
+        that: enriched_template_files | default([]) | length > 0
+        fail_msg: >-
+          No '.{{ template_extension }}' templates found for template_source
+          '{{ template_source | default('git') }}'. Check template_local_dir or
+          git_repo_subfolder in the inventory.
+        success_msg: >-
+          Loaded {{ enriched_template_files | length }} templates and
+          {{ enriched_composite_files | default([]) | length }} composite definitions
+          from {{ template_source | default('git') }} source.
 
     # DYNAMIC TEMPLATE PROCESSING ORDER
     # Instead of a static template_order dictionary, the playbook dynamically determines

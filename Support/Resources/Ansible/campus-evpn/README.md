@@ -447,13 +447,15 @@ Projects/
 
 Used by: **6.0**
 
-Jinja2 template files (`.j2`) and composite definitions (`.yml`) stored in a subfolder of the configured GitHub repository. Fetched at runtime via the GitHub REST API — no local clone required.
+Jinja2 template files (`.j2`) and composite definitions (`.yml`). With the lab default `template_source: local`, they are read from `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`. With `template_source: git`, they are fetched from a subfolder of the configured GitHub repository via the GitHub REST API.
 
 | Parameter | Value |
 |-----------|-------|
+| `template_source` | `local` (or `git`) |
+| `template_local_dir` | `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` |
 | `git_repo` | `https://github.com/imanassypov/CatalystCenter-BGP-EVPN-VXLAN.git` |
 | `git_branch` | `main` (configurable via `inventories/lab/hosts.yml`) |
-| `git_repo_subfolder` | `BGP EVPN` |
+| `git_repo_subfolder` | `Catalyst Center Templates/Site BGP EVPN Templates` |
 
 ---
 

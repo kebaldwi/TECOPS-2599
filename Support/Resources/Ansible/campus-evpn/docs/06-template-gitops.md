@@ -159,13 +159,25 @@ These variables authenticate to the CatC REST API via the `cisco.dnac` collectio
 | `dnac_log_level` | `INFO` | Log verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `dnac_log` | `true` | Writes SDK log to `dnac.log` in the playbook directory |
 
-#### GitHub Repository
+#### Template Source
+
+| Variable | Example | Description |
+|---|---|---|
+| `template_source` | `local` | `local` reads templates from `template_local_dir` (lab default; no GitHub API calls or rate limits). `git` reads them from the GitHub repository below. |
+| `template_local_dir` | `{{ inventory_dir }}/../../../../Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` | Folder containing the `.j2` templates and `.yml` composite definitions when `template_source: local`. |
+
+> Unauthenticated GitHub API access is limited to 60 requests per hour per
+> public IP, and one Git-mode run uses most of that. Lab pods share one public
+> IP, so keep `template_source: local` for classes, or add `git_token` to the
+> optional `campus-evpn/vaults/github.yml` when using `git`.
+
+#### GitHub Repository (`template_source: git`)
 
 | Variable | Example | Description |
 |---|---|---|
 | `git_repo` | `https://github.com/org/repo.git` | Full GitHub repository URL |
 | `git_branch` | `main` | Branch to read templates from |
-| `git_repo_subfolder` | `BGP EVPN` | Subfolder within the repo to scan for `.j2` and `.yml` files. Leave blank to scan the entire repository root. |
+| `git_repo_subfolder` | `Catalyst Center Templates/Site BGP EVPN Templates` | Subfolder within the repo to scan for `.j2` and `.yml` files. Leave blank to scan the entire repository root. |
 | `git_api_base_url` | `https://api.github.com` | Override for GitHub Enterprise instances |
 
 > **Note on `git_token`:** This variable is intentionally absent from `campus-evpn/inventories/lab/hosts.yml`. It can be defined in this stage's optional vault file; see the [Vault section](#vault--encrypted-credentials) below.
@@ -390,9 +402,9 @@ GET https://api.github.com/repos/{git_repo_slug}/git/trees/{git_branch}?recursiv
 
     ← {
         "tree": [
-          {"type": "blob", "path": "BGP EVPN/DEFN-VRF.j2",          "sha": "..."},
-          {"type": "blob", "path": "BGP EVPN/FABRIC-VRF.j2",         "sha": "..."},
-          {"type": "blob", "path": "BGP EVPN/BGP-EVPN-BUILD.yml",    "sha": "..."},
+          {"type": "blob", "path": "Catalyst Center Templates/Site BGP EVPN Templates/DEFN-VRF.j2",          "sha": "..."},
+          {"type": "blob", "path": "Catalyst Center Templates/Site BGP EVPN Templates/FABRIC-VRF.j2",         "sha": "..."},
+          {"type": "blob", "path": "Catalyst Center Templates/Site BGP EVPN Templates/BGP-EVPN-BUILD.yml",    "sha": "..."},
           ...
         ]
       }
@@ -401,17 +413,17 @@ GET https://api.github.com/repos/{git_repo_slug}/git/trees/{git_branch}?recursiv
 **File filtering (applied to `tree[]`):**
 
 ```
-git_repo_subfolder = "BGP EVPN"
-git_tree_prefix    = "BGP EVPN/"
+git_repo_subfolder = "Catalyst Center Templates/Site BGP EVPN Templates"
+git_tree_prefix    = "Catalyst Center Templates/Site BGP EVPN Templates/"
 
 All tree entries where:
   type == "blob"
-  AND path starts with "BGP EVPN/"
-  AND path ends with ".j2"   → api_template_files[]   (20 files)
+  AND path starts with "Catalyst Center Templates/Site BGP EVPN Templates/"
+  AND path ends with ".j2"   → api_template_files[]   (24 files)
 
 All tree entries where:
   type == "blob"
-  AND path starts with "BGP EVPN/"
+  AND path starts with "Catalyst Center Templates/Site BGP EVPN Templates/"
   AND path ends with ".yml"  → api_composite_files[]  (1 file)
 ```
 
@@ -449,7 +461,7 @@ GET https://api.github.com/repos/{slug}/commits/{sha}
     ← {
         "files": [
           {
-            "filename": "BGP EVPN/FABRIC-CLIENT-PORTS.j2",
+            "filename": "Catalyst Center Templates/Site BGP EVPN Templates/FABRIC-CLIENT-PORTS.j2",
             "patch": "@@ -0,0 +1,42 @@\n+{# Client port configuration ... #}"
           }
         ]
@@ -468,14 +480,14 @@ GET https://raw.githubusercontent.com/{slug}/{branch}/{path}
 ```yaml
 # enriched_template_files[] — one entry per .j2 file
 - name: "FABRIC-VRF.j2"
-  path: "BGP EVPN/FABRIC-VRF.j2"
+  path: "Catalyst Center Templates/Site BGP EVPN Templates/FABRIC-VRF.j2"
   content: "{% include \"{{ TEMPLATE_PROJECT_NAME }}/DEFN-VRF.j2\" %}\n..."
   commit_message: "2026-03-15T14:22:10Z | Add FABRIC-CLIENT-PORTS template [Igor Manassypov]"
   diff_content: "@@ -10,5 +10,6 @@..."   # empty string if include_diff_header: false
 
 # enriched_composite_files[] — one entry per .yml file
 - name: "BGP-EVPN-BUILD.yml"
-  path: "BGP EVPN/BGP-EVPN-BUILD.yml"
+  path: "Catalyst Center Templates/Site BGP EVPN Templates/BGP-EVPN-BUILD.yml"
   content: "templates:\n  - name: \"FABRIC-VRF.j2\"\n  ..."
 ```
 
@@ -612,7 +624,7 @@ Called once per template in the `sorted_template_files` loop. Receives the `temp
 
 ```yaml
 name: "FABRIC-VRF.j2"
-path: "BGP EVPN/FABRIC-VRF.j2"
+path: "Catalyst Center Templates/Site BGP EVPN Templates/FABRIC-VRF.j2"
 content: "{% include \"{{ TEMPLATE_PROJECT_NAME }}/DEFN-VRF.j2\" %}\n..."
 commit_message: "2026-03-15T14:22:10Z | Add FABRIC-CLIENT-PORTS template [Igor Manassypov]"
 diff_content: ""   # empty when include_diff_header: false
@@ -677,7 +689,7 @@ Called once per composite definition file. Receives the `composite_file` loop va
 
 ```yaml
 name: "BGP-EVPN-BUILD.yml"
-path: "BGP EVPN/BGP-EVPN-BUILD.yml"
+path: "Catalyst Center Templates/Site BGP EVPN Templates/BGP-EVPN-BUILD.yml"
 content: |
   templates:
     - name: "FABRIC-VRF.j2"
@@ -781,9 +793,9 @@ Response (abbreviated):
 {
   "sha": "abc123...",
   "tree": [
-    {"path": "BGP EVPN/DEFN-VRF.j2",         "type": "blob", "sha": "..."},
-    {"path": "BGP EVPN/FABRIC-VRF.j2",        "type": "blob", "sha": "..."},
-    {"path": "BGP EVPN/BGP-EVPN-BUILD.yml",   "type": "blob", "sha": "..."}
+    {"path": "Catalyst Center Templates/Site BGP EVPN Templates/DEFN-VRF.j2",         "type": "blob", "sha": "..."},
+    {"path": "Catalyst Center Templates/Site BGP EVPN Templates/FABRIC-VRF.j2",        "type": "blob", "sha": "..."},
+    {"path": "Catalyst Center Templates/Site BGP EVPN Templates/BGP-EVPN-BUILD.yml",   "type": "blob", "sha": "..."}
   ],
   "truncated": false
 }

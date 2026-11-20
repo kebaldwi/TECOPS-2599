@@ -292,6 +292,13 @@
     device_provisioning_is_error: >-
       {{ (device_provisioning_task_resp.isError | default(false) | bool)
          or (device_provisioning_reprov_resp.isError | default(false) | bool) }}
+    device_provisioning_unconfirmed: >-
+      {{ (device_provisioning_provision_task_id | length > 0
+          and device_provisioning_task_resp.endTime is not defined
+          and not (device_provisioning_task_resp.isError | default(false) | bool))
+         or (device_provisioning_reprovision_task_id | length > 0
+          and device_provisioning_reprov_resp.endTime is not defined
+          and not (device_provisioning_reprov_resp.isError | default(false) | bool)) }}
     device_provisioning_failure_reason: >-
       {{ [
         device_provisioning_task_resp.failureReason | default(''),
@@ -315,6 +322,8 @@
         SKIPPED — all devices already provisioned at this site
       {%- elif device_provisioning_is_error | bool -%}
         FAILURE
+      {%- elif device_provisioning_unconfirmed | bool -%}
+        UNCONFIRMED — task status could not be read (see the poll task error above)
       {%- else -%}
         SUCCESS
       {%- endif -%}
@@ -335,7 +344,10 @@
 - name: "Fail play if any provisioning task reported an error [{{ site_entry.key }}]"
   when:
     - device_provisioning_any_submitted | bool
-    - (device_provisioning_task_resp.isError | default(false) | bool) or (device_provisioning_reprov_resp.isError | default(false) | bool)
+    - >-
+      (device_provisioning_task_resp.isError | default(false) | bool)
+      or (device_provisioning_reprov_resp.isError | default(false) | bool)
+      or (device_provisioning_unconfirmed | bool)
   vars:
     device_provisioning_task_resp: >-
       {{ (device_provisioning_task_poll_result.json.response | default({}))
@@ -343,9 +355,16 @@
     device_provisioning_reprov_resp: >-
       {{ (device_provisioning_reprovision_task_poll_result.json.response | default({}))
          if device_provisioning_reprovision_task_id | length > 0 else {} }}
+    device_provisioning_unconfirmed: >-
+      {{ (device_provisioning_provision_task_id | length > 0
+          and device_provisioning_task_resp.endTime is not defined
+          and not (device_provisioning_task_resp.isError | default(false) | bool))
+         or (device_provisioning_reprovision_task_id | length > 0
+          and device_provisioning_reprov_resp.endTime is not defined
+          and not (device_provisioning_reprov_resp.isError | default(false) | bool)) }}
   ansible.builtin.fail:
     msg: >-
-      Provisioning failed for site '{{ site_entry.key }}'.
+      Provisioning failed or could not be confirmed for site '{{ site_entry.key }}'.
       POST failureReason : {{ device_provisioning_task_resp.failureReason | default('') }}
       PUT  failureReason : {{ device_provisioning_reprov_resp.failureReason | default('') }}
 
