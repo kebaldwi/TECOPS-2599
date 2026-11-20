@@ -188,8 +188,8 @@ Utilization statement:
 The workflow suite uses shared GitOps input artifacts:
 
 1. Project settings JSON
-- Campus EVPN: `Support/Resources/Data-Models/campus-evpn/settings.json`
-- Traditional fabric: `Projects/TRADITIONAL/Settings/settings.json`
+- Campus EVPN: `Projects/Data-Models/campus-evpn/settings.json`
+- Traditional fabric: `Projects/Data-Models/catalyst-center/settings.json`
 - Consumed across hierarchy, settings, discovery, profile, and provisioning logic.
 
 2. GitHub template source

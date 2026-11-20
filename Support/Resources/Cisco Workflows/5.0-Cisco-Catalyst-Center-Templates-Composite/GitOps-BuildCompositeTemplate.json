@@ -184,7 +184,7 @@
       {
         "schema_id": "datatype.string",
         "properties": {
-          "value": "Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates",
+          "value": "Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates",
           "scope": "input",
           "name": "GITHUB-PATH",
           "type": "datatype.string",

@@ -55,7 +55,7 @@ This resource suite addresses all five pressures through three parallel tooling 
 | Folder | Tooling | Primary Audience | Deployment Method |
 |--------|---------|-----------------|-------------------|
 | [Ansible/](Ansible/) | Ansible + cisco.catalystcenter collection | Network DevOps, CI/CD pipeline teams | `ansible-playbook` CLI or AWX/AAP |
-| [Data-Models/](Data-Models/) | Shared campus and data-center EVPN input models | All automation paths | Git-managed JSON and templates |
+| [Data-Models/](../../Projects/Data-Models/) | Shared campus EVPN, data-center EVPN and Traditional input models (under `Projects/`) | All automation paths | Git-managed JSON and templates |
 | [Cisco Workflows/](Cisco%20Workflows/) | Cisco SecureX / XDR Workflow Manager | Cisco platform operators, NOC teams | Catalyst Center Workflow Manager |
 | [Python/](Python/) | Pure Python + REST | Developers, troubleshooters, API learners | Direct Python execution |
 | [CML/](CML/) | Cisco Modeling Labs | Lab engineers, training leads | CML server import |
@@ -100,7 +100,8 @@ Each playbook targets one well-scoped Catalyst Center capability. Playbooks can 
 The campus suite uses the `cisco.catalystcenter` and `cisco.dnac` Ansible
 collections. Stage `6.0` integrates with a GitHub repository as a template
 source, enabling GitOps-driven template synchronization. The data-center
-pipeline is a reserved scaffold for Nexus Dashboard EVPN automation.
+pipeline in `Ansible/dc-evpn/` builds the NX-OSv VXLAN EVPN fabric through
+Nexus Dashboard with Nexus as Code, and hands its VRFs to the IP Core.
 
 ### When to Use Ansible
 

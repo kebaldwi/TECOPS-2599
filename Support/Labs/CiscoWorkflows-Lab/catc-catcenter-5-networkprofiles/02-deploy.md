@@ -72,7 +72,7 @@ Before creating the profile, `CATC-CreateSiteProfile-v3` calls `GET /dna/intent/
    |--------------------------|------------------------------|
    | `GITHUB-OWNER`           | `kebaldwi`                   |
    | `GITHUB-REPO`            | `TECOPS-2599`                |
-   | `GITHUB-PATH`            | `Support/Resources/Data-Models/campus-evpn` |
+   | `GITHUB-PATH`            | `Projects/Data-Models/campus-evpn` |
    | `GITHUB-FILE`            | `settings.json`              |
    | `TemplateHubProjectName` | `BGP_EVPN`                   |
 

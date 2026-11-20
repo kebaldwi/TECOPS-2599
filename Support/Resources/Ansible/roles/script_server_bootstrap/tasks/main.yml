@@ -47,6 +47,21 @@
   register: script_server_bootstrap_collection_install
   changed_when: "'Nothing to do' not in script_server_bootstrap_collection_install.stdout"
 
+# cisco.nd for dc-evpn is a pre-release from git, kept out of the shared collections.
+- name: Install the pinned pre-release cisco.nd collection for dc-evpn
+  ansible.builtin.command:
+    argv:
+      - "{{ script_server_bootstrap_venv_path }}/bin/ansible-galaxy"
+      - collection
+      - install
+      - -r
+      - "{{ script_server_bootstrap_dc_nd_requirements_file }}"
+      - -p
+      - "{{ script_server_bootstrap_dc_collections_path }}"
+      - --no-deps
+  register: script_server_bootstrap_dc_nd_install
+  changed_when: "'Nothing to do' not in script_server_bootstrap_dc_nd_install.stdout"
+
 - name: Add the virtual environment to shell PATH
   ansible.builtin.lineinfile:
     path: "{{ item }}"

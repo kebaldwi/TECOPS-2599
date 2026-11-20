@@ -1,0 +1,9 @@
+---
+# vPC pair: two leaves act as one switch to dual-homed servers.
+# Nexus Dashboard detects the peer-link (Ethernet1/3-4 in CML v15) and picks the domain ID.
+# CAUTION: once deployed, a pair cannot be edited, only deleted and recreated.
+vxlan:
+  topology:
+    vpc_peers:
+      - peer1: dc-leaf1
+        peer2: dc-leaf2

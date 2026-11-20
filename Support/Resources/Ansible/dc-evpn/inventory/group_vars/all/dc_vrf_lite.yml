@@ -1,0 +1,100 @@
+---
+# VRF-Lite handoff: how each DC VRF leaves the fabric to the IP Core.
+# VRF-Lite means one routed sub-interface plus one eBGP session per VRF on a shared wire.
+# Each handoff is a Nexus Dashboard "L3Out" (stages 03-05). The IP Core side is applied by hand
+# from Support/Resources/CML/Startup Configs/core0N-dc-vrf-fusion.cfg; keep the two in step.
+
+# Fabric-wide VRF-Lite behaviour. "manual" stops Nexus Dashboard picking its own VLAN tags.
+# The subnet values are the controller's default pool; every address below is pinned.
+dc_vrf_lite_fabric_settings:
+  vrf_lite_auto_config: manual
+  vrf_lite_subnet_range: 192.168.252.0/24
+  vrf_lite_subnet_target_mask: 30
+
+# The border leaf that carries every handoff.
+dc_vrf_lite_border_leaf: dc-border1
+
+# The two physical wires from the border leaf to the IP Core, one inter-fabric link each
+# (stage 04). The parent ports keep the CML point-to-point addresses; peer is a hostname
+# from dc_external_edge_devices. link_mtu must match the core port (1500).
+dc_vrf_lite_links:
+  - name: core1
+    interface: Ethernet1/3
+    peer: core1
+    peer_interface: Ethernet1/7
+    ifc:
+      src_ip_address_mask: 198.19.2.98/30
+      dst_ip_address: 198.19.2.97
+      link_mtu: 1500
+
+  - name: core2
+    interface: Ethernet1/4
+    peer: core2
+    peer_interface: Ethernet1/7
+    ifc:
+      src_ip_address_mask: 198.19.2.102/30
+      dst_ip_address: 198.19.2.101
+      link_mtu: 1500
+
+# MTU on the sub-interfaces. It can never be larger than its parent (link_mtu above).
+dc_vrf_lite_mtu: 1500
+
+# Sub-interface names are written as parent.tag, e.g. Ethernet1/3.2 (Nexus Dashboard requires it).
+dc_vrf_lite_interface_form: subinterface
+
+# The cores give the DC its default route, so the fabric must not send one to them.
+dc_vrf_lite_advertise_default_route: false
+
+# Which handoffs stage 05 acts on: all, or one or more VRF names.
+dc_vrf_lite_only: all
+
+# Six handoffs: three VRFs on each of the two links. link names a row in dc_vrf_lite_links.
+# dot1q = sub-interface VLAN tag; ipv4_addr = border leaf side; neighbor_ipv4 = core side.
+dc_vrf_lite_extensions:
+  - name: red-core1
+    vrf: red
+    peer_vrf: red
+    link: core1
+    dot1q: 2
+    ipv4_addr: 198.19.4.1/30
+    neighbor_ipv4: 198.19.4.2
+
+  - name: green-core1
+    vrf: green
+    peer_vrf: green
+    link: core1
+    dot1q: 3
+    ipv4_addr: 198.19.4.5/30
+    neighbor_ipv4: 198.19.4.6
+
+  - name: blue-core1
+    vrf: blue
+    peer_vrf: blue
+    link: core1
+    dot1q: 4
+    ipv4_addr: 198.19.4.9/30
+    neighbor_ipv4: 198.19.4.10
+
+  - name: red-core2
+    vrf: red
+    peer_vrf: red
+    link: core2
+    dot1q: 2
+    ipv4_addr: 198.19.4.13/30
+    neighbor_ipv4: 198.19.4.14
+
+  - name: green-core2
+    vrf: green
+    peer_vrf: green
+    link: core2
+    dot1q: 3
+    ipv4_addr: 198.19.4.17/30
+    neighbor_ipv4: 198.19.4.18
+
+  - name: blue-core2
+    vrf: blue
+    peer_vrf: blue
+    link: core2
+    dot1q: 4
+    ipv4_addr: 198.19.4.21/30
+    neighbor_ipv4: 198.19.4.22

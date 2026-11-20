@@ -77,7 +77,7 @@ The same `settings.json` that has driven every previous module also drives provi
 
 > **Note:** Unlike the network-profile workflow, the site hierarchy fields (`HierarchyParent`, `HierarchyArea`, `HierarchyBldg`, `HierarchyFloor`) are also exposed as **direct workflow input parameters** in addition to being read from `settings.json`. The input parameters drive the `siteId` and device resolution; the JSON fields drive template target and composite name extraction.
 
-For this lab, the file lives at `Support/Resources/Data-Models/campus-evpn/settings.json` in the `kebaldwi/TECOPS-2599` repository, and is the same file referenced by the default workflow input parameters (`GITHUB_USER`, `GITHUB_REPO`, `GITHUB_PATH`, `GITHUB_FILE`).
+For this lab, the file lives at `Projects/Data-Models/campus-evpn/settings.json` in the `kebaldwi/TECOPS-2599` repository, and is the same file referenced by the default workflow input parameters (`GITHUB_USER`, `GITHUB_REPO`, `GITHUB_PATH`, `GITHUB_FILE`).
 
 ## What You Will Do in This Module
 

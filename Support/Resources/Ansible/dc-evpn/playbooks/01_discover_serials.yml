@@ -1,0 +1,222 @@
+---
+# Stage 01 - SSH to each DC switch and IP Core (read-only), read its serial, and generate
+# topology_switches.nac.yaml. Nexus Dashboard identifies devices by serial, so the model needs them.
+# Run from Support/Resources/Ansible/dc-evpn: ansible-playbook playbooks/01_discover_serials.yml
+
+- name: Stage 01a - build the SSH groups from the declared tables
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  any_errors_fatal: true
+
+  tasks:
+    - name: Assert the declared switch and core tables are usable
+      ansible.builtin.assert:
+        that:
+          - dc_switches is defined
+          - dc_switches | length > 0
+          - dc_switches | selectattr('name', 'undefined') | list | length == 0
+          - dc_switches | selectattr('management_ipv4_address', 'undefined') | list | length == 0
+          - dc_switches | selectattr('role', 'undefined') | list | length == 0
+          - dc_external_edge_devices | default([]) | length > 0
+          - dc_external_edge_devices | selectattr('hostname', 'undefined') | list | length == 0
+          - dc_external_edge_devices | selectattr('ip', 'undefined') | list | length == 0
+        fail_msg: >-
+          inventory/group_vars/all/dc_switches.yml must declare dc_switches (name,
+          management_ipv4_address, role) and dc_external_settings.yml must declare
+          dc_external_edge_devices (hostname, ip).
+
+    # add_host adds a host to the inventory while the playbook runs; loop does it once per device.
+    # This keeps the group_vars tables the single place where names and addresses are written.
+    - name: Add each declared DC switch to the SSH group
+      ansible.builtin.add_host:
+        name: "{{ item.name }}"
+        groups: dc_fabric_switches
+        ansible_host: "{{ item.management_ipv4_address }}"
+      loop: "{{ dc_switches }}"
+      loop_control:
+        label: "{{ item.name }} ({{ item.management_ipv4_address }})"
+      changed_when: false
+
+    - name: Add each declared IP Core to the SSH group
+      ansible.builtin.add_host:
+        name: "{{ item.hostname }}"
+        groups: dc_core_switches
+        ansible_host: "{{ item.ip }}"
+      loop: "{{ dc_external_edge_devices }}"
+      loop_control:
+        label: "{{ item.hostname }} ({{ item.ip }})"
+      changed_when: false
+
+- name: Stage 01b - read the serial number off each device
+  hosts: dc_fabric_switches:dc_core_switches
+  gather_facts: false
+  # Keep going when one device is unreachable, so the report can show which.
+  ignore_unreachable: true
+
+  tasks:
+    # Nexus Dashboard knows a switch by its chassis serial, so read that, not `show version`.
+    - name: Read the chassis serial number
+      cisco.nxos.nxos_command:
+        commands:
+          - show inventory | json
+      register: dc_switch_inventory
+      ignore_errors: true
+      changed_when: false
+
+    - name: Keep the chassis serial for the next play
+      ansible.builtin.set_fact:
+        dc_switch_serial: >-
+          {{ ((dc_switch_inventory.stdout | default([]) | first | default({})).TABLE_inv.ROW_inv
+              | default([], true)
+              | selectattr('name', 'defined')
+              | selectattr('name', 'search', 'Chassis')
+              | map(attribute='serialnum') | list | first | default('')) }}
+      when: dc_switch_inventory is succeeded
+
+- name: Stage 01c - generate the switch data model from the serial numbers
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  any_errors_fatal: true
+
+  vars:
+    # The data model is read from playbooks/host_vars/ (a link to Projects/Data-Models/dc-evpn/host_vars).
+    dc_switch_model_dir: "{{ playbook_dir }}/host_vars/{{ dc_fabric_name }}"
+    dc_switch_model_example: "{{ dc_switch_model_dir }}/topology_switches.nac.yaml.example"
+    dc_switch_model_path: "{{ dc_switch_model_dir }}/topology_switches.nac.yaml"
+    dc_switch_model_shown: "Projects/Data-Models/dc-evpn/host_vars/{{ dc_fabric_name }}/topology_switches.nac.yaml"
+
+    # A name-to-serial list in group_vars/all, which Ansible loads for every later stage.
+    dc_serial_lookup_path: "{{ playbook_dir }}/../inventory/group_vars/all/dc_device_serials.yml"
+    dc_serial_lookup_shown: "inventory/group_vars/all/dc_device_serials.yml"
+    dc_serial_lookup_names: >-
+      {{ (dc_switches | map(attribute='name') | list)
+         + (dc_external_edge_devices | map(attribute='hostname') | list) }}
+
+    dc_serial_rows: >-
+      {%- set rows = [] -%}
+      {%- for sw in dc_switches -%}
+      {{- rows.append('%-12s %-16s %-12s %s' | format(
+            sw.name, sw.management_ipv4_address, sw.role,
+            hostvars[sw.name].dc_switch_serial | default('', true) or 'UNREACHABLE')) or '' -}}
+      {%- endfor -%}
+      {%- for core in dc_external_edge_devices -%}
+      {{- rows.append('%-12s %-16s %-12s %s' | format(
+            core.hostname, core.ip, core.role | default('core_router'),
+            hostvars[core.hostname].dc_switch_serial | default('', true) or 'UNREACHABLE')) or '' -}}
+      {%- endfor -%}
+      {{ rows }}
+
+    dc_discovered_serials: >-
+      {{ dc_switches | map(attribute='name')
+         | map('extract', hostvars, 'dc_switch_serial') | list }}
+
+    # Header placed at the top of the generated file instead of the .example's header.
+    # Keep the "GENERATED BY" line: a check at the end of the play looks for it.
+    dc_generated_model_header: |
+      ---
+      # GENERATED BY 01_discover_serials.yml - do not edit this file.
+      # Re-running stage 01 overwrites it. To change the model, edit
+      # topology_switches.nac.yaml.example or dc_switches.yml and run stage 01 again.
+
+    dc_generated_model_text: "{{ dc_generated_model_raw.content | b64decode }}"
+
+  tasks:
+    - name: Show the serial numbers
+      ansible.builtin.debug:
+        msg: >-
+          {{ ['%-12s %-16s %-12s %s' | format('DEVICE', 'MANAGEMENT IP', 'ROLE', 'SERIAL NUMBER')]
+             + dc_serial_rows }}
+
+    # Stop before writing anything if any device did not answer.
+    # A missing or wrong serial would only fail much later, when the fabric is built.
+    - name: Require a serial for every declared device
+      ansible.builtin.assert:
+        that:
+          - dc_serial_rows | select('search', 'UNREACHABLE') | list | length == 0
+        fail_msg: >-
+          At least one declared device did not return a serial number - see the
+          UNREACHABLE rows above. Nothing has been written. Check that you can
+          reach 198.18.1.x, that the addresses in group_vars/all are right, and
+          that the switch credentials in the vault are correct.
+        success_msg: >-
+          Read a serial number from all {{ dc_serial_rows | length }} declared device(s).
+
+    - name: Copy the tracked shape reference over the generated model
+      ansible.builtin.copy:
+        src: "{{ dc_switch_model_example }}"
+        dest: "{{ dc_switch_model_path }}"
+        mode: "0644"
+
+    - name: Swap the .example header for one that describes the generated file
+      ansible.builtin.replace:
+        path: "{{ dc_switch_model_path }}"
+        regexp: '\A---\n(?:#[^\n]*\n)+'
+        replace: "{{ dc_generated_model_header }}"
+
+    # Find each switch by its `- name:` line and fill in its serial and role; nothing else changes.
+    - name: Stamp each switch's discovered serial and declared role
+      ansible.builtin.replace:
+        path: "{{ dc_switch_model_path }}"
+        regexp: >-
+          ^([ \t]*- name: {{ item.name | regex_escape }}[ \t]*\n[ \t]*serial_number: )[^\n]*(\n[ \t]*role: )[^\n]*
+        replace: '\g<1>{{ hostvars[item.name].dc_switch_serial }}\g<2>{{ item.role }}'
+      loop: "{{ dc_switches }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ hostvars[item.name].dc_switch_serial }}"
+
+    - name: Read the generated model back
+      ansible.builtin.slurp:
+        src: "{{ dc_switch_model_path }}"
+      register: dc_generated_model_raw
+
+    # Check the finished file itself, because a failed text substitution does not report an error.
+    - name: Check no placeholder survived and every serial landed
+      ansible.builtin.assert:
+        that:
+          - "'REPLACE_ME' not in dc_generated_model_text"
+          - "'# GENERATED BY 01_discover_serials.yml' in dc_generated_model_text"
+          - dc_discovered_serials | reject('in', dc_generated_model_text) | list | length == 0
+        fail_msg: >-
+          {{ dc_switch_model_shown }} was written but is not complete. The usual
+          cause is a switch name in dc_switches.yml that does not match the name
+          in topology_switches.nac.yaml.example. Do not run stage 02 against this file.
+
+    - name: Check each switch carries its own serial and its declared role
+      ansible.builtin.assert:
+        that:
+          - (dc_generated_model_text | from_yaml).vxlan.topology.switches
+            | selectattr('name', 'eq', item.name)
+            | selectattr('serial_number', 'eq', hostvars[item.name].dc_switch_serial)
+            | selectattr('role', 'eq', item.role)
+            | list | length == 1
+        fail_msg: >-
+          {{ dc_switch_model_shown }} does not hold exactly one {{ item.name }}
+          entry carrying serial {{ hostvars[item.name].dc_switch_serial }} and
+          role {{ item.role }}.
+      loop: "{{ dc_switches }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # One name-to-serial list for the DC switches and the cores, used by later stages.
+    - name: Write the serial lookup every later stage reads
+      ansible.builtin.copy:
+        dest: "{{ dc_serial_lookup_path }}"
+        mode: "0644"
+        content: |
+          ---
+          # GENERATED BY 01_discover_serials.yml - do not edit this file.
+          # Serial numbers read off each device; stage 01 overwrites this file.
+          # Not tracked in git, because the serials belong to this lab only.
+          dc_device_serials:
+          {% for name in dc_serial_lookup_names %}
+            {{ name }}: "{{ hostvars[name].dc_switch_serial | default('') }}"
+          {% endfor %}
+
+    - name: Say what was written
+      ansible.builtin.debug:
+        msg:
+          - "Wrote {{ dc_switch_model_shown }}"
+          - "and dc-evpn/{{ dc_serial_lookup_shown }}."
+          - "Both are build output and git-ignored. Edit the .example or dc_switches.yml instead."

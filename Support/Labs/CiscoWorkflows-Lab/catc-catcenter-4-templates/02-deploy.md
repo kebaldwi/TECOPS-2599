@@ -1,6 +1,6 @@
 # Examine and Run the Templates Workflows
 
-In this section we will open the **`GitOps-ImportTemplates`** workflow in the **Cisco Workflows** dashboard, walk through what it does, supply the input parameters, and run it against Catalyst Center to import every Jinja2 template under `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` into the Template Hub project `BGP_EVPN`. We will then run **`GitOps-BuildCompositeTemplate`** against the same path to assemble those templates into a published composite template, and verify the result in Catalyst Center.
+In this section we will open the **`GitOps-ImportTemplates`** workflow in the **Cisco Workflows** dashboard, walk through what it does, supply the input parameters, and run it against Catalyst Center to import every Jinja2 template under `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` into the Template Hub project `BGP_EVPN`. We will then run **`GitOps-BuildCompositeTemplate`** against the same path to assemble those templates into a published composite template, and verify the result in Catalyst Center.
 
 These workflows are the **fourth** and **fifth** in the GitOps provisioning suite. The import workflow depends only on the site hierarchy created by `GitOps-BuildHierarchy-v3`; the composite workflow depends on the import workflow having published every member template it references.
 
@@ -68,7 +68,7 @@ Before creating a template, `CATC-CreateTemplate-v3` calls `GET /dna/intent/api/
    |--------------------------|-------------------------------------|
    | `GITHUB-OWNER`           | `kebaldwi`                          |
    | `GITHUB-REPO`            | `TECOPS-2599`                       |
-   | `GITHUB-PATH`            | `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`   |
+   | `GITHUB-PATH`            | `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`   |
    | `TemplateHubProjectName` | `BGP_EVPN`                          |
    | `FORCE Update`           | `false`                             |
 
@@ -143,7 +143,7 @@ Before creating a composite, `CATC-CreateCompositeTemplate-v3` checks the projec
    |--------------------------|-------------------------------------|
    | `GITHUB-OWNER`           | `kebaldwi`                          |
    | `GITHUB-REPO`            | `TECOPS-2599`                       |
-   | `GITHUB-PATH`            | `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`   |
+   | `GITHUB-PATH`            | `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`   |
    | `TemplateHubProjectName` | `BGP_EVPN`                          |
    | `FORCE Update`           | `false`                             |
 
@@ -187,7 +187,7 @@ A successful run reports the composite template created and published.
    ![Discovery Menu](../../images/common/platform/catc-menu-tools.png?raw=true)
 
 5. Locate the **`BGP_EVPN`** project on the left and expand it to confirm:
-    - Every `.j2` file from `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` is listed as a regular template.
+    - Every `.j2` file from `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` is listed as a regular template.
     - Each template shows status **Published** (committed). Templates still showing **Draft** indicate the commit step did not run for that template — re-run `GitOps-ImportTemplates` to publish them.
     - The `BGP-EVPN-BUILD.j2` composite template is present, with `Composite` indicated in its type, and shows status **Published**.
 
@@ -200,7 +200,7 @@ A successful run reports the composite template created and published.
 
 ## Summary
 
-You have used two Cisco Workflows — driven entirely from version-controlled `.j2` and `.yml` files in GitHub — to import every Jinja2 template under `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` into the Catalyst Center Template Hub project `BGP_EVPN`, publish them in dependency-safe order, and then assemble and publish the `BGP-EVPN-BUILD` composite template that bundles them into a single deployable unit. No copy-paste, no per-template UI clicking, no manual member-ID lookups. The same GitOps pattern (List → Read → Process → Act → Commit → Verify) used for hierarchy, settings, and discovery now applies to templates, and the composite produced here is the unit that Network Profiles and Provisioning will consume in the next modules.
+You have used two Cisco Workflows — driven entirely from version-controlled `.j2` and `.yml` files in GitHub — to import every Jinja2 template under `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` into the Catalyst Center Template Hub project `BGP_EVPN`, publish them in dependency-safe order, and then assemble and publish the `BGP-EVPN-BUILD` composite template that bundles them into a single deployable unit. No copy-paste, no per-template UI clicking, no manual member-ID lookups. The same GitOps pattern (List → Read → Process → Act → Commit → Verify) used for hierarchy, settings, and discovery now applies to templates, and the composite produced here is the unit that Network Profiles and Provisioning will consume in the next modules.
 
 > [**Next Module**](../catc-catcenter-5-networkprofiles/01-intro.md)
 

@@ -1,0 +1,29 @@
+---
+# The External fabric: holds only the IP Core switches that the DC hands its VRFs to.
+# Stage 04 reads these values to create it and add the cores. Anything not listed is left
+# at the Nexus Dashboard default.
+
+# The fabric's name; it matches the External host in inventory/hosts.yml.
+dc_external_fabric_name: TECOPS-External
+
+dc_external_fabric_settings:
+  # The IP Core BGP AS. It differs from the DC fabric's 65005 because the handoff is eBGP.
+  bgp_asn: "65002"
+
+  # Monitor Mode: Nexus Dashboard only reads the cores and never writes to them.
+  # Set at creation so the fabric is never writable, even briefly.
+  monitored_mode: true
+
+# The IP Core switches that live in this fabric. They are NX-OS, discovered over SNMPv3
+# with the shared switch login from the vault. Their side of each handoff is applied by
+# hand from Support/Resources/CML/Startup Configs/core0N-dc-vrf-fusion.cfg, never by Nexus Dashboard.
+dc_external_edge_devices:
+  - hostname: core1
+    ip: 198.18.1.108
+    platform_type: nx-os
+    role: core_router
+
+  - hostname: core2
+    ip: 198.18.1.109
+    platform_type: nx-os
+    role: core_router

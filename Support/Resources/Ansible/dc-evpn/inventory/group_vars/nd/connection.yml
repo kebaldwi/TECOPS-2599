@@ -1,0 +1,22 @@
+---
+# How Ansible connects to Nexus Dashboard (the "nd" group) over its HTTPS API.
+# Credentials come only from the vault-encrypted group_vars/all/vault.yml.
+ansible_connection: ansible.netcommon.httpapi
+ansible_network_os: cisco.dcnm.dcnm
+ansible_httpapi_port: 443
+ansible_httpapi_use_ssl: true
+ansible_httpapi_validate_certs: false
+ansible_httpapi_login_domain: local
+
+# Nexus Dashboard login.
+ansible_user: "{{ dc_nd_username }}"
+ansible_password: "{{ dc_nd_password }}"
+
+# The login Nexus Dashboard uses to reach and manage the switches.
+ndfc_switch_username: "{{ dc_switch_username }}"
+ndfc_switch_password: "{{ dc_switch_password }}"
+
+# Long timeouts (seconds): adding switches to the fabric can take minutes.
+# With the 30 s default the run fails with an error that looks like a bad password.
+ansible_command_timeout: 1000
+ansible_connect_timeout: 1000

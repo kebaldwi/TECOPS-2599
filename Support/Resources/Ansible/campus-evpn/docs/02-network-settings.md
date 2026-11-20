@@ -173,7 +173,7 @@ Support/Resources/Ansible/
 The playbook reads from the shared `settings.json` data model:
 
 ```
-Support/Resources/Data-Models/campus-evpn/settings.json
+Projects/Data-Models/campus-evpn/settings.json
 ```
 
 ---
@@ -205,7 +205,7 @@ all:
       catc_verify:  false
       catc_debug:   false
 
-      settings_json_path: "{{ inventory_dir }}/../../../../Data-Models/campus-evpn/settings.json"
+      settings_json_path: "{{ inventory_dir }}/../../../../../../Projects/Data-Models/campus-evpn/settings.json"
 ```
 
 | Variable | Purpose |

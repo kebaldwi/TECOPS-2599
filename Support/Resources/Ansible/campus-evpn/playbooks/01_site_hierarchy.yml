@@ -110,7 +110,7 @@
     # building_info_map: { "Global/X/Y": { address, country, latitude, longitude } }
     # floor_info_map   : { "Global/X/Y": { rf_model, width, length, height, floor_number } }
     #
-    # Sample (Data-Models/campus-evpn/settings.json synthesised):
+    # Sample (Projects/Data-Models/campus-evpn/settings.json synthesised):
     #
     # site_type_map:
     #   {
@@ -160,7 +160,7 @@
         # All four fields are always present; missing JSON fields fall back to inventory defaults.
         # Used in Step 4 to populate the building sub-dict passed to the module.
         #
-        # Sample (Data-Models/campus-evpn/settings.json):
+        # Sample (Projects/Data-Models/campus-evpn/settings.json):
         #   {
         #     "Global/PODS/POD 0/Building P0": {
         #       "address":   "1 Cisco Way, San Jose, CA 95134",  ← entry.address (HierarchyBldgAddress) or default_building_address
@@ -188,7 +188,7 @@
         # All five fields are always present; missing JSON fields fall back to inventory defaults.
         # Used in Step 4 to populate the floor sub-dict passed to the module.
         #
-        # Sample (Data-Models/campus-evpn/settings.json):
+        # Sample (Projects/Data-Models/campus-evpn/settings.json):
         #   {
         #     "Global/PODS/POD 0/Building P0/Floor 1": {
         #       "rf_model":     "Cubes And Walled Offices",  ← entry.rfModel / rf_model or default_floor_rf_model
@@ -221,7 +221,7 @@
     # then sort by path depth so parent sites are always created before children.
     # "Global" (depth 1) is skipped — it always pre-exists in CatC.
     #
-    # Sample (Data-Models/campus-evpn/settings.json synthesised):
+    # Sample (Projects/Data-Models/campus-evpn/settings.json synthesised):
     #
     # all_site_paths:
     #   [
@@ -281,7 +281,7 @@
     #   { site_type: "area"|"building"|"floor",
     #     site: { <type>: { name, parent_name, ...type-specific fields } } }
     #
-    # Sample (Data-Models/campus-evpn/settings.json synthesised, two entries shown):
+    # Sample (Projects/Data-Models/campus-evpn/settings.json synthesised, two entries shown):
     #
     # site_configs_list:
     #   [

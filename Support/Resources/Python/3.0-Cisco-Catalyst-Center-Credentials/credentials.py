@@ -49,8 +49,8 @@ DEFAULT_SETTINGS = os.path.abspath(
         "..",
         "..",
         "Projects",
-        "BGP_EVPN",
-        "Settings",
+        "Data-Models",
+        "campus-evpn",
         "settings.json",
     )
 )

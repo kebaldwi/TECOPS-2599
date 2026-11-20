@@ -66,7 +66,7 @@ The hierarchy that Catalyst Center will end up with is defined entirely by `sett
 ]
 ```
 
-For this lab the file lives at `Support/Resources/Data-Models/campus-evpn/settings.json` in the cloned repository, and is the same file referenced by every other playbook in the suite via the `settings_json_path` variable in `campus-evpn/inventories/lab/hosts.yml`.
+For this lab the file lives at `Projects/Data-Models/campus-evpn/settings.json` in the cloned repository, and is the same file referenced by every other playbook in the suite via the `settings_json_path` variable in `campus-evpn/inventories/lab/hosts.yml`.
 
 ## What You Will Do in This Module
 

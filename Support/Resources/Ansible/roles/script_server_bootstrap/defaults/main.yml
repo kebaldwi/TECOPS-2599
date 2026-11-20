@@ -2,6 +2,8 @@
 script_server_bootstrap_venv_path: "{{ ansible_user_dir }}/tecops-venv"
 script_server_bootstrap_requirements_file: "{{ role_path }}/../../requirements.txt"
 script_server_bootstrap_collections_file: "{{ role_path }}/../../requirements.yml"
+script_server_bootstrap_dc_nd_requirements_file: "{{ role_path }}/../../dc-evpn/collections/requirements-cisco-nd.yml"
+script_server_bootstrap_dc_collections_path: "{{ role_path }}/../../dc-evpn/collections"
 script_server_bootstrap_shell_profiles:
   - "{{ ansible_user_dir }}/.profile"
   - "{{ ansible_user_dir }}/.bashrc"

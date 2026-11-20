@@ -1,0 +1,7 @@
+---
+# Underlay: the routed IP network between spines and leaves that carries VXLAN traffic.
+vxlan:
+  underlay:
+    ipv4:
+      # Each spine-leaf link gets a /31 (two addresses, no waste).
+      subnet_mask: 31

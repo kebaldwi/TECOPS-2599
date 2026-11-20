@@ -61,7 +61,7 @@ The playbook is configured entirely from `campus-evpn/inventories/lab/hosts.yml`
 github_owner: kebaldwi
 github_repo:  TECOPS-2599
 github_branch: main
-github_path:   Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
+github_path:   Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
 template_project_name: TECOPS-2599
 ```
 

@@ -34,10 +34,10 @@ Open the common lab inventory to confirm the data path:
 
 ```bash
 grep settings_json_path campus-evpn/inventories/lab/hosts.yml
-# Expect: settings_json_path resolves to Support/Resources/Data-Models/campus-evpn/settings.json
+# Expect: settings_json_path resolves to Projects/Data-Models/campus-evpn/settings.json
 ```
 
-This relative path resolves to `~/TECOPS-2599/Support/Resources/Data-Models/campus-evpn/settings.json` — the shared source-of-truth file.
+This relative path resolves to `~/TECOPS-2599/Projects/Data-Models/campus-evpn/settings.json` — the shared source-of-truth file.
 
 ## Step 2 — Confirm the Shared Vault
 

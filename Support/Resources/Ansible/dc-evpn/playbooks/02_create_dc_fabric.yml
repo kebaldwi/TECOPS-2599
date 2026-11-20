@@ -1,0 +1,53 @@
+---
+# Stage 02: Nexus as Code reads the YAML model in host_vars/ and builds the fabric, switches,
+# vPC, VRFs and networks. WARNING: importing a switch erases its config.
+# All else is only saved on the controller until stage 06.
+# Run from Support/Resources/Ansible/dc-evpn: ansible-playbook playbooks/02_create_dc_fabric.yml
+
+- name: Stage 02 - create the DC fabric intent
+  hosts: TECOPS-DC1
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    dc_switch_model_path: "{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/topology_switches.nac.yaml"
+
+  pre_tasks:
+    # Safety checks before anything is built. The switch file comes from stage 01,
+    # so stop early if it is missing. "always" tags mean --tags cannot skip them.
+    - name: Look for the generated switch model
+      ansible.builtin.stat:
+        path: "{{ dc_switch_model_path }}"
+      register: dc_switch_model
+      delegate_to: localhost
+      tags: [always]
+
+    - name: Fail with a pointer to stage 01 when the switch model is absent
+      ansible.builtin.fail:
+        msg: >-
+          Projects/Data-Models/dc-evpn/host_vars/{{ inventory_hostname }}/topology_switches.nac.yaml
+          does not exist. It is generated, not tracked, because the serial
+          numbers belong to one lab. Run playbooks/01_discover_serials.yml.
+      when: not dc_switch_model.stat.exists
+      tags: [always]
+
+    # A placeholder serial number would only fail much later, with a confusing error.
+    - name: Read the switch model back to check the serials are real
+      ansible.builtin.slurp:
+        src: "{{ dc_switch_model_path }}"
+      register: dc_switch_model_content
+      delegate_to: localhost
+      tags: [always]
+
+    - name: Fail when a placeholder serial number is still in place
+      ansible.builtin.fail:
+        msg: >-
+          topology_switches.nac.yaml still contains REPLACE_ME, so it was not
+          written by a clean stage 01 run. Re-run playbooks/01_discover_serials.yml.
+      when: "'REPLACE_ME' in (dc_switch_model_content.content | b64decode)"
+      tags: [always]
+
+  roles:
+    # validate checks the model for errors first; create then builds it on Nexus Dashboard.
+    - role: cisco.nac_dc_vxlan.validate
+    - role: cisco.nac_dc_vxlan.dtc.create

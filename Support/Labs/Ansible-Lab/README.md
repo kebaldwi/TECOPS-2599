@@ -29,7 +29,7 @@ Cisco publishes two Ansible collections that wrap the Catalyst Center Intent API
 * **`cisco.catalystcenter`** — newer collection aligned with the modern site-hierarchy model (areas, buildings, floors as typed resources).
 * **`cisco.dnac`** — long-standing collection providing high-level **Workflow Manager** modules (discovery, credentials, templates, network profiles) that wrap multi-step API sequences into single idempotent tasks.
 
-Together with `ansible.builtin.uri` for the handful of operations not yet covered by a module, these collections are sufficient to automate the entire Day-0 → Day-N lifecycle of a Catalyst Center managed network. Every playbook in this lab is **data-driven** — it reads the shared [`settings.json`](../../Resources/Data-Models/campus-evpn/settings.json) intent file and makes Catalyst Center match.
+Together with `ansible.builtin.uri` for the handful of operations not yet covered by a module, these collections are sufficient to automate the entire Day-0 → Day-N lifecycle of a Catalyst Center managed network. Every playbook in this lab is **data-driven** — it reads the shared [`settings.json`](../../../Projects/Data-Models/campus-evpn/settings.json) intent file and makes Catalyst Center match.
 
 > Reference: [Support/Resources/Ansible](../../Resources/Ansible/README.md) — full as-built documentation for every playbook used in this lab.
 

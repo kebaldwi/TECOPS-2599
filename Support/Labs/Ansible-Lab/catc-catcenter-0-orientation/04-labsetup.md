@@ -40,7 +40,7 @@ needed for a GitHub token. Use the same Vault password for all these files.
 The intent that drives every playbook in this suite lives in a single file:
 
 ```text
-~/TECOPS-2599/Support/Resources/Data-Models/campus-evpn/settings.json
+~/TECOPS-2599/Projects/Data-Models/campus-evpn/settings.json
 ```
 
 This is the same file consumed by the Cisco Workflows track. Each playbook reads it (the path is set in `campus-evpn/inventories/lab/hosts.yml` as `settings_json_path`) and acts on the relevant block:

@@ -1,0 +1,8 @@
+---
+# Shape of dc-evpn/inventory/group_vars/all/vault.yml (git-ignored, vault-encrypted).
+# The script-server staging script creates it with the lab defaults.
+# Edit with: ansible-vault edit inventory/group_vars/all/vault.yml
+dc_nd_username: "admin"
+dc_nd_password: "<Nexus Dashboard password>"
+dc_switch_username: "cisco"
+dc_switch_password: "<NX-OS switch password>"

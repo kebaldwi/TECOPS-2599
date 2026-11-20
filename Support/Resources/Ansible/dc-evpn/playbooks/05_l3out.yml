@@ -1,0 +1,255 @@
+---
+# Stage 05: one L3Out per VRF per core carries that VRF out to the IP Core (a dot1q sub-interface
+# plus eBGP). Data checks run before any write. It creates and attaches the L3Outs; stage 06 pushes them.
+# Run from Support/Resources/Ansible/dc-evpn: ansible-playbook playbooks/05_l3out.yml
+
+- name: Stage 05 - create and attach the L3Outs on the border leaf
+  hosts: TECOPS-DC1
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    ansible_network_os: cisco.nd.nd
+    dc_l3out_attach: true  # false = create the L3Outs but do not attach them
+
+  tasks:
+    # --------------------------------------------------- declared intent
+    # Read the same VRF file stage 02 used, so both stages agree on the VRFs.
+    - name: Read the declared VRFs
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/vrfs.nac.yaml"
+        name: dc_vrf_lite_vrf_model
+      delegate_to: localhost
+
+    - name: Flatten the declared VRFs
+      ansible.builtin.set_fact:
+        dc_vrf_lite_declared_vrfs: "{{ dc_vrf_lite_vrf_model.vxlan.overlay.vrfs | default([]) }}"
+
+    # ------------------------------------------------------- data checks
+    # These run before anything is written, so a typo shows up as a clear data error.
+    - name: Fail when the border leaf is not a declared switch with the border role
+      ansible.builtin.assert:
+        that:
+          - matching_switches | length == 1
+          - (matching_switches | first).role == 'border'
+        fail_msg: >-
+          DATA MODEL ERROR. dc_vrf_lite_border_leaf '{{ dc_vrf_lite_border_leaf }}'
+          must match exactly one switch in dc_switches.yml, and that switch must
+          hold the border role (declared: {{ dc_switches | map(attribute='name') | join(', ') }}).
+      vars:
+        matching_switches: >-
+          {{ dc_switches | selectattr('name', 'equalto', dc_vrf_lite_border_leaf) | list }}
+
+    - name: Fail when a row names an undeclared VRF or link
+      ansible.builtin.assert:
+        that:
+          - undeclared_vrfs | length == 0
+          - undeclared_links | length == 0
+        fail_msg: >-
+          DATA MODEL ERROR. dc_vrf_lite.yml names VRF(s) {{ undeclared_vrfs | join(', ') }}
+          missing from vrfs.nac.yaml, or link(s) {{ undeclared_links | join(', ') }}
+          missing from dc_vrf_lite_links.
+      vars:
+        undeclared_vrfs: >-
+          {{ dc_vrf_lite_extensions | map(attribute='vrf')
+             | reject('in', dc_vrf_lite_declared_vrfs | map(attribute='name') | list) | list }}
+        undeclared_links: >-
+          {{ dc_vrf_lite_extensions | map(attribute='link')
+             | reject('in', dc_vrf_lite_links | map(attribute='name') | list) | list }}
+
+    # A VRF can only leave through the border leaf if it exists on that leaf.
+    - name: Fail when the model does not attach the border leaf to every handed-off VRF
+      ansible.builtin.assert:
+        that:
+          - unattached | length == 0
+        fail_msg: >-
+          DATA MODEL ERROR. {{ dc_vrf_lite_border_leaf }} is not in the
+          vrf_attach_group of {{ unattached | join(', ') }} in vrfs.nac.yaml.
+      vars:
+        dc_vrf_lite_attach_groups: >-
+          {{ dc_vrf_lite_vrf_model.vxlan.overlay.vrf_attach_groups | default([]) }}
+        unattached: >-
+          {%- set missing = [] -%}
+          {%- for ext in dc_vrf_lite_extensions -%}
+          {%- set declared = (dc_vrf_lite_declared_vrfs
+                              | selectattr('name', 'equalto', ext.vrf)
+                              | list | first) | default({}) -%}
+          {%- set group = (dc_vrf_lite_attach_groups
+                           | selectattr('name', 'equalto',
+                                        declared.vrf_attach_group | default(''))
+                           | list | first) | default({}) -%}
+          {%- set hosts = (group.switches | default([]))
+                          | map(attribute='hostname') | list -%}
+          {%- if dc_vrf_lite_border_leaf not in hosts -%}
+          {{- missing.append(ext.vrf) or '' -}}
+          {%- endif -%}
+          {%- endfor -%}
+          {{ missing | unique | list }}
+
+    # Each VRF needs its own dot1q tag on a link, and every L3Out needs its own name.
+    # Two rows with the same name would silently merge into one L3Out.
+    - name: Fail on a duplicate dot1q tag per link or a duplicate L3Out name
+      ansible.builtin.assert:
+        that:
+          - link_tags | length == link_tags | unique | length
+          - l3out_names | length == l3out_names | unique | length
+          - l3out_names | reject('match', '^[A-Za-z0-9_-]{1,64}$') | list | length == 0
+        fail_msg: >-
+          DATA MODEL ERROR. dc_vrf_lite.yml reuses a dot1q tag on one link
+          ({{ link_tags | join(', ') }}) or an L3Out name
+          ({{ l3out_names | join(', ') }}), or a name is not 1-64 letters,
+          digits, _ or -.
+      vars:
+        link_tags: >-
+          {{ dc_vrf_lite_extensions | map(attribute='link')
+             | zip(dc_vrf_lite_extensions | map(attribute='dot1q') | map('string'))
+             | map('join', ':') | list }}
+        l3out_names: "{{ dc_vrf_lite_extensions | map(attribute='name') | list }}"
+
+    # A sub-interface MTU cannot be bigger than its parent interface's MTU.
+    - name: Fail when the sub-interface MTU exceeds a link MTU
+      ansible.builtin.assert:
+        that:
+          - dc_vrf_lite_links | map(attribute='ifc.link_mtu') | map('int')
+            | select('lt', dc_vrf_lite_mtu | int) | list | length == 0
+        fail_msg: >-
+          DATA MODEL ERROR. dc_vrf_lite_mtu {{ dc_vrf_lite_mtu }} is larger than
+          a link_mtu in dc_vrf_lite_links.
+
+    - name: Fail when an address is not written as address/prefix
+      ansible.builtin.assert:
+        that:
+          - bad_rows | length == 0
+        fail_msg: >-
+          DATA MODEL ERROR. ipv4_addr must be address/prefix-length, for
+          example 198.19.4.1/30. Rows: {{ bad_rows | join(', ') }}.
+      vars:
+        bad_rows: >-
+          {{ dc_vrf_lite_extensions
+             | rejectattr('ipv4_addr', 'match', '^[0-9.]+/[0-9]{1,2}$')
+             | map(attribute='name') | list }}
+
+    - name: Select VRFs for this run
+      ansible.builtin.set_fact:
+        dc_vrf_lite_selected_extensions: >-
+          {{ dc_vrf_lite_extensions
+             if dc_vrf_lite_only | string | lower == 'all'
+             else dc_vrf_lite_extensions
+                  | selectattr('vrf', 'in',
+                      [dc_vrf_lite_only] if dc_vrf_lite_only is string
+                      else dc_vrf_lite_only | list)
+                  | list }}
+
+    - name: Fail when dc_vrf_lite_only selects no declared VRFs
+      ansible.builtin.assert:
+        that:
+          - dc_vrf_lite_selected_extensions | length > 0
+        fail_msg: >-
+          dc_vrf_lite_only={{ dc_vrf_lite_only }} selects no declared VRFs.
+          Use 'all' or one or more names from
+          {{ dc_vrf_lite_extensions | map(attribute='vrf') | unique | join(', ') }}.
+
+    # ------------------------------------------------ prerequisite: the links
+    # The L3Outs sit on the links stage 04 builds, so check that each one exists.
+    - name: Read the inter-fabric links of the DC fabric
+      cisco.nd.nd_manage_links:
+        fabric_name: "{{ dc_fabric_name }}"
+        link_scope: manage
+        state: gathered
+      register: dc_l3out_links
+
+    - name: Fail when an inter-fabric link is missing
+      ansible.builtin.assert:
+        that:
+          - missing_links | length == 0
+        fail_msg: >-
+          No link from {{ dc_vrf_lite_border_leaf }} {{ missing_links | join(', ') }}
+          to {{ dc_external_fabric_name }}. Run playbooks/04_external_fabric.yml first.
+      vars:
+        present_interfaces: >-
+          {{ dc_l3out_links.gathered | default([])
+             | selectattr('dst_fabric_name', 'defined')
+             | selectattr('dst_fabric_name', 'equalto', dc_external_fabric_name)
+             | map(attribute='src_interface_name') | list }}
+        missing_links: >-
+          {{ dc_vrf_lite_links | map(attribute='interface')
+             | reject('in', present_interfaces) | list }}
+
+    # ------------------------------------------------------------- intent
+    - name: Build the L3Out definitions
+      ansible.builtin.include_tasks: tasks/l3out_config.yml
+      vars:
+        dc_l3out_rows: "{{ dc_vrf_lite_selected_extensions }}"
+
+    - name: Show what will be created
+      ansible.builtin.debug:
+        msg: >-
+          {{ ['L3Outs on ' ~ dc_vrf_lite_border_leaf
+              ~ ' (interface_name form: ' ~ dc_vrf_lite_interface_form ~ '):']
+             + dc_l3out_table }}
+      vars:
+        dc_l3out_table: >-
+          {%- set rows = ['| L3Out | VRF | Link | Dot1q | Local address | Neighbor | MTU |',
+                          '| --- | --- | --- | ---: | --- | --- | ---: |'] -%}
+          {%- for ext in dc_vrf_lite_selected_extensions -%}
+          {{- rows.append('| ' ~ ext.name ~ ' | ' ~ ext.vrf ~ ' | ' ~ ext.link
+                          ~ ' | ' ~ ext.dot1q ~ ' | ' ~ ext.ipv4_addr ~ ' | '
+                          ~ ext.neighbor_ipv4 ~ ' | ' ~ dc_vrf_lite_mtu ~ ' |') or '' -}}
+          {%- endfor -%}
+          {{ rows }}
+
+    - name: Create or update the L3Outs
+      cisco.nd.nd_manage_l3out:
+        fabric_name: "{{ dc_fabric_name }}"
+        state: merged
+        config: "{{ dc_l3out_config }}"
+      register: dc_l3out_result
+
+    # Attach only what is not attached yet; the module would report a change every run.
+    # This plain API call is the only way to see which L3Outs are already attached.
+    - name: Read which L3Outs are already attached
+      cisco.nd.nd_rest:
+        path: "/api/v1/manage/l3Outs?fabricName={{ dc_fabric_name }}"
+        method: get
+      register: dc_l3out_raw
+      changed_when: false
+      when: dc_l3out_attach | bool
+
+    - name: Select the L3Outs that still need attaching
+      ansible.builtin.set_fact:
+        dc_l3out_to_attach: >-
+          {{ dc_l3out_config | map(attribute='name')
+             | reject('in', (dc_l3out_raw.jsondata | default({})).l3Outs | default([])
+                            | selectattr('attach', 'defined')
+                            | selectattr('attach')
+                            | map(attribute='name') | list)
+             | list }}
+      when: dc_l3out_attach | bool
+
+    # Attaching marks the L3Out for deployment. The module only warns when attach fails,
+    # so failed_when turns that warning into a real failure.
+    - name: Attach the L3Outs
+      cisco.nd.nd_manage_l3out:
+        fabric_name: "{{ dc_fabric_name }}"
+        state: merged
+        config: >-
+          {{ dc_l3out_config | selectattr('name', 'in', dc_l3out_to_attach)
+             | map('combine', {'attach': true}) | list }}
+      register: dc_l3out_attach_result
+      failed_when: >-
+        dc_l3out_attach_result.failed | default(false)
+        or (dc_l3out_attach_result.warnings | default([])
+            | select('search', 'Attachment operation failed') | list | length > 0)
+      when:
+        - dc_l3out_attach | bool
+        - dc_l3out_to_attach | length > 0
+
+    - name: Report the L3Out result
+      ansible.builtin.debug:
+        msg: >-
+          L3Out intent: {{ 'created or updated' if dc_l3out_result.changed
+                           else 'already matched, nothing sent' }}.
+          Attach: {{ ('sent for ' ~ (dc_l3out_to_attach | join(', '))
+                      if dc_l3out_to_attach | length > 0 else 'all already attached, nothing sent')
+                     if dc_l3out_attach | bool else 'skipped (dc_l3out_attach=false)' }}.
+          Stage 06 deploys it to {{ dc_vrf_lite_border_leaf }}.

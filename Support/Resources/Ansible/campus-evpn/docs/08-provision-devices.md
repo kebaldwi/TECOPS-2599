@@ -190,7 +190,7 @@ standard operation.
 | `dnac_debug` | `false` | Enable SDK debug logging |
 | `dnac_log` | `true` | Enable collection-level logging |
 | `dnac_log_level` | `INFO` | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `settings_json_path` | `../../../../Resources/Data-Models/campus-evpn/settings.json` | Path to the input JSON file. Relative paths are resolved from the playbook directory |
+| `settings_json_path` | `../../../../../Projects/Data-Models/campus-evpn/settings.json` | Path to the input JSON file. Relative paths are resolved from the playbook directory |
 | `force_reprovision` | `false` | Re-provision devices already provisioned at the target site |
 | `task_poll_retries` | `36` | Maximum poll attempts before giving up on an async task |
 | `task_poll_delay` | `5` | Seconds between poll attempts (36 × 5 s = 3 minutes maximum) |

@@ -127,7 +127,7 @@ These parameters are entered when the workflow is launched from the Catalyst Cen
 |-----------|------|---------|-------------|
 | `GITHUB-OWNER` | string | `kebaldwi` | GitHub account or organization that owns the repository |
 | `GITHUB-REPO` | string | `TECOPS-2599` | Repository name containing `settings.json` and hierarchy definitions |
-| `GITHUB-PATH` | string | `Support/Resources/Data-Models/campus-evpn` | Path within the repository to the folder containing hierarchy files |
+| `GITHUB-PATH` | string | `Projects/Data-Models/campus-evpn` | Path within the repository to the folder containing hierarchy files |
 | `GITHUB-FILE` | string | `settings.json` | Filename to retrieve from the GitHub path (the workflow scans the directory for this file) |
 | `FORCE Update` | string (`true`/`false`) | `false` | If `true`, update existing sites even if already present. If `false`, skip sites that already exist in CatC |
 
@@ -437,7 +437,7 @@ The `executionId` is polled until `endTime` is set and `isError = false`, indica
 2. Fill in the input parameters:
    - **GITHUB-OWNER:** `kebaldwi`
    - **GITHUB-REPO:** `TECOPS-2599`
-   - **GITHUB-PATH:** `Support/Resources/Data-Models/campus-evpn`
+   - **GITHUB-PATH:** `Projects/Data-Models/campus-evpn`
    - **GITHUB-FILE:** `settings.json`
    - **FORCE Update:** `false` (set to `true` if updating existing hierarchy)
 3. Click **Execute**.
@@ -451,7 +451,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
   "inputParameters": {
     "GITHUB-OWNER": "kebaldwi",
     "GITHUB-REPO": "TECOPS-2599",
-    "GITHUB-PATH": "Support/Resources/Data-Models/campus-evpn",
+    "GITHUB-PATH": "Projects/Data-Models/campus-evpn",
     "GITHUB-FILE": "settings.json",
     "FORCE Update": "false"
   }
@@ -465,7 +465,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
 A successful run produces the following sequence in the workflow execution log:
 
 ```
-Step 1       GitHub directory retrieved: /kebaldwi/TECOPS-2599/Support/Resources/Data-Models/campus-evpn
+Step 1       GitHub directory retrieved: /kebaldwi/TECOPS-2599/Projects/Data-Models/campus-evpn
 Step 2       File list extracted: [settings.json, other.json, ...]
              Found target file: settings.json
 Step 3       Settings file retrieved from GitHub (raw JSON response)

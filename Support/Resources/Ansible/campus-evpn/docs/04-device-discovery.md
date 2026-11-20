@@ -121,7 +121,7 @@ Support/Resources/Ansible/
 
 Input data comes from the shared `settings.json`:
 
-`Support/Resources/Data-Models/campus-evpn/settings.json` is the single
+`Projects/Data-Models/campus-evpn/settings.json` is the single
 source of truth for site hierarchy and device list.
 
 ---
@@ -155,7 +155,7 @@ all:
       dnac_log: true
       dnac_log_level: INFO
 
-      settings_json_path: "../../../../Resources/Data-Models/campus-evpn/settings.json"
+      settings_json_path: "../../../../../Projects/Data-Models/campus-evpn/settings.json"
 ```
 
 | Variable | Purpose |

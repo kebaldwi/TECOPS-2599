@@ -136,7 +136,7 @@ These parameters are entered when the workflow is launched from the Catalyst Cen
 |-----------|------|---------|-------------|
 | `GITHUB-OWNER` | string | `kebaldwi` | GitHub account or organization that owns the repository |
 | `GITHUB-REPO` | string | `TECOPS-2599` | Repository name containing the YAML composite definition files |
-| `GITHUB-PATH` | string | `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` | Path within the repository to the folder containing `.yml` composite definition files |
+| `GITHUB-PATH` | string | `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` | Path within the repository to the folder containing `.yml` composite definition files |
 | `TemplateHubProjectName` | string | `BGP_EVPN` | If provided, used directly as `ProjectName` and `CATC-ProjectName`. If empty, derived from the last segment of `GITHUB-PATH` |
 | `FORCE Update` | string (`true`/`false`) | `false` | If `true`, existing composite templates are overwritten with the GitHub definition. If `false`, existing composites are skipped |
 
@@ -436,7 +436,7 @@ Submitted to `POST /dna/intent/api/v1/template-programmer/template/version`:
 3. Fill in the input parameters:
    - **GITHUB-OWNER:** `kebaldwi`
    - **GITHUB-REPO:** `TECOPS-2599`
-   - **GITHUB-PATH:** `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`
+   - **GITHUB-PATH:** `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`
    - **TemplateHubProjectName:** `BGP_EVPN`
    - **FORCE Update:** `false` (set to `true` to overwrite existing composite)
 4. Click **Execute**.
@@ -450,7 +450,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
   "inputParameters": {
     "GITHUB-OWNER": "kebaldwi",
     "GITHUB-REPO": "TECOPS-2599",
-    "GITHUB-PATH": "Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates",
+    "GITHUB-PATH": "Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates",
     "TemplateHubProjectName": "BGP_EVPN",
     "FORCE Update": "false"
   }
@@ -464,7 +464,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
 A successful run produces the following sequence in the workflow execution log:
 
 ```
-Step 1       GitHub directory retrieved: /kebaldwi/TECOPS-2599/Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
+Step 1       GitHub directory retrieved: /kebaldwi/TECOPS-2599/Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
 Step 2       File list extracted: 22 files found
              GithubFileList: [BGP-EVPN-BUILD.yml, BGP-EVPN-BUILD.j2, DEFN-VRF.j2, ...]
 Step 3       Python script: CATC-ProjectName = BGP_EVPN

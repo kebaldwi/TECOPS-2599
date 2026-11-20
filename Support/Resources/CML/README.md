@@ -53,6 +53,8 @@ CML/
 | `Topology/EVPN_Campus_v1.yaml` | EVPN Campus topology — Version 1 |
 | `Topology/EVPN_Campus_v2.yaml` | EVPN Campus topology — Version 2 (current) |
 | `Topology/EVPN_Campus_v2_normalized.yaml` | Version 2 pre-normalized for CML < 2.9.1 |
+| `Topology/EVPN_Campus_v14.yaml` | EVPN Campus with IP Core and NX-OSv DC switches |
+| `Topology/EVPN_Campus_v15.yaml` | v14 plus the DC vPC peer-link and dual-homed DC hosts (dc-red01, dc-green01, dc-blue01) for the [dc-evpn pipeline](../Ansible/dc-evpn/README.md). The IP Core side of the DC handoff is in `Startup Configs/core0N-dc-vrf-fusion.cfg` |
 
 **Recommended:** Use `EVPN_Campus_v2.yaml` on CML 2.9.1 or later. Use `EVPN_Campus_v2_normalized.yaml` on earlier versions.
 

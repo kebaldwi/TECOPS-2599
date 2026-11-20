@@ -15,7 +15,8 @@ project:
    `create-catc-vault.py`.
 2. `playbooks/00_preflight.yml` verifies the host, checkout, virtual
    environment, and sudo access.
-3. `playbooks/01_bootstrap_script_server.yml` installs the pinned collections
+3. `playbooks/01_bootstrap_script_server.yml` installs the pinned collections,
+   installs the pre-release `cisco.nd` collection into `dc-evpn/collections/`,
    and verifies Ansible.
 
 During staging, enter and confirm an Ansible Vault password (skipped when
@@ -36,7 +37,9 @@ staging validates it and stores the password file without replacing the vault.
 The helper also creates the encrypted stage vaults
 `campus-evpn/vaults/network_settings.yml` (ISE RADIUS shared secrets) and
 `campus-evpn/vaults/device_credentials.yml` (device CLI/enable passwords and
-SNMP communities) with the lab defaults, using the same Vault password. Existing
+SNMP communities), and `dc-evpn/inventory/group_vars/all/vault.yml` (Nexus
+Dashboard and NX-OS switch logins) with the lab defaults, using the same Vault
+password. Existing
 vaults are validated and never overwritten, so rerunning the helper is safe:
 
 ```bash

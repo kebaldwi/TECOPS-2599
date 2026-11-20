@@ -131,13 +131,18 @@ def vault_accepts_password(
 
 LAB_SECRET = "C1sco12345"
 
-# Lab-wide stage secrets; the public dCloud lab uses one shared password.
+# NX-OS default login on the CML DC switches and IP Core.
+LAB_NXOS_USERNAME = "cisco"
+LAB_NXOS_SECRET = "cisco"
+
+# Lab-wide stage secrets, keyed by path relative to the Ansible root.
+# The public dCloud lab uses one shared password.
 STAGE_VAULTS = {
-    "network_settings.yml": (
+    "campus-evpn/vaults/network_settings.yml": (
         f"catc_network_aaa_shared_secret: {json.dumps(LAB_SECRET)}\n"
         f"catc_client_and_endpoint_aaa_shared_secret: {json.dumps(LAB_SECRET)}\n"
     ),
-    "device_credentials.yml": (
+    "campus-evpn/vaults/device_credentials.yml": (
         "catc_device_credential_secrets:\n"
         "  cli_credential:\n"
         f"    password: {json.dumps(LAB_SECRET)}\n"
@@ -146,6 +151,12 @@ STAGE_VAULTS = {
         '    read_community: "RO"\n'
         "  snmp_v2c_write:\n"
         '    write_community: "RW"\n'
+    ),
+    "dc-evpn/inventory/group_vars/all/vault.yml": (
+        'dc_nd_username: "admin"\n'
+        f"dc_nd_password: {json.dumps(LAB_SECRET)}\n"
+        f"dc_switch_username: {json.dumps(LAB_NXOS_USERNAME)}\n"
+        f"dc_switch_password: {json.dumps(LAB_NXOS_SECRET)}\n"
     ),
 }
 
@@ -206,7 +217,6 @@ def main() -> int:
     bootstrap_dir = Path(__file__).resolve().parent
     campus_root = bootstrap_dir.parent / "campus-evpn"
     shared_vault = campus_root / "group_vars" / "all" / "vault.yml"
-    stage_vault_dir = campus_root / "vaults"
     ansible_vault = Path(sys.argv[1])
     persistent_password_file = Path.home() / ".ansible" / "vault_pass"
 
@@ -252,7 +262,7 @@ def main() -> int:
             )
 
         for name, plaintext in STAGE_VAULTS.items():
-            target = stage_vault_dir / name
+            target = bootstrap_dir.parent / name
             if encrypt_new_vault(
                 ansible_vault, target, plaintext, temporary_password_file
             ):

@@ -78,7 +78,7 @@ For each device, `CATC` is queried (`GET /dna/intent/api/v1/sda/provisionDevices
    | `Project Name`      | `BGP_EVPN`                    |
    | `GITHUB_USER`       | `kebaldwi`                    |
    | `GITHUB_REPO`       | `TECOPS-2599`                 |
-   | `GITHUB_PATH`       | `Support/Resources/Data-Models/campus-evpn`  |
+   | `GITHUB_PATH`       | `Projects/Data-Models/campus-evpn`  |
    | `GITHUB_FILE`       | `settings.json`               |
 
 3. Click **Run** to start execution.

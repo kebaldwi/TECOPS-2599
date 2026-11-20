@@ -2,3 +2,15 @@ ansible-core==2.17.14
 catalystcentersdk==3.1.6.0.7
 dnacentersdk==2.11.2
 pytz==2026.6
+# dc-evpn: SSH transport for cisco.nxos (serial discovery, core fusion, cleanup).
+ansible-pylibssh==1.4.0
+netaddr==1.3.0
+# dc-evpn: cisco.nac_dc_vxlan 0.9.0 validates the .nac.yaml model in Python.
+nac-yaml==1.0.0
+nac-validate==1.0.0
+macaddress==2.0.2
+packaging==24.2
+jmespath==1.0.1
+# dc-evpn: the pre-release cisco.nd collection builds its models with pydantic.
+pydantic==2.14.3
+jsonpath-ng==1.16.0

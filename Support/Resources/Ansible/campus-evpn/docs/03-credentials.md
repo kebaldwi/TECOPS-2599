@@ -144,7 +144,7 @@ Support/Resources/Ansible/
 
 The playbook uses `settings.json` from the project tree as its **single source of truth**:
 
-`Support/Resources/Data-Models/campus-evpn/settings.json` is the project
+`Projects/Data-Models/campus-evpn/settings.json` is the project
 source of truth for `device_credentials` and `assign_credentials`.
 
 ---
@@ -183,7 +183,7 @@ all:
       catc_debug:   false
 
       # Input file path (relative or absolute) — single source of truth
-      settings_json_path: "{{ inventory_dir }}/../../../../Data-Models/campus-evpn/settings.json"
+      settings_json_path: "{{ inventory_dir }}/../../../../../../Projects/Data-Models/campus-evpn/settings.json"
 ```
 
 | Variable | Purpose |

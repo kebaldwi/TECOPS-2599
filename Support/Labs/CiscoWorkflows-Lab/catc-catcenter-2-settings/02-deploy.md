@@ -66,7 +66,7 @@ Before any credential is created, the workflow queries `GET /dna/intent/api/v1/g
    |--------------------------|------------------------------|
    | `GITHUB-OWNER`           | `kebaldwi`                   |
    | `GITHUB-REPO`            | `TECOPS-2599`                |
-   | `GITHUB-PATH`            | `Support/Resources/Data-Models/campus-evpn` |
+   | `GITHUB-PATH`            | `Projects/Data-Models/campus-evpn` |
    | `GITHUB-FILE`            | `settings.json`              |
    | `FORCE Update`           | `false`                      |
    | `TemplateHubProjectName` | `BGP_EVPN`                   |

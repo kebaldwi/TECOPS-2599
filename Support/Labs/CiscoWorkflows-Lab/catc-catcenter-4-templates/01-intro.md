@@ -19,7 +19,7 @@ Templates and parameters allow for the **configuration** of devices when associa
 
 In this lab we will:
 
-1. Import every `.j2` template under `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` into the Template Hub project `BGP_EVPN`, in dependency-safe order, and **commit** each one.
+1. Import every `.j2` template under `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` into the Template Hub project `BGP_EVPN`, in dependency-safe order, and **commit** each one.
 2. Use the `BGP-EVPN-BUILD.yml` composite definition to **assemble** those templates into a single composite template, then **commit** the composite.
 
 > **Note:** A Deployment API exists in the underlying workflows for completeness, but actual provisioning to devices is performed in later modules (Network Profile, Provisioning) and not invoked here.
@@ -108,7 +108,7 @@ composite:
     - template: BGP-EVPN-BUILD.j2
 ```
 
-For this lab, all of the above lives at `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` in the `kebaldwi/TECOPS-2599` repository, and is the same path referenced by the default workflow input parameters (`GITHUB-OWNER`, `GITHUB-REPO`, `GITHUB-PATH`).
+For this lab, all of the above lives at `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` in the `kebaldwi/TECOPS-2599` repository, and is the same path referenced by the default workflow input parameters (`GITHUB-OWNER`, `GITHUB-REPO`, `GITHUB-PATH`).
 
 ## What You Will Do in This Module
 

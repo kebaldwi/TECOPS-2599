@@ -11,7 +11,7 @@ This playbook builds or deletes Catalyst Center site hierarchy objects (areas, b
 
 Important behavior:
 
-1. It reads settings.json from settings_json_path (inventory default points to Support/Resources/Data-Models/campus-evpn/settings.json).
+1. It reads settings.json from settings_json_path (inventory default points to Projects/Data-Models/campus-evpn/settings.json).
 2. It synthesizes hierarchy paths from these fields in each project entry:
    - HierarchyParent
    - HierarchyArea

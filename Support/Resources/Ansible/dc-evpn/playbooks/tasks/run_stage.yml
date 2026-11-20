@@ -1,0 +1,37 @@
+---
+# Runs one stage as a separate ansible-playbook process, for 00_dc_deploy.yml.
+# Each stage's output is saved to a log file. Input: dc_stage, dc_deploy_root, dc_deploy_log_dir, dc_deploy_extra_vars.
+
+# Uses the same Python environment and settings as running the stage by hand.
+- name: Run {{ dc_stage }}
+  ansible.builtin.command:
+    argv: >-
+      {{ [ansible_playbook_python | dirname ~ '/ansible-playbook', 'playbooks/' ~ dc_stage]
+         + (['-e', dc_deploy_extra_vars | to_json] if dc_deploy_extra_vars | length > 0 else []) }}
+    chdir: "{{ dc_deploy_root }}"
+  register: dc_stage_run
+  # Don't fail yet: save the log first, then check the result at the end.
+  failed_when: false
+  changed_when: dc_stage_run.stdout is search('changed=[1-9]')
+
+- name: Write the log of {{ dc_stage }}
+  ansible.builtin.copy:
+    content: "{{ dc_stage_run.stdout }}\n{{ dc_stage_run.stderr }}\n"
+    dest: "{{ dc_deploy_log_dir }}/{{ dc_stage | regex_replace('\\.yml$', '') }}.log"
+    mode: "0644"
+
+- name: Show the recap of {{ dc_stage }}
+  ansible.builtin.debug:
+    msg: >-
+      {{ dc_stage_run.stdout_lines
+         | select('search', '^(PLAY RECAP|\\S+\\s+: ok=)') | list }}
+
+- name: Stop on a failure of {{ dc_stage }}
+  ansible.builtin.assert:
+    that:
+      - dc_stage_run.rc == 0
+    fail_msg: >-
+      {{ dc_stage }} failed (rc {{ dc_stage_run.rc }}). Full output:
+      {{ dc_deploy_log_dir }}/{{ dc_stage | regex_replace('\.yml$', '') }}.log.
+      Last lines: {{ (dc_stage_run.stdout_lines + dc_stage_run.stderr_lines)[-25:] | join(' | ') }}
+    quiet: true

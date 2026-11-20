@@ -1,0 +1,42 @@
+---
+# Builds the whole DC fabric by running stages 01-06 in order, stopping at the first failure.
+# WARNING: stage 02 erases every DC switch's config. Teardown is 07_cleanup.yml.
+# Run from Support/Resources/Ansible/dc-evpn: ansible-playbook playbooks/00_dc_deploy.yml
+
+- name: Build the DC fabric, one stage per ansible-playbook process
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  any_errors_fatal: true
+
+  vars:
+    # Order matters: each stage builds on the one before it.
+    dc_deploy_stages:
+      - 01_discover_serials.yml  # read serials off the DC switches and IP Cores
+      - 02_create_dc_fabric.yml  # fabric, switches, vPC, VRFs, networks (wipes switches)
+      - 03_fabric_advanced_settings.yml  # extra fabric settings
+      - 04_external_fabric.yml  # IP Core fabric and the links to it
+      - 05_l3out.yml  # per-VRF handoff to each core
+      - 06_recalculate_and_deploy.yml  # pushes config to the switches
+    dc_deploy_extra_vars: {}  # extra -e variables passed to every stage
+    dc_deploy_root: "{{ (playbook_dir ~ '/..') | realpath }}"
+
+  tasks:
+    # Save the timestamp once, so every stage logs into the same folder.
+    - name: Name this run's log directory
+      ansible.builtin.set_fact:
+        dc_deploy_log_dir: >-
+          {{ dc_deploy_root }}/evidence/dc-deploy-{{ now(utc=true).strftime('%Y%m%dT%H%M%SZ') }}
+
+    - name: Make the log directory
+      ansible.builtin.file:
+        path: "{{ dc_deploy_log_dir }}"
+        state: directory
+        mode: "0755"
+
+    # Each stage runs as its own ansible-playbook process; its output shows when it finishes.
+    - name: Run each stage
+      ansible.builtin.include_tasks: tasks/run_stage.yml
+      loop: "{{ dc_deploy_stages }}"
+      loop_control:
+        loop_var: dc_stage

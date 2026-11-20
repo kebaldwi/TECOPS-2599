@@ -1,0 +1,28 @@
+---
+# The DC switch list: names, management addresses and fabric roles, as built in CML.
+# Serial numbers differ per lab, so stage 01 reads them off the switches instead of storing them.
+# This is the single source for the switch list; names must match topology_switches.nac.yaml.example.
+
+dc_fabric_name: TECOPS-DC1
+
+dc_switches:
+  - name: dc-spine1
+    management_ipv4_address: 198.18.1.115
+    role: spine
+
+  - name: dc-spine2
+    management_ipv4_address: 198.18.1.116
+    role: spine
+
+  # Border leaf: carries the VRF-Lite handoffs to core1 and core2.
+  - name: dc-border1
+    management_ipv4_address: 198.18.1.117
+    role: border
+
+  - name: dc-leaf1
+    management_ipv4_address: 198.18.1.118
+    role: leaf
+
+  - name: dc-leaf2
+    management_ipv4_address: 198.18.1.119
+    role: leaf

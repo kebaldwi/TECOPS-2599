@@ -191,7 +191,7 @@ Each tooling path is a complete, self-contained implementation that:
 | Folder | Tooling | Primary Audience | Deployment Method |
 |--------|---------|-----------------|-------------------|
 | [Ansible/](Resources/Ansible/) | Ansible + cisco.catalystcenter collection | Network DevOps, CI/CD pipeline teams | `ansible-playbook` CLI or AWX/AAP |
-| [Data-Models/](Resources/Data-Models/) | Shared campus and data-center EVPN input models | All automation paths | Git-managed JSON and templates |
+| [Data-Models/](../Projects/Data-Models/) | Shared campus EVPN, data-center EVPN and Traditional input models (under `Projects/`) | All automation paths | Git-managed JSON and templates |
 | [Cisco Workflows/](Resources/Cisco%20Workflows/) | Cisco SecureX / XDR Workflow Manager | Cisco platform operators, NOC teams | Catalyst Center Workflow Manager |
 | [Python/](Resources/Python/) | Pure Python + REST | Developers, troubleshooters, API learners | Direct Python execution |
 | [CML/](Resources/CML/) | Cisco Modeling Labs | Lab engineers, training leads | CML server import |
@@ -200,8 +200,8 @@ Each tooling path is a complete, self-contained implementation that:
 #### Ansible — Campus EVPN Pipeline
 
 The existing Catalyst Center pipeline is under `Resources/Ansible/campus-evpn/`.
-`Resources/Ansible/dc-evpn/` is reserved for the future Nexus Dashboard
-automation.
+The Nexus Dashboard data-center pipeline is under `Resources/Ansible/dc-evpn/`
+(see its [README](Resources/Ansible/dc-evpn/README.md)).
 
 | # | Playbook | Catalyst Center Outcome |
 |---|----------|------------------------|
@@ -288,4 +288,4 @@ For teams new to this project the following sequence builds understanding progre
 
 5. **Run the production tooling** — Execute your chosen tooling path (Ansible playbooks or Cisco Workflows) against the CML environment end-to-end. See [Resources/README.md](Resources/README.md) for the full tooling comparison and when-to-use guidance.
 
-6. **Adapt to your environment** — Update `settings.json` with your production topology and credential references in the relevant model folder ([campus-evpn](Resources/Data-Models/campus-evpn/) or [TRADITIONAL](../Projects/TRADITIONAL/Settings/)), then run the tooling path that matches your operational model.
+6. **Adapt to your environment** — Update `settings.json` with your production topology and credential references in the relevant model folder ([campus-evpn](../Projects/Data-Models/campus-evpn/) or [TRADITIONAL](../Projects/Data-Models/catalyst-center/)), then run the tooling path that matches your operational model.

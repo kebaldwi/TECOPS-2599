@@ -1,0 +1,19 @@
+---
+# Safety switches for the Nexus as Code remove role. Each flag lets it delete one kind of object.
+# Keep them all false so removing something from the data model never deletes live config.
+# Teardown is 07_cleanup.yml, which does not depend on these flags.
+edge_connections_delete_mode: false
+interface_delete_mode: false
+inventory_delete_mode: false
+link_fabric_delete_mode: false
+link_vpc_delete_mode: false
+network_delete_mode: false
+policy_delete_mode: false
+tor_pairing_delete_mode: false
+vpc_delete_mode: false
+vrf_delete_mode: false
+
+# Multisite is not used in this lab, but the flags must exist for the role.
+multisite_child_fabric_delete_mode: false
+multisite_network_delete_mode: false
+multisite_vrf_delete_mode: false

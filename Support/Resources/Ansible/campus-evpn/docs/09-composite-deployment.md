@@ -163,7 +163,7 @@ Support/Resources/Ansible/
 
 Input data comes from the shared `settings.json` in the project tree:
 
-`Support/Resources/Data-Models/campus-evpn/settings.json` is the source for
+`Projects/Data-Models/campus-evpn/settings.json` is the source for
 site hierarchy, device list, and template deployment data.
 
 ---
@@ -199,7 +199,7 @@ all:
       dnac_log_level: INFO
 
       # Input file
-      settings_json_path: "../../../../Resources/Data-Models/campus-evpn/settings.json"
+      settings_json_path: "../../../../../Projects/Data-Models/campus-evpn/settings.json"
 
       # Deploy behaviour
       force_push_template: false
@@ -214,7 +214,7 @@ all:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `settings_json_path` | Relative or absolute path to the `settings.json` input file | `../../../../Resources/Data-Models/campus-evpn/settings.json` |
+| `settings_json_path` | Relative or absolute path to the `settings.json` input file | `../../../../../Projects/Data-Models/campus-evpn/settings.json` |
 | `force_push_template` | When `true`, push to devices even if they appear in-sync with the template | `false` |
 | `member_template_params` | Dict of per-member template parameter overrides keyed by template name | `{}` |
 | `task_poll_retries` | Maximum number of task status polls after submitting a deploy request | `36` |

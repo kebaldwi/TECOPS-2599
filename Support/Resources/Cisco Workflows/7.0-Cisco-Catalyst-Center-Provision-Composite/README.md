@@ -150,7 +150,7 @@ These parameters are entered when the workflow is launched from the Catalyst Cen
 | `Project Name` | string | `BGP_EVPN` | Template Hub project name where the composite template resides. Used to resolve the composite template ID. |
 | `GITHUB_USER` | string | `kebaldwi` | GitHub account or organization that owns the repository. |
 | `GITHUB_REPO` | string | `TECOPS-2599` | Repository name containing `settings.json`. |
-| `GITHUB_PATH` | string | `Support/Resources/Data-Models/campus-evpn` | Path within the repository to the folder containing `settings.json`. |
+| `GITHUB_PATH` | string | `Projects/Data-Models/campus-evpn` | Path within the repository to the folder containing `settings.json`. |
 | `GITHUB_FILE` | string | `settings.json` | Filename to retrieve from GitHub. |
 
 > **Note:** Unlike Workflows 4.0 and 5.0, the site hierarchy fields (`HierarchyParent`, `HierarchyArea`, `HierarchyBldg`, `HierarchyFloor`) are direct workflow input parameters in addition to being read from `settings.json`. The JSON fields drive template target and composite name extraction; the input parameters drive site and device resolution.
@@ -628,7 +628,7 @@ Submitted to `PUT /dna/intent/api/v1/sda/provisionDevices`:
    - **Project Name:** `BGP_EVPN`
    - **GITHUB_USER:** `kebaldwi`
    - **GITHUB_REPO:** `TECOPS-2599`
-   - **GITHUB_PATH:** `Support/Resources/Data-Models/campus-evpn`
+   - **GITHUB_PATH:** `Projects/Data-Models/campus-evpn`
    - **GITHUB_FILE:** `settings.json`
 4. Click **Execute**.
 5. Monitor progress in **Workflow Executions** → **Execution Details**.
@@ -648,7 +648,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
     "Project Name": "BGP_EVPN",
     "GITHUB_USER": "kebaldwi",
     "GITHUB_REPO": "TECOPS-2599",
-    "GITHUB_PATH": "Support/Resources/Data-Models/campus-evpn",
+    "GITHUB_PATH": "Projects/Data-Models/campus-evpn",
     "GITHUB_FILE": "settings.json"
   }
 }
@@ -662,7 +662,7 @@ A successful run produces the following sequence in the workflow execution log:
 
 ```
 Step 1       settings.json retrieved from GitHub:
-             /kebaldwi/TECOPS-2599/Support/Resources/Data-Models/campus-evpn/settings.json
+             /kebaldwi/TECOPS-2599/Projects/Data-Models/campus-evpn/settings.json
 
 Step 2       JSONPath extraction complete:
              HierarchyParent=Global/PODS, HierarchyArea=POD 0

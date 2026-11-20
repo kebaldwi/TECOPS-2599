@@ -1,0 +1,380 @@
+---
+# Stage 07 - DESTRUCTIVE: deletes both fabrics from Nexus Dashboard and removes the VRF-Lite
+# sub-interfaces from the border leaf. It cannot be undone, and it does nothing unless you confirm.
+# The IP Core is never changed (Monitor Mode); its hand-applied fusion config stays in place.
+# Run: ansible-playbook playbooks/07_cleanup.yml -e dc_cleanup_confirm=CLEANUP_OK
+
+- name: Stage 07a - refuse to run without confirmation
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  any_errors_fatal: true
+
+  tasks:
+    - name: Require the confirmation string
+      ansible.builtin.assert:
+        that:
+          - dc_cleanup_confirm | default('') == 'CLEANUP_OK'
+        fail_msg: >-
+          07_cleanup.yml deletes both fabrics and edits switch configuration.
+          Re-run it with -e dc_cleanup_confirm=CLEANUP_OK if that is what you want.
+        success_msg: >-
+          Confirmed. Removing the L3Outs, the overlays and the links, removing
+          switches from {{ dc_fabric_name }} and {{ dc_external_fabric_name }},
+          deleting both fabrics, then stripping the VRF-Lite sub-interfaces from
+          {{ dc_vrf_lite_border_leaf }}.
+
+# Step 1 of 5 - remove the L3Outs first: they use the VRFs, the switches and the links removed later.
+# Every L3Out in the DC fabric is removed, then each is detached from the switches before deletion.
+- name: Stage 07b - detach and delete the L3Outs
+  hosts: TECOPS-DC1
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    ansible_network_os: cisco.nd.nd
+
+  tasks:
+    # If the fabric is already gone, later steps skip, so a half-finished cleanup can be re-run.
+    - name: Look on the controller for {{ dc_fabric_name }}
+      cisco.nd.nd_manage_fabric_ibgp_vxlan:
+        state: gathered
+        config:
+          - fabric_name: "{{ dc_fabric_name }}"
+      register: dc_cleanup_fabric_read
+
+    - name: Note whether the controller still has {{ dc_fabric_name }}
+      ansible.builtin.set_fact:
+        dc_cleanup_dc_present: "{{ dc_cleanup_fabric_read.gathered | default([]) | length > 0 }}"
+
+    # A dry-run (check mode) delete lists the existing L3Outs without changing anything.
+    - name: Read the L3Outs in {{ dc_fabric_name }}
+      cisco.nd.nd_manage_l3out:
+        fabric_name: "{{ dc_fabric_name }}"
+        state: deleted
+        config: "{{ dc_vrf_lite_extensions | map(attribute='name') | map('community.general.dict_kv', 'name') | list }}"
+      check_mode: true
+      register: dc_cleanup_l3out_read
+      when: dc_cleanup_dc_present | bool
+
+    - name: Select the L3Outs that belong to {{ dc_fabric_name }}
+      ansible.builtin.set_fact:
+        dc_cleanup_l3outs: >-
+          {{ dc_cleanup_l3out_read.before | default([])
+             | selectattr('fabric1_name', 'defined')
+             | selectattr('fabric1_name', 'equalto', dc_fabric_name)
+             | list }}
+
+    - name: Detach the L3Outs
+      cisco.nd.nd_manage_l3out:
+        fabric_name: "{{ dc_fabric_name }}"
+        state: merged
+        config: "{{ dc_cleanup_l3outs | map('combine', {'attach': false}) | list }}"
+      register: dc_cleanup_l3out_detach
+      failed_when: >-
+        dc_cleanup_l3out_detach.failed | default(false)
+        or (dc_cleanup_l3out_detach.warnings | default([])
+            | select('search', 'Attachment operation failed') | list | length > 0)
+      when: dc_cleanup_l3outs | length > 0
+
+    - name: Delete the L3Outs
+      cisco.nd.nd_manage_l3out:
+        fabric_name: "{{ dc_fabric_name }}"
+        state: deleted
+        config: "{{ dc_cleanup_l3outs | map(attribute='name') | map('community.general.dict_kv', 'name') | list }}"
+      register: dc_cleanup_l3out_delete
+      when: dc_cleanup_l3outs | length > 0
+
+    - name: Report the L3Out result
+      ansible.builtin.debug:
+        msg: >-
+          {{ ('L3Outs detached and deleted: '
+              ~ (dc_cleanup_l3outs | map(attribute='name') | join(', ')) ~ '.')
+             if dc_cleanup_l3outs | length > 0
+             else 'No L3Outs in ' ~ dc_fabric_name ~ ' - nothing to remove.' }}
+
+# Step 2 of 5 - remove the overlays: networks first, then VRFs, because a network lives inside a VRF.
+# Both must go before the switches can be removed. An empty config list means "delete all".
+- name: Stage 07c - remove the overlays
+  hosts: TECOPS-DC1
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    ansible_network_os: cisco.nd.nd
+
+  tasks:
+    - name: Delete every network
+      cisco.nd.nd_manage_networks:
+        fabric_name: "{{ dc_fabric_name }}"
+        state: deleted
+        config: []
+      register: dc_cleanup_networks
+      when: dc_cleanup_dc_present | bool
+      vars:
+        ansible_command_timeout: 3000
+        ansible_connect_timeout: 3000
+
+    - name: Delete every VRF
+      cisco.nd.nd_manage_vrfs:
+        fabric_name: "{{ dc_fabric_name }}"
+        state: deleted
+        config: []
+      register: dc_cleanup_vrfs
+      when: dc_cleanup_dc_present | bool
+      vars:
+        ansible_command_timeout: 3000
+        ansible_connect_timeout: 3000
+
+    - name: Report the overlay result
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Networks removed (changed=' ~ (dc_cleanup_networks.changed | default(false)) ~
+             '), VRFs removed (changed=' ~ (dc_cleanup_vrfs.changed | default(false)) ~ ').'
+             if dc_cleanup_dc_present | bool
+             else dc_fabric_name ~ ' is not on the controller - nothing to remove.' }}
+
+# Step 3 of 5 - remove the links between the border leaf and the IP Core.
+# They must go before the switches, because the border leaf is one end of each.
+- name: Stage 07d - remove the inter-fabric links
+  hosts: TECOPS-DC1
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    ansible_network_os: cisco.nd.nd
+
+  tasks:
+    # Check which links exist first, so a re-run after a partial cleanup does not fail here.
+    - name: Read the inter-fabric links of the DC fabric
+      cisco.nd.nd_manage_links:
+        fabric_name: "{{ dc_fabric_name }}"
+        link_scope: manage
+        state: gathered
+      register: dc_cleanup_links_read
+      when: dc_cleanup_dc_present | bool
+
+    - name: Select the declared links that are still there
+      ansible.builtin.set_fact:
+        dc_cleanup_links: >-
+          {{ dc_vrf_lite_links | selectattr('interface', 'in',
+               dc_cleanup_links_read.gathered | default([])
+               | selectattr('dst_fabric_name', 'defined')
+               | selectattr('dst_fabric_name', 'equalto', dc_external_fabric_name)
+               | map(attribute='src_interface_name') | list)
+             | list }}
+
+    - name: Delete the links
+      cisco.nd.nd_manage_links:
+        fabric_name: "{{ dc_fabric_name }}"
+        link_scope: manage
+        state: deleted
+        config: >-
+          {%- set links = [] -%}
+          {%- for link in dc_cleanup_links -%}
+          {{- links.append({
+                'src_fabric_name': dc_fabric_name,
+                'dst_fabric_name': dc_external_fabric_name,
+                'src_switch_name': dc_vrf_lite_border_leaf,
+                'dst_switch_ip': (dc_external_edge_devices
+                                  | selectattr('hostname', 'equalto', link.peer) | first).ip,
+                'src_interface_name': link.interface,
+                'dst_interface_name': link.peer_interface}) or '' -}}
+          {%- endfor -%}
+          {{ links }}
+      register: dc_cleanup_link
+      when: dc_cleanup_links | length > 0
+
+    - name: Report the link result
+      ansible.builtin.debug:
+        msg: >-
+          {{ ('Inter-fabric links removed: ' ~ (dc_cleanup_links | map(attribute='interface') | join(', ')) ~ '.')
+             if dc_cleanup_links | length > 0
+             else 'No inter-fabric links - nothing to remove.' }}
+
+# Step 4 of 5 - remove the switches from both fabrics, so the controller stops managing them
+# and will not push config back. This uses direct API calls because the border leaf needs a forced removal.
+- name: Stage 07e - remove the switches from both fabrics
+  hosts: TECOPS-DC1
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    ansible_network_os: cisco.nd.nd
+
+  tasks:
+    - name: Look on the controller for {{ dc_external_fabric_name }}
+      cisco.nd.nd_manage_fabric_external:
+        state: gathered
+        config:
+          - fabric_name: "{{ dc_external_fabric_name }}"
+      register: dc_cleanup_ext_read
+
+    - name: Note which fabrics are still on the controller
+      ansible.builtin.set_fact:
+        dc_cleanup_ext_present: "{{ dc_cleanup_ext_read.gathered | default([]) | length > 0 }}"
+        dc_cleanup_fabrics: >-
+          {{ ([dc_fabric_name] if dc_cleanup_dc_present | bool else [])
+             + ([dc_external_fabric_name] if dc_cleanup_ext_read.gathered | default([]) | length > 0 else []) }}
+
+    - name: List the switches in each fabric
+      cisco.nd.nd_rest:
+        path: "/api/v1/manage/fabrics/{{ item }}/switches"
+        method: get
+      loop: "{{ dc_cleanup_fabrics }}"
+      register: dc_cleanup_switch_lists
+      changed_when: false
+
+    - name: Force-remove every switch
+      cisco.nd.nd_rest:
+        path: "/api/v1/manage/fabrics/{{ item.item }}/switchActions/remove?force=true"
+        method: post
+        content:
+          switchIds: "{{ item.jsondata.switches | default([]) | map(attribute='switchId') | list }}"
+      loop: "{{ dc_cleanup_switch_lists.results | default([]) }}"
+      loop_control:
+        label: >-
+          {{ item.item }}: {{ item.jsondata.switches | default([])
+                              | map(attribute='hostname', default='?') | join(', ') }}
+      register: dc_cleanup_removed
+      changed_when: true
+      # Fail if any single switch reports a failed removal.
+      failed_when: >-
+        dc_cleanup_removed.failed | default(false)
+        or ((dc_cleanup_removed.jsondata | default({})).results | default([])
+            | selectattr('status', 'defined')
+            | selectattr('status', 'equalto', 'failed') | list | length > 0)
+      when: item.jsondata.switches | default([]) | length > 0
+      vars:
+        ansible_command_timeout: 3000
+        ansible_connect_timeout: 3000
+
+    - name: Report the inventory result
+      ansible.builtin.debug:
+        msg: >-
+          {{ (dc_cleanup_removed.results | default([]) | rejectattr('skipped', 'defined') | list | length) }}
+          fabric(s) had switches removed. The IP Core configuration is untouched.
+
+# Step 5 of 5 - delete both fabrics, which removes the controller's stored intent.
+- name: Stage 07f - delete both fabrics
+  hosts: TECOPS-DC1
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    ansible_network_os: cisco.nd.nd
+
+  tasks:
+    - name: Delete the External fabric
+      cisco.nd.nd_manage_fabric_external:
+        state: deleted
+        config:
+          - fabric_name: "{{ dc_external_fabric_name }}"
+      register: dc_cleanup_ext_fabric
+      when: dc_cleanup_ext_present | bool
+
+    - name: Delete the DC fabric
+      cisco.nd.nd_manage_fabric_ibgp_vxlan:
+        state: deleted
+        config:
+          - fabric_name: "{{ dc_fabric_name }}"
+      register: dc_cleanup_dc_fabric
+      when: dc_cleanup_dc_present | bool
+
+    - name: Report the fabric result
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Fabrics deleted: ' ~ (dc_cleanup_fabrics | join(', ')) ~ '.'
+             if dc_cleanup_fabrics | length > 0
+             else 'Neither fabric was on the controller - nothing to delete.' }}
+
+# Last - clean the border leaf itself. Deleting fabrics does not change a switch's running config,
+# and leftover sub-interfaces would block their dot1q tags in the next build.
+- name: Stage 07g - build the border leaf SSH group
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  any_errors_fatal: true
+
+  tasks:
+    - name: Add the border leaf to the SSH group
+      ansible.builtin.add_host:
+        name: "{{ dc_vrf_lite_border_leaf }}"
+        groups: dc_fabric_switches
+        ansible_host: >-
+          {{ (dc_switches
+              | selectattr('name', 'equalto', dc_vrf_lite_border_leaf)
+              | list | first).management_ipv4_address }}
+      changed_when: false
+
+- name: Stage 07h - strip the VRF-Lite sub-interfaces off the border leaf
+  hosts: dc_fabric_switches
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    dc_cleanup_parents: "{{ dc_vrf_lite_links | map(attribute='interface') | list }}"
+
+  tasks:
+    # Only remove sub-interfaces that really exist: NX-OS rejects `no interface` for a missing one.
+    - name: Read the running interface configuration
+      cisco.nxos.nxos_command:
+        commands:
+          - show running-config interface
+      register: dc_cleanup_before
+      changed_when: false
+
+    - name: Work out which sub-interfaces are actually present
+      ansible.builtin.set_fact:
+        dc_cleanup_present: >-
+          {%- set found = [] -%}
+          {%- for line in dc_cleanup_before.stdout[0].splitlines() -%}
+          {%- for parent in dc_cleanup_parents
+                if line.strip().startswith('interface ' ~ parent ~ '.') -%}
+          {{- found.append(line.strip().split(' ', 1)[1]) or '' -}}
+          {%- endfor -%}
+          {%- endfor -%}
+          {{ found | unique | list }}
+
+    # `no interface` deletes each sub-interface; `default interface` resets each parent port
+    # to factory settings. The next build configures them again.
+    - name: Remove the sub-interfaces and default the parent ports
+      cisco.nxos.nxos_config:
+        lines: >-
+          {{ dc_cleanup_present | map('regex_replace', '^', 'no interface ') | list
+             + dc_cleanup_parents | map('regex_replace', '^', 'default interface ') | list }}
+      register: dc_cleanup_interface
+
+    - name: Save the configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+    # Read the config again to prove the sub-interfaces are really gone.
+    - name: Read the interfaces back
+      cisco.nxos.nxos_command:
+        commands:
+          - show running-config interface
+      register: dc_cleanup_readback
+      changed_when: false
+
+    - name: Fail when a sub-interface survived
+      ansible.builtin.assert:
+        that:
+          - surviving | length == 0
+        fail_msg: >-
+          {{ surviving | join(', ') }} still present on
+          {{ dc_vrf_lite_border_leaf }} after the cleanup. Remove them by hand
+          before rebuilding.
+        success_msg: >-
+          {{ dc_vrf_lite_border_leaf }} {{ dc_cleanup_parents | join(', ') }} are back
+          to default and carry no sub-interfaces. Safe to rebuild with
+          playbooks/00_dc_deploy.yml.
+      vars:
+        surviving: >-
+          {%- set rows = [] -%}
+          {%- for line in dc_cleanup_readback.stdout[0].splitlines() -%}
+          {%- for parent in dc_cleanup_parents if line.startswith('interface ' ~ parent ~ '.') -%}
+          {{- rows.append(line | trim) or '' -}}
+          {%- endfor -%}
+          {%- endfor -%}
+          {{ rows }}

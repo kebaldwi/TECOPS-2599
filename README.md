@@ -71,11 +71,16 @@ Teams choose the path that matches their operational model and skill set. All th
 ```
 TECOPS-2599/
 ├── Projects/
+│   ├── Data-Models/               # Intent and data models for every project
+│   │   ├── campus-evpn/
+│   │   │   ├── settings.json
+│   │   │   └── BGP_EVPN/          # Campus EVPN templates and related assets
+│   │   ├── dc-evpn/               # Nexus as Code DC EVPN data model
+│   │   └── catalyst-center/       # settings.json for the Traditional project
 │   └── TRADITIONAL/               # Traditional (non-EVPN) fabric project
 │       ├── Configs/               # Generated device configurations
 │       ├── Day0Templates/         # PnP onboarding Jinja2 templates
-│       ├── DayNTemplates/         # Production Day-N Jinja2 templates
-│       └── Settings/              # settings.json and devices.json
+│       └── DayNTemplates/         # Production Day-N Jinja2 templates
 └── Support/
     ├── Labs/                      # Guided lab exercises (7 modules each, 0–6)
     │   ├── Ansible-Lab/           # Step-by-step Ansible lab track
@@ -86,12 +91,7 @@ TECOPS-2599/
     └── Resources/                 # Automation tooling and reference content
         ├── Ansible/
         │   ├── campus-evpn/       # Catalyst Center campus EVPN playbook suite
-        │   └── dc-evpn/           # Nexus Dashboard EVPN automation (planned)
-        ├── Data-Models/
-        │   ├── campus-evpn/
-        │   │   ├── settings.json
-        │   │   └── BGP_EVPN/      # Campus EVPN templates and related assets
-        │   └── dc-evpn/           # Data-center EVPN models (planned)
+        │   └── dc-evpn/           # Nexus Dashboard DC EVPN automation
         ├── Cisco Workflows/       # Cisco Workflow JSON suite (7 workflows)
         ├── Python/                # Python REST reference scripts (12 scripts)
         ├── CML/                   # Cisco Modeling Labs topology and configs
@@ -103,23 +103,21 @@ TECOPS-2599/
 
 ## Projects and Data Models
 
-The campus EVPN data model is under `Support/Resources/Data-Models/campus-evpn/`.
+The campus EVPN data model is under `Projects/Data-Models/campus-evpn/`.
 The existing traditional fabric project remains under `Projects/TRADITIONAL/`.
 
 ### Campus BGP EVPN
 
-**Path:** [Data-Models/campus-evpn/](Support/Resources/Data-Models/campus-evpn/)
+**Path:** [Data-Models/campus-evpn/](Projects/Data-Models/campus-evpn/)
 
 The campus EVPN model provides `settings.json` and configuration templates for
 a BGP EVPN campus fabric deployment on Cisco Catalyst 9000 series switches.
 
 | Path | Purpose |
 |-----------|---------|
-| [settings.json](Support/Resources/Data-Models/campus-evpn/settings.json) | Site hierarchy, network settings, discovery, and credential intent |
-| [BGP_EVPN/](Support/Resources/Data-Models/campus-evpn/BGP_EVPN/) | Existing template and related asset folder |
-| [Day0Templates/](Support/Resources/Data-Models/campus-evpn/BGP_EVPN/Day0Templates/) | PnP onboarding Jinja2 templates for zero-touch device commissioning |
-| [DayNTBD/](Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTBD/) | Day-N templates under active development (not yet production) |
-| [DayNTemplates/](Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates/) | Production Day-N Jinja2 templates for post-onboarding configuration |
+| [settings.json](Projects/Data-Models/campus-evpn/settings.json) | Site hierarchy, network settings, discovery, and credential intent |
+| [BGP_EVPN/](Projects/Data-Models/campus-evpn/BGP_EVPN/) | Campus EVPN template folder |
+| [DayNTemplates/](Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates/) | Production Day-N Jinja2 templates for post-onboarding configuration |
 
 ### Traditional Fabric
 
@@ -152,7 +150,7 @@ The TRADITIONAL project provides configuration templates and settings for conven
 | [Configs/](Projects/TRADITIONAL/Configs/) | Generated device configurations produced after provisioning runs |
 | [Day0Templates/](Projects/TRADITIONAL/Day0Templates/) | PnP onboarding Jinja2 templates for zero-touch device commissioning |
 | [DayNTemplates/](Projects/TRADITIONAL/DayNTemplates/) | Production Day-N Jinja2 templates for modular post-onboarding configuration |
-| [Settings/](Projects/TRADITIONAL/Settings/) | `settings.json` and `devices.json` — site and device intent for this project |
+| [Data-Models/catalyst-center/](Projects/Data-Models/catalyst-center/) | `settings.json` — site and device intent for this project (kept with the other project data models) |
 
 **Day0 templates** mirror the BGP\_EVPN set, covering L2/L3 PnP onboarding with EIGRP, OSPF, and seed variants.
 
@@ -322,7 +320,7 @@ A pre-built EVPN campus fabric (spine, leaf, border, core, firewall, DHCP, DMZ) 
 
 | If your fabric uses... | Use project... |
 |------------------------|---------------|
-| BGP EVPN with VXLAN underlay | [Campus EVPN data model](Support/Resources/Data-Models/campus-evpn/) |
+| BGP EVPN with VXLAN underlay | [Campus EVPN data model](Projects/Data-Models/campus-evpn/) |
 | Traditional routed access (EIGRP/OSPF) | [Projects/TRADITIONAL/](Projects/TRADITIONAL/) |
 
 Update the chosen project's `settings.json` with site topology and connectivity

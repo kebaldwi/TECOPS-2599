@@ -72,7 +72,7 @@ Before creating a new discovery job, the workflow lists existing jobs (`GET /api
    |--------------------------|------------------------------|
    | `GITHUB-OWNER`           | `kebaldwi`                   |
    | `GITHUB-REPO`            | `TECOPS-2599`                |
-   | `GITHUB-PATH`            | `Support/Resources/Data-Models/campus-evpn` |
+   | `GITHUB-PATH`            | `Projects/Data-Models/campus-evpn` |
    | `GITHUB-FILE`            | `settings.json`              |
    | `FORCE Update`           | `false`                      |
    | `TemplateHubProjectName` | `BGP_EVPN`                   |

@@ -131,7 +131,7 @@ These parameters are entered when the workflow is launched from the Catalyst Cen
 |-----------|------|---------|-------------|
 | `GITHUB-OWNER` | string | `kebaldwi` | GitHub account or organization that owns the repository |
 | `GITHUB-REPO` | string | `TECOPS-2599` | Repository name containing `settings.json` |
-| `GITHUB-PATH` | string | `Support/Resources/Data-Models/campus-evpn` | Path within the repository to the folder containing `settings.json` |
+| `GITHUB-PATH` | string | `Projects/Data-Models/campus-evpn` | Path within the repository to the folder containing `settings.json` |
 | `GITHUB-FILE` | string | `settings.json` | Filename to retrieve (pre-configured; the workflow directly retrieves this file without a directory scan loop) |
 | `TemplateHubProjectName` | string | `BGP_EVPN` | Template Hub project name used when resolving template names to IDs via `CATC-GetTemplates-v2` |
 
@@ -498,7 +498,7 @@ Submitted to `POST /dna/intent/api/v1/network-profile/{profileId}/site`:
 3. Fill in the input parameters:
    - **GITHUB-OWNER:** `kebaldwi`
    - **GITHUB-REPO:** `TECOPS-2599`
-   - **GITHUB-PATH:** `Support/Resources/Data-Models/campus-evpn`
+   - **GITHUB-PATH:** `Projects/Data-Models/campus-evpn`
    - **GITHUB-FILE:** `settings.json`
    - **TemplateHubProjectName:** `BGP_EVPN`
 4. Click **Execute**.
@@ -512,7 +512,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
   "inputParameters": {
     "GITHUB-OWNER": "kebaldwi",
     "GITHUB-REPO": "TECOPS-2599",
-    "GITHUB-PATH": "Support/Resources/Data-Models/campus-evpn",
+    "GITHUB-PATH": "Projects/Data-Models/campus-evpn",
     "GITHUB-FILE": "settings.json",
     "TemplateHubProjectName": "BGP_EVPN"
   }
@@ -527,7 +527,7 @@ A successful run produces the following sequence in the workflow execution log:
 
 ```
 Step 1       settings.json retrieved from GitHub:
-             /kebaldwi/TECOPS-2599/Support/Resources/Data-Models/campus-evpn/settings.json
+             /kebaldwi/TECOPS-2599/Projects/Data-Models/campus-evpn/settings.json
 Step 2       JSONPath extraction complete:
              HierarchyParent=Global/PODS, HierarchyArea=POD 0
              HierarchyBldg=Building P0, HierarchyFloor=Floor 1

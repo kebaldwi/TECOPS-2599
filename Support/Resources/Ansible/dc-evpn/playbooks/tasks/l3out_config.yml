@@ -1,0 +1,82 @@
+---
+# Builds one L3Out definition (VRF-Lite sub-interface + eBGP to an IP Core) per row in dc_l3out_rows.
+# Stage 05 writes these to Nexus Dashboard, so the definitions come from one place.
+# Input: dc_l3out_rows. Output: dc_l3out_config, dc_vrf_lite_border_serial.
+
+- name: Read the declared fabric ASN
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/global.nac.yaml"
+    name: dc_global_model
+  delegate_to: localhost
+
+- name: Read the switch model stage 01 generated
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/topology_switches.nac.yaml"
+    name: dc_vrf_lite_switch_model
+  delegate_to: localhost
+
+# The border leaf serial comes from the switch model; each core's from dc_device_serials.yml.
+- name: Resolve the border leaf serial
+  ansible.builtin.set_fact:
+    dc_vrf_lite_border_serial: >-
+      {{ (dc_vrf_lite_switch_model.vxlan.topology.switches | default([])
+          | selectattr('name', 'equalto', dc_vrf_lite_border_leaf)
+          | map(attribute='serial_number') | list | first | default('')) }}
+    dc_l3out_config: []
+
+- name: Fail when stage 01 left a serial unresolved
+  ansible.builtin.assert:
+    that:
+      - dc_vrf_lite_border_serial | length > 0
+      - missing_cores | length == 0
+    fail_msg: >-
+      No serial for {{ (([dc_vrf_lite_border_leaf] if dc_vrf_lite_border_serial | length == 0 else [])
+                         + missing_cores) | join(', ') }}. Re-run playbooks/01_discover_serials.yml.
+  vars:
+    missing_cores: >-
+      {{ dc_vrf_lite_links | map(attribute='peer')
+         | reject('in', (dc_device_serials | default({})) | dict2items
+                        | selectattr('value') | map(attribute='key') | list)
+         | list }}
+
+# Each L3Out: a dot1q sub-interface on each side, an IP subnet, and an eBGP session per VRF.
+# fabric1 is the DC fabric (border leaf); fabric2 is the IP Core. Its ASN goes in fabric2_details.local_asn.
+# Keep this a single-expression loop: it must return a list on every ansible-core version.
+- name: Build the L3Out definitions
+  ansible.builtin.set_fact:
+    dc_l3out_config: >-
+      {{ dc_l3out_config + [{
+           'name': item.name,
+           'fabric1_name': dc_fabric_name,
+           'fabric2_name': dc_external_fabric_name,
+           'vrf1_name': item.vrf,
+           'vrf2_name': item.peer_vrf,
+           'configured_fabrics': 'fabric1',
+           'ip_version': 'ipv4',
+           'connectivity_details': {
+             'routing_interface_type': 'subInterface',
+             'links': [{
+               'vlan_id': item.dot1q | int,
+               'mtu': dc_vrf_lite_mtu | int,
+               'ipv4_mask_length': item.ipv4_addr.split('/')[1] | int,
+               'switch1_details': {
+                 'switch_id': dc_vrf_lite_border_serial,
+                 'interface_name': dc_l3out_link.interface ~ dc_l3out_subif,
+                 'interface_ipv4_address': item.ipv4_addr.split('/')[0]},
+               'switch2_details': {
+                 'switch_id': dc_device_serials[dc_l3out_link.peer],
+                 'interface_name': dc_l3out_link.peer_interface ~ dc_l3out_subif,
+                 'interface_ipv4_address': item.neighbor_ipv4}}]},
+           'routing_details': {
+             'routing_protocol': 'bgp',
+             'bgp': {
+               'fabric1_details': {'local_asn': dc_global_model.vxlan.global.ibgp.bgp_asn | string,
+                                   'advertise_default_route': dc_vrf_lite_advertise_default_route | bool},
+               'fabric2_details': {'local_asn': dc_external_fabric_settings.bgp_asn | string}}}}] }}
+  vars:
+    dc_l3out_link: "{{ dc_vrf_lite_links | selectattr('name', 'equalto', item.link) | first }}"
+    dc_l3out_subif: >-
+      {{ ('.' ~ item.dot1q) if dc_vrf_lite_interface_form == 'subinterface' else '' }}
+  loop: "{{ dc_l3out_rows }}"
+  loop_control:
+    label: "{{ item.name }}"

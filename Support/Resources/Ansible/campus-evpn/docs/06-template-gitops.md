@@ -164,7 +164,7 @@ These variables authenticate to the CatC REST API via the `cisco.dnac` collectio
 | Variable | Example | Description |
 |---|---|---|
 | `template_source` | `local` | `local` reads templates from `template_local_dir` (lab default; no GitHub API calls or rate limits). `git` reads them from the GitHub repository below. |
-| `template_local_dir` | `{{ inventory_dir }}/../../../../Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` | Folder containing the `.j2` templates and `.yml` composite definitions when `template_source: local`. |
+| `template_local_dir` | `{{ inventory_dir }}/../../../../../../Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` | Folder containing the `.j2` templates and `.yml` composite definitions when `template_source: local`. |
 
 > Unauthenticated GitHub API access is limited to 60 requests per hour per
 > public IP, and one Git-mode run uses most of that. Lab pods share one public

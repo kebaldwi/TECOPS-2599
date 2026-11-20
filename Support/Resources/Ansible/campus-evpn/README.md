@@ -50,7 +50,7 @@ Existing vaults are never overwritten. To change a value, run
 structure. Stage 6.0 optionally uses `campus-evpn/vaults/github.yml` for a
 GitHub token.
 All generated vault files are git-ignored. Secrets are intentionally absent
-from `Support/Resources/Data-Models/campus-evpn/settings.json`, which retains
+from `Projects/Data-Models/campus-evpn/settings.json`, which retains
 the Cat9kv inventory and topology.
 
 ### 3. Run the pipeline
@@ -447,12 +447,12 @@ Projects/
 
 Used by: **6.0**
 
-Jinja2 template files (`.j2`) and composite definitions (`.yml`). With the lab default `template_source: local`, they are read from `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`. With `template_source: git`, they are fetched from a subfolder of the configured GitHub repository via the GitHub REST API.
+Jinja2 template files (`.j2`) and composite definitions (`.yml`). With the lab default `template_source: local`, they are read from `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`. With `template_source: git`, they are fetched from a subfolder of the configured GitHub repository via the GitHub REST API.
 
 | Parameter | Value |
 |-----------|-------|
 | `template_source` | `local` (or `git`) |
-| `template_local_dir` | `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` |
+| `template_local_dir` | `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` |
 | `git_repo` | `https://github.com/imanassypov/CatalystCenter-BGP-EVPN-VXLAN.git` |
 | `git_branch` | `main` (configurable via `inventories/lab/hosts.yml`) |
 | `git_repo_subfolder` | `Catalyst Center Templates/Site BGP EVPN Templates` |

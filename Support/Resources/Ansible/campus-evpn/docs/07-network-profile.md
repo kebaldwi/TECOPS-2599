@@ -112,7 +112,7 @@ Support/Resources/Ansible/
 
 The playbook references a shared `settings.json` file located in the project tree:
 
-`Support/Resources/Data-Models/campus-evpn/settings.json` is the default
+`Projects/Data-Models/campus-evpn/settings.json` is the default
 input data file.
 
 The path is configurable at runtime (see [Running the Playbook](#running-the-playbook)).
@@ -151,7 +151,7 @@ all:
       dnac_log_level: INFO
 
       # Path to the settings.json input file
-      settings_json_path: "../../../../Resources/Data-Models/campus-evpn/settings.json"
+      settings_json_path: "../../../../../Projects/Data-Models/campus-evpn/settings.json"
 ```
 
 Key variables:
@@ -305,12 +305,12 @@ To create a second profile that spans multiple sites and uses both template type
          else (playbook_dir + '/' + settings_json_path) }}
 ```
 
-`playbook_dir` is an Ansible magic variable that holds the directory containing the playbook file. For a relative path like `../../../../Resources/Data-Models/campus-evpn/settings.json`, the resolved value would be:
+`playbook_dir` is an Ansible magic variable that holds the directory containing the playbook file. For a relative path like `../../../../../Projects/Data-Models/campus-evpn/settings.json`, the resolved value would be:
 
 ```
 /path/to/repo/Support/Resources/Ansible/
-../../../../Resources/Data-Models/campus-evpn/settings.json
-→ /path/to/repo/Support/Resources/Data-Models/campus-evpn/settings.json
+../../../../../Projects/Data-Models/campus-evpn/settings.json
+→ /path/to/repo/Projects/Data-Models/campus-evpn/settings.json
 ```
 
 You can override `settings_json_path` entirely at runtime:

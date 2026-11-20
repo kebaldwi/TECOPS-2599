@@ -1,0 +1,16 @@
+---
+# SSH settings for logging in to the DC and IP Core switches directly.
+# Used by serial discovery (01) and cleanup (07).
+ansible_connection: ansible.netcommon.network_cli
+ansible_network_os: cisco.nxos.nxos
+
+# Login from the vault; every NX-OS switch in the lab shares one account.
+ansible_user: "{{ dc_switch_username }}"
+ansible_password: "{{ dc_switch_password }}"
+
+# NX-OS has no enable mode, and the lab account is already an administrator.
+ansible_become: false
+
+# Extra time (seconds) for a loaded lab.
+ansible_command_timeout: 60
+ansible_connect_timeout: 60

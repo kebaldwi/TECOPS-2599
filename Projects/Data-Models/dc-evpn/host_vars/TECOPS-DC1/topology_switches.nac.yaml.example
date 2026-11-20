@@ -1,0 +1,79 @@
+---
+# Template for the fabric's switches and their server port-channels. Stage 01 copies it
+# to topology_switches.nac.yaml and fills in each serial number (REPLACE_ME - leave it).
+# Switch names must match dc-evpn/inventory/group_vars/all/dc_switches.yml exactly.
+vxlan:
+  topology:
+    switches:
+      - name: dc-spine1
+        serial_number: REPLACE_ME
+        role: spine
+        management:
+          management_ipv4_address: 198.18.1.115
+        interfaces: []
+
+      - name: dc-spine2
+        serial_number: REPLACE_ME
+        role: spine
+        management:
+          management_ipv4_address: 198.18.1.116
+        interfaces: []
+
+      - name: dc-border1
+        serial_number: REPLACE_ME
+        role: border
+        management:
+          management_ipv4_address: 198.18.1.117
+        interfaces: []
+
+      - name: dc-leaf1
+        serial_number: REPLACE_ME
+        role: leaf
+        management:
+          management_ipv4_address: 198.18.1.118
+        # Each port-channel below is one vPC to a dual-homed host, built on both leaves.
+        # Keep descriptions plain ASCII (hyphens, not dashes); they become switch config.
+        interfaces:
+          - name: Port-channel5
+            mode: access
+            vpc_id: 5
+            description: "dc-red01 - vPC5"
+            members:
+              - Ethernet1/5
+          - name: Port-channel6
+            mode: access
+            vpc_id: 6
+            description: "dc-green01 - vPC6"
+            members:
+              - Ethernet1/6
+          - name: Port-channel7
+            mode: access
+            vpc_id: 7
+            description: "dc-blue01 - vPC7"
+            members:
+              - Ethernet1/7
+
+      - name: dc-leaf2
+        serial_number: REPLACE_ME
+        role: leaf
+        management:
+          management_ipv4_address: 198.18.1.119
+        interfaces:
+          - name: Port-channel5
+            mode: access
+            vpc_id: 5
+            description: "dc-red01 - vPC5"
+            members:
+              - Ethernet1/5
+          - name: Port-channel6
+            mode: access
+            vpc_id: 6
+            description: "dc-green01 - vPC6"
+            members:
+              - Ethernet1/6
+          - name: Port-channel7
+            mode: access
+            vpc_id: 7
+            description: "dc-blue01 - vPC7"
+            members:
+              - Ethernet1/7

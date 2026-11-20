@@ -1,0 +1,39 @@
+---
+# Overlay VRFs red, green and blue, named as in the campus fabric.
+# Each VRF is a separate routing table; vrf_id is its L3 VNI across the fabric.
+# Always set vlan_id yourself (2000-2299); letting the controller pick clashes.
+vxlan:
+  overlay:
+    vrfs:
+      - name: red
+        vrf_id: 50000
+        vlan_id: 2000
+        vrf_vlan_name: red
+        vrf_intf_desc: red
+        vrf_description: red
+        vrf_attach_group: dc_leaves
+
+      - name: green
+        vrf_id: 50001
+        vlan_id: 2001
+        vrf_vlan_name: green
+        vrf_intf_desc: green
+        vrf_description: green
+        vrf_attach_group: dc_leaves
+
+      - name: blue
+        vrf_id: 50002
+        vlan_id: 2002
+        vrf_vlan_name: blue
+        vrf_intf_desc: blue
+        vrf_description: blue
+        vrf_attach_group: dc_leaves
+
+    vrf_attach_groups:
+      # The switches that get these VRFs, border leaf included.
+      # Stage 05 (L3Out) builds the external handoff on top of the border leaf's attachment.
+      - name: dc_leaves
+        switches:
+          - hostname: dc-leaf1
+          - hostname: dc-leaf2
+          - hostname: dc-border1

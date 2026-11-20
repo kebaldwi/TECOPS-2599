@@ -2,3 +2,6 @@
 **/.vault_pass
 campus-evpn/vaults/*.yml
 campus-evpn/artifacts/
+dc-evpn/collections/ansible_collections/
+dc-evpn/evidence/
+dc-evpn/inventory/group_vars/all/dc_device_serials.yml

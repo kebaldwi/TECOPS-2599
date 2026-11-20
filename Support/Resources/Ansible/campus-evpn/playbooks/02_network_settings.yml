@@ -62,7 +62,7 @@
     #   HierarchyArea set   → Parent/Area
     #   (none set)          → HierarchyParent  (e.g. "Global")
     #
-    # Sample (Data-Models/campus-evpn/settings.json):
+    # Sample (Projects/Data-Models/campus-evpn/settings.json):
     #
     #   Entry 0: HierarchyParent=Global,       Area=null  → "Global"
     #   Entry 1: HierarchyParent=Global,       Area=PODS  → "Global/PODS"

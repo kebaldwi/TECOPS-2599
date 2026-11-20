@@ -377,7 +377,7 @@
       {
         "schema_id": "datatype.string",
         "properties": {
-          "value": "Support/Resources/Data-Models/campus-evpn",
+          "value": "Projects/Data-Models/campus-evpn",
           "scope": "input",
           "name": "GITHUB_PATH",
           "type": "datatype.string",

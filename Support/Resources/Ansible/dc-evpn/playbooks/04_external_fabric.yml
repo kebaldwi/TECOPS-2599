@@ -1,0 +1,205 @@
+---
+# Stage 04: puts the IP Core switches in their own External fabric in Monitor Mode (read-only),
+# then builds one inter-fabric link from the border leaf to each core.
+# SAFETY: Nexus Dashboard never writes to the cores; their side is applied by hand.
+# Run from Support/Resources/Ansible/dc-evpn: ansible-playbook playbooks/04_external_fabric.yml
+
+- name: Stage 04 - create the External fabric and add the IP Core
+  hosts: TECOPS-External
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    ansible_network_os: cisco.nd.nd
+    dc_external_add_edge_devices: true  # false = build the fabric only (stage 05 then cannot run)
+
+  pre_tasks:
+    - name: Require the External fabric settings to be declared
+      ansible.builtin.assert:
+        that:
+          - dc_external_fabric_settings is mapping
+          - dc_external_fabric_settings.bgp_asn is defined
+          - dc_external_fabric_settings.monitored_mode | default(false) | bool
+          - dc_external_edge_devices | default([]) | length > 0
+          - dc_external_edge_devices | selectattr('platform_type', 'undefined') | list | length == 0
+        fail_msg: >-
+          dc_external_fabric_settings or dc_external_edge_devices is incomplete,
+          or monitored_mode is not true. Both are expected in
+          inventory/group_vars/all/dc_external_settings.yml, and this lab
+          never lets Nexus Dashboard write to the IP Core.
+      tags: [always]
+
+    - name: Require stage 01 to have read every core serial
+      ansible.builtin.assert:
+        that:
+          - missing | length == 0
+        fail_msg: >-
+          No serial for {{ missing | join(', ') }} in
+          inventory/group_vars/all/dc_device_serials.yml. Run
+          playbooks/01_discover_serials.yml first.
+      vars:
+        missing: >-
+          {{ dc_external_edge_devices | map(attribute='hostname')
+             | reject('in', (dc_device_serials | default({})) | dict2items
+                            | selectattr('value') | map(attribute='key') | list)
+             | list }}
+      when: dc_external_add_edge_devices | bool
+      tags: [always]
+
+  tasks:
+    # Monitor Mode is switched on as the fabric is created, so it is never writable.
+    - name: Create the External fabric with the declared settings
+      cisco.nd.nd_manage_fabric_external:
+        state: merged
+        config:
+          - fabric_name: "{{ inventory_hostname }}"
+            management: "{{ dc_external_fabric_settings }}"
+      register: dc_external_fabric_result
+
+    - name: Report the fabric result
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Fabric created or updated, Monitor Mode on. Nexus Dashboard will
+              not configure devices in this fabric.'
+             if dc_external_fabric_result.changed
+             else 'Fabric already matches the declared settings. No change sent.' }}
+
+    # SAFETY: save and deploy are off (this module would do both by default).
+    # preserve_config true keeps each core's own config; the controller only reads it.
+    - name: Discover and add the IP Core switches
+      cisco.nd.nd_manage_switches:
+        fabric: "{{ inventory_hostname }}"
+        state: merged
+        config_actions:
+          save: false
+          deploy: false
+        config: >-
+          {%- set devices = [] -%}
+          {%- for device in dc_external_edge_devices -%}
+          {{- devices.append({'seed_ip': device.ip,
+                              'platform_type': device.platform_type,
+                              'role': device.role | default('core_router'),
+                              'username': dc_switch_username,
+                              'password': dc_switch_password,
+                              'preserve_config': true}) or '' -}}
+          {%- endfor -%}
+          {{ devices }}
+      register: dc_external_device_result
+      no_log: true
+      when: dc_external_add_edge_devices | bool
+
+    # Read the fabric's device list to confirm the right devices joined:
+    # each serial number must match the one stage 01 read.
+    - name: Read the External fabric inventory
+      cisco.nd.nd_rest:
+        path: "/api/v1/manage/fabrics/{{ inventory_hostname }}/switches"
+        method: get
+      register: dc_external_inventory
+      changed_when: false
+      when: dc_external_add_edge_devices | bool
+
+    - name: Require each added core to be the device stage 01 read
+      ansible.builtin.assert:
+        that:
+          - dc_external_row | length == 1
+          - dc_external_row[0].serialNumber | default(dc_external_row[0].switchId | default(''))
+            == dc_device_serials[item.hostname]
+        fail_msg: >-
+          {{ item.ip }} in {{ inventory_hostname }} does not match stage 01's
+          serial '{{ dc_device_serials[item.hostname] }}':
+          {{ dc_external_row | to_json }}. Either the core never joined the
+          fabric or the address now answers as a different device.
+      vars:
+        dc_external_row: >-
+          {{ (dc_external_inventory.jsondata | default({})).switches
+             | default([])
+             | selectattr('fabricManagementIp', 'defined')
+             | selectattr('fabricManagementIp', 'equalto', item.ip)
+             | list }}
+      loop: "{{ dc_external_edge_devices }}"
+      loop_control:
+        label: "{{ item.hostname }} ({{ item.ip }})"
+      when: dc_external_add_edge_devices | bool
+
+    - name: Report the IP Core result
+      ansible.builtin.debug:
+        msg: >-
+          {{ ('IP Core ' + ('added.' if dc_external_device_result.changed
+                            else 'already in the fabric. No change sent.'))
+             if dc_external_add_edge_devices | bool
+             else 'IP Core skipped because dc_external_add_edge_devices is false.' }}
+
+# ---------------------------------------------------------------------------
+# Second play: one inter-fabric link per core, which the L3Outs use.
+# It runs on the DC fabric, which owns the links. Keep state merged: overridden deletes other links.
+- name: Stage 04 - build the inter-fabric links
+  hosts: TECOPS-DC1
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    ansible_network_os: cisco.nd.nd
+    dc_external_add_edge_devices: true
+
+  tasks:
+    # Take the DC's BGP AS number from the fabric model, so the links always match it.
+    - name: Read the declared fabric ASN
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/host_vars/{{ inventory_hostname }}/global.nac.yaml"
+        name: dc_global_model
+      delegate_to: localhost
+
+    - name: Fail when a link names a peer that is not a declared core
+      ansible.builtin.assert:
+        that:
+          - unknown | length == 0
+        fail_msg: >-
+          DATA MODEL ERROR. dc_vrf_lite_links peer(s) {{ unknown | join(', ') }}
+          are not in dc_external_edge_devices.
+      vars:
+        unknown: >-
+          {{ dc_vrf_lite_links | map(attribute='peer')
+             | reject('in', dc_external_edge_devices | map(attribute='hostname') | list)
+             | list }}
+
+    # eBGP VRF-Lite links. The auto_gen_config options are false: no config for the core,
+    # and no BGP session in the default VRF. The per-VRF BGP sessions come from the L3Outs.
+    - name: Create the inter-fabric links
+      cisco.nd.nd_manage_links:
+        fabric_name: "{{ dc_fabric_name }}"
+        link_scope: manage
+        state: merged
+        config: >-
+          {%- set links = [] -%}
+          {%- for link in dc_vrf_lite_links -%}
+          {%- set peer = dc_external_edge_devices | selectattr('hostname', 'equalto', link.peer) | first -%}
+          {{- links.append({
+                'src_fabric_name': dc_fabric_name,
+                'dst_fabric_name': dc_external_fabric_name,
+                'src_switch_name': dc_vrf_lite_border_leaf,
+                'dst_switch_ip': peer.ip,
+                'src_interface_name': link.interface,
+                'dst_interface_name': link.peer_interface,
+                'config_data': {
+                  'policy_type': 'ebgpVrfLite',
+                  'template_inputs': link.ifc | combine({
+                    'src_ebgp_asn': dc_global_model.vxlan.global.ibgp.bgp_asn | string,
+                    'dst_ebgp_asn': dc_external_fabric_settings.bgp_asn | string,
+                    'auto_gen_config_peer': false,
+                    'auto_gen_config_default_vrf': false,
+                    'auto_gen_config_nx_peer_default_vrf': false})}}) or '' -}}
+          {%- endfor -%}
+          {{ links }}
+      register: dc_external_link
+      when: dc_external_add_edge_devices | bool
+
+    - name: Report the link result
+      ansible.builtin.debug:
+        msg: >-
+          {{ (dc_vrf_lite_links | map(attribute='name') | list | length) }} inter-fabric link(s)
+          from {{ dc_vrf_lite_border_leaf }}:
+          {{ dc_vrf_lite_links | map(attribute='interface') | zip(dc_vrf_lite_links | map(attribute='peer'))
+             | map('join', ' -> ') | join(', ') }}.
+          {{ ('changed=' ~ (dc_external_link.changed | default(false)) ~ '.')
+             if dc_external_add_edge_devices | bool
+             else 'Skipped: dc_external_add_edge_devices is false.' }}

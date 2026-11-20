@@ -1,0 +1,11 @@
+---
+# Fabric settings that the Nexus as Code data model cannot express. Stage 03 applies them.
+# VRF-Lite settings live separately in dc_vrf_lite.yml.
+dc_advanced_nd_fabric_settings:
+  # "Telemetry": off, so the fabric does not stream data into Insights.
+  telemetry_collection: false
+
+  # "Location": San Jose, California, US. Give both values together.
+  location:
+    latitude: 37.3382
+    longitude: -121.8863

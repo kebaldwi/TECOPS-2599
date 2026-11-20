@@ -85,7 +85,7 @@ The same `settings.json` that defines the hierarchy, network settings, device di
 
 The `DayNTemplateNames[].TemplateName` value (`BGP-EVPN-BUILD.j2`) is the composite template published by the previous module. The workflow resolves this name to its Template Hub UUID at runtime via `CATC-GetTemplates-v2`, so the profile payload is portable across Catalyst Center instances. `Day0TemplateNames[].TemplateName` is left `null` for this lab — fabric deployments use a separate PnP seed process rather than a Day0 template bound to the profile.
 
-For this lab, the file lives at `Support/Resources/Data-Models/campus-evpn/settings.json` in the `kebaldwi/TECOPS-2599` repository, and is the same file referenced by the default workflow input parameters (`GITHUB-OWNER`, `GITHUB-REPO`, `GITHUB-PATH`, `GITHUB-FILE`).
+For this lab, the file lives at `Projects/Data-Models/campus-evpn/settings.json` in the `kebaldwi/TECOPS-2599` repository, and is the same file referenced by the default workflow input parameters (`GITHUB-OWNER`, `GITHUB-REPO`, `GITHUB-PATH`, `GITHUB-FILE`).
 
 ## What You Will Do in This Module
 

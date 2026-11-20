@@ -1,0 +1,33 @@
+---
+# Fabric-wide settings for the DC VXLAN EVPN fabric.
+# A "fabric" is the whole group of spines and leaves Nexus Dashboard manages as one.
+# No Jinja ({{ ... }}) here: this file is read as plain data, never templated.
+vxlan:
+  fabric:
+    name: TECOPS-DC1
+    type: VXLAN_EVPN
+
+  global:
+    ibgp:
+      # BGP AS shared by every DC switch (iBGP). Keep the quotes: it must be a string.
+      # Campus is 65001, IP Core 65002, DMZ 65003/65004.
+      bgp_asn: "65005"
+      # The two spines act as BGP route reflectors, so leaves peer only with them.
+      route_reflectors: 2
+      # Authentication used when Nexus Dashboard discovers the switches.
+      auth_proto: MD5
+
+      # "Add Switches without Reload". Switches are still wiped on import;
+      # this only lets that cleanup happen without rebooting each switch.
+      greenfield_cleanup: Enable
+
+      # VNI pools. Networks (L2) take IDs 30000+ and VRFs (L3) take 50000+.
+      layer2_vni_range:
+        from: 30000
+        to: 49000
+      layer3_vni_range:
+        from: 50000
+        to: 59000
+
+# The VRF-Lite fabric settings cannot be expressed in this model. They live in
+# dc-evpn/inventory/group_vars/all/dc_vrf_lite.yml and are applied by stage 03.

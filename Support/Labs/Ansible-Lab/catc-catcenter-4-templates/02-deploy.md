@@ -38,7 +38,7 @@ For this lab the values should be:
 github_owner: kebaldwi
 github_repo:  TECOPS-2599
 github_branch: main
-github_path:   Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
+github_path:   Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
 template_project_name: TECOPS-2599
 ```
 
@@ -83,7 +83,7 @@ A successful first run produces `changed > 0` (every template is being created).
 
 2. Expand the project named `TECOPS-2599` (or whatever you configured in `campus-evpn/inventories/lab/hosts.yml`). You should see:
 
-    - One entry per `.j2` file under `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` in the repo.
+    - One entry per `.j2` file under `Projects/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` in the repo.
     - One **composite** template per `.yml` file (notably `BGP-EVPN-BUILD`).
 
 3. Open one of the templates (e.g. `FABRIC-VRF`). The body should match the `.j2` source, and the description field should contain the latest commit message and author.
