@@ -18,3 +18,6 @@ __pycache__/
 **/__pycache__/
 **/dnac.log
 *.log
+
+# Local Copilot instructions (per-user, not shared)
+.github/copilot-instructions.md
