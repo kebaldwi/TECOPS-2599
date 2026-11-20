@@ -1,0 +1,169 @@
+---
+# =============================================================================
+# roles/device_credentials/tasks/netconf_create_or_update.yml
+#
+# Creates or updates ONE NETCONF global credential.
+# Loop variable: netconf_config (set by the include_tasks loop in this role's
+#                                tasks/main.yml)
+#
+# Existence is determined by NETCONF PORT, not description, because CatC
+# enforces one credential per port (duplicate port → task fails with
+# "Duplicate credential").  Checking by description would miss matches when
+# the desired description differs from the one stored in CatC.
+#
+# Decision matrix:
+#   port absent in CatC              → CREATE (POST)
+#   port present, description same   → skip (idempotent)
+#   port present, description differs→ UPDATE (PUT) to rename
+#
+# POST and PUT both return HTTP 202 + async task ID body.  The
+# cisco.dnac.netconf_credential module mishandles this response; raw
+# ansible.builtin.uri + task polling is used instead.
+#
+# Play-scope vars required (set by playbooks/03_credentials.yml Phase B):
+#   device_credentials_netconf_port_map — {port_str: {id, description}}
+#   device_credentials_catc_token      — bearer token for Authorization header
+#   catc_host / catc_port / catc_verify
+#
+# API paths:
+#   CREATE → POST /dna/intent/api/v1/global-credential/netconf
+#             body: list [{description, netconfPort}]  → 202 + task ID
+#   UPDATE → PUT  /dna/intent/api/v1/global-credential/netconf
+#             body: object {id, description, netconfPort} → 202 + task ID
+#   POLL   → GET  /api/v1/task/{taskId}                 → {isError, ...}
+# =============================================================================
+
+# ── Step 1: Derive existence / UUID / description-match by port ───────────────
+- name: "Derive exists / id / desc_match by port  | {{ netconf_config.description }}"
+  ansible.builtin.set_fact:
+    device_credentials_nc_exists: "{{ netconf_config.netconf_port | string in device_credentials_netconf_port_map }}"
+    device_credentials_nc_id: "{{ (device_credentials_netconf_port_map.get(netconf_config.netconf_port | string, {})).get('id', '') }}"
+    device_credentials_nc_desc_match: >-
+      {{ (device_credentials_netconf_port_map.get(
+           netconf_config.netconf_port | string, {}
+         )).get('description', '') == netconf_config.description }}
+
+# =============================================================================
+# CREATE — no credential with this port exists in CatC
+# =============================================================================
+
+- name: "NETCONF | CREATE — port / description: {{ [netconf_config.netconf_port, netconf_config.description] | join(' / ') }}"
+  ansible.builtin.uri:
+    url: "https://{{ catc_host }}:{{ catc_port }}/dna/intent/api/v1/global-credential/netconf"
+    method: POST
+    headers:
+      X-Auth-Token: "{{ device_credentials_catc_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      - description: "{{ netconf_config.description }}"
+        netconfPort: "{{ netconf_config.netconf_port }}"
+    validate_certs: "{{ catc_verify }}"
+    status_code: [200, 202]
+  register: device_credentials_nc_create
+  when: not device_credentials_nc_exists
+
+- name: "NETCONF | Poll CREATE task  | {{ netconf_config.description }}"
+  ansible.builtin.uri:
+    url: "https://{{ catc_host }}:{{ catc_port }}{{ device_credentials_nc_create.json.response.url }}"
+    method: GET
+    headers:
+      X-Auth-Token: "{{ device_credentials_catc_token }}"
+    validate_certs: "{{ catc_verify }}"
+    status_code: 200
+  register: device_credentials_nc_create_task
+  until: device_credentials_nc_create_task.json.response.isError is defined
+  retries: 12
+  delay: 5
+  when: not device_credentials_nc_exists
+
+- name: "NETCONF | Assert CREATE succeeded  | {{ netconf_config.description }}"
+  ansible.builtin.assert:
+    that: not device_credentials_nc_create_task.json.response.isError
+    fail_msg: >-
+      NETCONF credential create failed for '{{ netconf_config.description }}':
+      {{ device_credentials_nc_create_task.json.response.failureReason | default('unknown') }}
+    success_msg: "NETCONF credential '{{ netconf_config.description }}' created."
+  when: not device_credentials_nc_exists
+
+- name: "NETCONF | Resolve new UUID  | {{ netconf_config.description }}"
+  cisco.dnac.global_credential_info:
+    credentialSubType: NETCONF
+  register: device_credentials_nc_resolve
+  when: not device_credentials_nc_exists
+
+- name: "NETCONF | Update device_credentials_netconf_port_map after CREATE  | {{ netconf_config.description }}"
+  ansible.builtin.set_fact:
+    device_credentials_netconf_port_map: >-
+      {%- set ns = namespace(new_id='') -%}
+      {%- for cred in device_credentials_nc_resolve.dnac_response.response | default([]) -%}
+        {%- if cred.description == netconf_config.description -%}
+          {%- set ns.new_id = cred.id -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ device_credentials_netconf_port_map | combine({netconf_config.netconf_port | string: {'id': ns.new_id, 'description': netconf_config.description}}) }}
+  when: not device_credentials_nc_exists
+
+# =============================================================================
+# UPDATE — port already exists; description differs → rename
+# =============================================================================
+
+- name: "NETCONF | UPDATE (rename)  | {{ netconf_config.description }}"
+  ansible.builtin.uri:
+    url: "https://{{ catc_host }}:{{ catc_port }}/dna/intent/api/v1/global-credential/netconf"
+    method: PUT
+    headers:
+      X-Auth-Token: "{{ device_credentials_catc_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      id: "{{ device_credentials_nc_id }}"
+      description: "{{ netconf_config.description }}"
+      netconfPort: "{{ netconf_config.netconf_port }}"
+    validate_certs: "{{ catc_verify }}"
+    status_code: [200, 202]
+  register: device_credentials_nc_update
+  when:
+    - device_credentials_nc_exists
+    - not device_credentials_nc_desc_match
+
+- name: "NETCONF | Poll UPDATE task  | {{ netconf_config.description }}"
+  ansible.builtin.uri:
+    url: "https://{{ catc_host }}:{{ catc_port }}{{ device_credentials_nc_update.json.response.url }}"
+    method: GET
+    headers:
+      X-Auth-Token: "{{ device_credentials_catc_token }}"
+    validate_certs: "{{ catc_verify }}"
+    status_code: 200
+  register: device_credentials_nc_update_task
+  until: device_credentials_nc_update_task.json.response.isError is defined
+  retries: 12
+  delay: 5
+  when:
+    - device_credentials_nc_exists
+    - not device_credentials_nc_desc_match
+
+- name: "NETCONF | Assert UPDATE succeeded  | {{ netconf_config.description }}"
+  ansible.builtin.assert:
+    that: not device_credentials_nc_update_task.json.response.isError
+    fail_msg: >-
+      NETCONF credential update failed for '{{ netconf_config.description }}':
+      {{ device_credentials_nc_update_task.json.response.failureReason | default('unknown') }}
+    success_msg: "NETCONF credential '{{ netconf_config.description }}' updated."
+  when:
+    - device_credentials_nc_exists
+    - not device_credentials_nc_desc_match
+
+# =============================================================================
+# IDEMPOTENT — port exists, description already matches
+# =============================================================================
+
+- name: "NETCONF | Already up-to-date  | {{ netconf_config.description }}"
+  ansible.builtin.debug:
+    msg: >-
+      NETCONF credential '{{ netconf_config.description }}'
+      (port {{ netconf_config.netconf_port }}) already exists with matching
+      description — no action needed.
+  when:
+    - device_credentials_nc_exists
+    - device_credentials_nc_desc_match

@@ -1,8 +1,8 @@
 # Templates from GitHub
 
-In this module we use Ansible to implement a **GitOps** workflow for Catalyst Center templates: a single playbook (`ansible-git-catc.yml`) reads a folder of Jinja2 templates from a GitHub repository, builds composite (multi-template) bundles from `.yml` definition files, and syncs everything into a Catalyst Center Template Project.
+In this module we use Ansible to implement a **GitOps** workflow for Catalyst Center templates: a single playbook (`06_sync_templates.yml`) reads a folder of Jinja2 templates from a GitHub repository, builds composite (multi-template) bundles from `.yml` definition files, and syncs everything into a Catalyst Center Template Project.
 
-> Reference: [6.0 Template GitHub Sync — full as-built](../../../Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md)
+> Reference: [6.0 Template GitHub Sync — full as-built](../../../Resources/Ansible/campus-evpn/docs/06-template-gitops.md)
 
 ## What "GitOps for Templates" Means
 
@@ -53,15 +53,15 @@ The playbook reads this file, resolves each `member_templates` entry against the
 
 GitHub-side calls go through `ansible.builtin.uri`; Catalyst Center writes go through the Workflow Manager module.
 
-## Source — `inventory.yml`
+## Source — `campus-evpn/inventories/lab/hosts.yml`
 
-The playbook is configured entirely from `inventory.yml`:
+The playbook is configured entirely from `campus-evpn/inventories/lab/hosts.yml`:
 
 ```yaml
 github_owner: kebaldwi
 github_repo:  TECOPS-2599
 github_branch: main
-github_path:   Projects/BGP_EVPN/DayNTemplates
+github_path:   Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
 template_project_name: TECOPS-2599
 ```
 
@@ -69,11 +69,11 @@ To sync a different template library, edit those five values and re-run.
 
 ## What You Will Do
 
-1. Encrypt the `vault.yml` for the 6.0 playbook (same `admin / C1sco12345`; optionally add `git_token` for higher GitHub rate limits).
-2. Run `ansible-git-catc.yml`. Watch for the per-template *create / update* lines.
+1. Use the shared Catalyst Center vault created during staging. A local 6.0 vault is optional and is only needed for a GitHub token.
+2. Run `06_sync_templates.yml`. Watch for the per-template *create / update* lines.
 3. Verify in **Tools → Template Editor** that the Template Project exists and contains both individual templates and at least one composite.
 
-> **Prerequisites:** Modules 1–3 complete. The Catalyst Center Template Project named in `inventory.yml` will be auto-created if it does not already exist.
+> **Prerequisites:** Modules 1–3 complete. The Catalyst Center Template Project named in `campus-evpn/inventories/lab/hosts.yml` will be auto-created if it does not already exist.
 
 > [**Next Section**](./02-deploy.md)
 

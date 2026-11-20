@@ -44,7 +44,7 @@ python3 provision_devices.py
 **Optional overrides:**
 
 ```bash
-export CATC_SETTINGS_JSON=/path/to/settings.json   # default: Projects/BGP_EVPN/Settings/settings.json
+export CATC_SETTINGS_JSON=/path/to/settings.json   # default: Support/Resources/Data-Models/campus-evpn/settings.json
 export CATC_FORCE_REPROVISION=true                  # re-provision already-provisioned devices
 export DEBUG=true                                   # print UUIDs and full payloads
 ```

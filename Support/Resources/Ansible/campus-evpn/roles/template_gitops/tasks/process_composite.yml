@@ -1,0 +1,64 @@
+# ============================================================================
+# Authors
+# ============================================================================
+# | Name            | Role                              | Contact              |
+# |-----------------|-----------------------------------|----------------------|
+# | Igor Manassypov | Systems Engineer                  | imanassy@cisco.com   |
+# Copyright © 2024-2026 Cisco Systems, Inc. All rights reserved.
+# ============================================================================
+
+---
+# process-composite.yml
+# Processes composite template definition files
+
+- name: Load composite definition from {{ composite_file.name }}
+  ansible.builtin.set_fact:
+    template_gitops_composite_def: "{{ composite_file.content | from_yaml }}"
+
+- name: Extract composite metadata
+  ansible.builtin.set_fact:
+    template_gitops_composite_name: "{{ template_gitops_composite_def.composite_name | default((composite_file.name | regex_replace('\\.yml$', '.j2'))) }}"
+    template_gitops_composite_template_names: "{{ template_gitops_composite_def.templates | map(attribute='name') | list }}"
+
+- name: Build containing templates list
+  ansible.builtin.set_fact:
+    template_gitops_containing_templates_list: >-
+      {{ (template_gitops_containing_templates_list | default([])) + [{
+        'name': item,
+        'composite': false,
+        'project_name': project_name,
+        'description': 'description',
+        'language': 'JINJA',
+        'device_types': default_device_types,
+        'software_type': default_software_type,
+        'software_variant': default_software_variant,
+        'templateParams': [],
+        'tags': []
+      }] }}
+  with_items: "{{ template_gitops_composite_template_names }}"
+
+- name: Build composite workflow configuration for {{ template_gitops_composite_name }}
+  ansible.builtin.set_fact:
+    template_gitops_composite_workflow_configs: "{{ template_gitops_composite_workflow_configs | default([]) + [composite_config] }}"
+  vars:
+    composite_config:
+      configuration_templates:
+        template_name: "{{ template_gitops_composite_name }}"
+        project_name: "{{ project_name }}"
+        composite: true
+        language: "JINJA"
+        template_content: ""
+        template_description: "Composite template synced from Git repository"
+        device_types: "{{ default_device_types }}"
+        software_type: "{{ default_software_type }}"
+        software_variant: "{{ default_software_variant }}"
+        software_version:
+        template_params: []
+        failure_policy: "ABORT_TARGET_ON_ERROR"
+        version: "{{ default_template_version }}"
+        containing_templates: "{{ template_gitops_containing_templates_list }}"
+        tags: []
+
+- name: Reset containing templates list
+  ansible.builtin.set_fact:
+    template_gitops_containing_templates_list: []

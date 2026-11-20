@@ -1,0 +1,7 @@
+---
+- name: Apply network settings per site
+  ansible.builtin.include_tasks: apply_network_settings.yml
+  loop: "{{ network_settings_list }}"
+  loop_control:
+    loop_var: site_config
+    label: "{{ site_config.site_name }}"

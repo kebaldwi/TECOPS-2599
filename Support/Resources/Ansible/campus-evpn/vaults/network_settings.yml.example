@@ -1,0 +1,10 @@
+---
+# Stage-specific secrets. Catalyst Center API credentials are stored in the
+# shared encrypted file at ../group_vars/all/vault.yml.
+# From Support/Resources/Ansible, copy and encrypt:
+#   cp campus-evpn/vaults/network_settings.yml.example campus-evpn/vaults/network_settings.yml
+#   ansible-vault encrypt campus-evpn/vaults/network_settings.yml --ask-vault-pass
+
+# Secrets are injected at runtime; do not put them in settings.json.
+catc_network_aaa_shared_secret: "replace_with_network_aaa_secret"
+catc_client_and_endpoint_aaa_shared_secret: "replace_with_client_aaa_secret"

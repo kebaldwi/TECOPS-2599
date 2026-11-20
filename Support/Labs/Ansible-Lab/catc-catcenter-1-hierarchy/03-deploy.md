@@ -5,62 +5,56 @@
 [![Build Site Hierarchy](https://img.youtube.com/vi/e7lGFKs2i1w/0.jpg)](https://www.youtube.com/watch?v=e7lGFKs2i1w)
 > 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
 
-In this section we encrypt the playbook's vault, run `site_hierarchy.yml`, and verify the resulting hierarchy in the Catalyst Center UI.
+In this section we use the shared vault created during script-server staging,
+run `01_site_hierarchy.yml`, and verify the resulting hierarchy in Catalyst Center.
 
-> All commands run on the **Script Server** (`ssh root@198.18.133.28`) inside the activated `~/tecops-venv` from the orientation module.
+> All commands run on the **Script Server** using the regular DCLOUD account used during staging, inside the activated `~/tecops-venv` from the orientation module.
 
 ## Step 1 — Inspect the Playbook
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy
+cd ~/TECOPS-2599/Support/Resources/Ansible
 ls
 ```
 
 ```text
-ansible.cfg          requirements.txt        tasks/
-DIAGRAMS/            requirements.yml        vault.yml.example
-inventory.yml        site_hierarchy.yml
-README.md
+ansible.cfg
+campus-evpn/inventories/lab/hosts.yml
+campus-evpn/playbooks/01_site_hierarchy.yml
+campus-evpn/roles/site_hierarchy/tasks/
 ```
 
-The `tasks/` subfolder contains the two include files used by the main playbook:
+The `site_hierarchy` role contains its entrypoint and per-site task files:
 
-* `tasks/create_or_update_site.yml` — runs once per path to create or update an Area/Building/Floor.
-* `tasks/delete_site.yml` — runs once per path (in deepest-first order) when `state: deleted`.
+* `main.yml` — selects create/update or delete based on `state`.
+* `create_or_update_site.yml` — runs once per path to create or update an Area/Building/Floor.
+* `delete_site.yml` — runs once per path (in deepest-first order) when `state: deleted`.
 
-Open `inventory.yml` to confirm the data path:
+Open the common lab inventory to confirm the data path:
 
 ```bash
-grep settings_json_path inventory.yml
-# Expect: settings_json_path: "../../../Projects/BGP_EVPN/Settings/settings.json"
+grep settings_json_path campus-evpn/inventories/lab/hosts.yml
+# Expect: settings_json_path resolves to Support/Resources/Data-Models/campus-evpn/settings.json
 ```
 
-This relative path resolves to `~/TECOPS-2599/Projects/BGP_EVPN/Settings/settings.json` — the shared source-of-truth file.
+This relative path resolves to `~/TECOPS-2599/Support/Resources/Data-Models/campus-evpn/settings.json` — the shared source-of-truth file.
 
-## Step 2 — Encrypt the Vault
-
-```bash
-cp vault.yml.example vault.yml
-cat vault.yml
-# catc_username: admin
-# catc_password: C1sco12345
-```
-
-For DCLOUD the values in `vault.yml.example` are already correct, so just encrypt:
+## Step 2 — Confirm the Shared Vault
 
 ```bash
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
-head -1 vault.yml
+head -1 campus-evpn/group_vars/all/vault.yml
 # Expect: $ANSIBLE_VAULT;1.1;AES256
 ```
+
+The staging script prompts for and encrypts the CatC admin password. Stage 1.0 does not need a local `vault.yml`.
 
 ## Step 3 — Dry Run (Optional)
 
 Confirm the playbook can read its inputs and authenticate to Catalyst Center without making any changes:
 
 ```bash
-ansible-playbook -i inventory.yml site_hierarchy.yml \
-    --vault-password-file ~/.vault_pass \
+ansible-playbook campus-evpn/playbooks/01_site_hierarchy.yml \
+    --ask-vault-pass \
     --check -v
 ```
 
@@ -69,8 +63,8 @@ If `--check` produces a `PLAY RECAP` with `failed=0`, the connection, vault, and
 ## Step 4 — Apply the Hierarchy
 
 ```bash
-ansible-playbook -i inventory.yml site_hierarchy.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/01_site_hierarchy.yml \
+    --ask-vault-pass
 ```
 
 A successful run looks like:
@@ -88,9 +82,9 @@ TASK [Fetch existing site map] **********************************************
 ok: [catalyst_center]
 
 TASK [include_tasks : create_or_update_site.yml] ****************************
-included: tasks/create_or_update_site.yml for catalyst_center => (item=Global/NA)
-included: tasks/create_or_update_site.yml for catalyst_center => (item=Global/NA/HQ San Jose)
-included: tasks/create_or_update_site.yml for catalyst_center => (item=Global/NA/HQ San Jose/Floor 1)
+included: 01_create_or_update_site.yml for catalyst_center => (item=Global/NA)
+included: 01_create_or_update_site.yml for catalyst_center => (item=Global/NA/HQ San Jose)
+included: 01_create_or_update_site.yml for catalyst_center => (item=Global/NA/HQ San Jose/Floor 1)
 ...
 
 PLAY RECAP ******************************************************************

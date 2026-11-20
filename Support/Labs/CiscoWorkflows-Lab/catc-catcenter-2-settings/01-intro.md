@@ -78,7 +78,7 @@ The same `settings.json` that defines the hierarchy also carries the network set
 ]
 ```
 
-For this lab, the file lives at `Projects/BGP_EVPN/Settings/settings.json` in the `kebaldwi/TECOPS-2599` repository, and is the same file referenced by the default workflow input parameters (`GITHUB-OWNER`, `GITHUB-REPO`, `GITHUB-PATH`, `GITHUB-FILE`).
+For this lab, the file lives at `Support/Resources/Data-Models/campus-evpn/settings.json` in the `kebaldwi/TECOPS-2599` repository, and is the same file referenced by the default workflow input parameters (`GITHUB-OWNER`, `GITHUB-REPO`, `GITHUB-PATH`, `GITHUB-FILE`).
 
 ## What You Will Do in This Module
 

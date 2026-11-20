@@ -5,23 +5,22 @@
 [![Device Discovery](https://img.youtube.com/vi/x6ELVGKPJe8/0.jpg)](https://www.youtube.com/watch?v=x6ELVGKPJe8)
 > 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
 
-> All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
+> All commands run on the Script Server using the regular DCLOUD account used during staging, with the `~/tecops-venv` activated.
 
 ## Part A — Device Discovery (4.0)
 
-### Step 1 — Encrypt the Vault
+### Step 1 — Confirm the Shared Vault
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery
-cp vault.yml.example vault.yml
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+cd ~/TECOPS-2599/Support/Resources/Ansible
+head -1 campus-evpn/group_vars/all/vault.yml
 ```
 
 ### Step 2 — Run the Playbook
 
 ```bash
-ansible-playbook -i inventory.yml device_discovery.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/04_device_discovery.yml \
+    --ask-vault-pass
 ```
 
 Discovery jobs are submitted asynchronously to Catalyst Center. The Workflow Manager module polls each job to completion before returning, so a successful `PLAY RECAP` means every IP in `device_list` has been processed (reachable + authenticated, or marked unreachable with a reason).
@@ -43,19 +42,18 @@ Discovery jobs are submitted asynchronously to Catalyst Center. The Workflow Man
 
 ## Part B — Assign To Site (5.0)
 
-### Step 4 — Encrypt the Vault
+### Step 4 — Confirm the Shared Vault
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site
-cp vault.yml.example vault.yml
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+cd ~/TECOPS-2599/Support/Resources/Ansible
+head -1 campus-evpn/group_vars/all/vault.yml
 ```
 
 ### Step 5 — Run the Playbook
 
 ```bash
-ansible-playbook -i inventory.yml assign_to_site.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/05_assign_to_site.yml \
+    --ask-vault-pass
 ```
 
 The recap shows one *changed* result per site that needed devices moved into it. Re-running produces `changed=0`.

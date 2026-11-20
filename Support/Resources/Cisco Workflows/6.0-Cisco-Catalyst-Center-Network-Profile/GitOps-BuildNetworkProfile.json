@@ -55,7 +55,7 @@
       {
         "schema_id": "datatype.string",
         "properties": {
-          "value": "Projects/BGP_EVPN/Settings",
+          "value": "Support/Resources/Data-Models/campus-evpn",
           "scope": "input",
           "name": "GITHUB-PATH",
           "type": "datatype.string",

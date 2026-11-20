@@ -43,14 +43,12 @@ Reference index: [Getting Started Ansible](../Resources/Ansible/README.md)
 | # | Module | Lab Walkthrough | Playbook Reference |
 |---|--------|-----------------|--------------------|
 | 0 | Orientation | [01-intro.md](./Ansible-Lab/catc-catcenter-0-orientation/01-intro.md) | — |
-| 1 | Building Hierarchy | [01-intro.md](./Ansible-Lab/catc-catcenter-1-hierarchy/01-intro.md) | [1.0 Site Hierarchy](../Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) |
-| 2 | Settings & Credentials | [01-intro.md](./Ansible-Lab/catc-catcenter-2-settings/01-intro.md) | [2.0 Settings](../Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings/README.md) · [3.0 Credentials](../Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials/README.md) |
-| 3 | Device Discovery | [01-intro.md](./Ansible-Lab/catc-catcenter-3-discovery/01-intro.md) | [4.0 Device Discovery](../Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) · [5.0 Assign To Site](../Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) |
-| 4 | Templates (Import + Composite) | [01-intro.md](./Ansible-Lab/catc-catcenter-4-templates/01-intro.md) | [6.0 Templates GitHub](../Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) |
-| 5 | Network Profiles | [01-intro.md](./Ansible-Lab/catc-catcenter-5-networkprofiles/01-intro.md) | [7.0 Network Profile](../Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) |
-| 6 | Device Provisioning | [01-intro.md](./Ansible-Lab/catc-catcenter-6-provisioning/01-intro.md) | [8.0 Provision Devices](../Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) · [9.0 Provision Composite](../Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) |
-
-> Additional Ansible reference: [10.0 Backup My Configs](../Resources/Ansible/10.0-Backup-My-Configs/README.md) — companion playbook for archiving running configurations (no matching lab module).
+| 1 | Building Hierarchy | [01-intro.md](./Ansible-Lab/catc-catcenter-1-hierarchy/01-intro.md) | [1.0 Site Hierarchy](../Resources/Ansible/campus-evpn/docs/01-site-hierarchy.md) |
+| 2 | Settings & Credentials | [01-intro.md](./Ansible-Lab/catc-catcenter-2-settings/01-intro.md) | [2.0 Settings](../Resources/Ansible/campus-evpn/docs/02-network-settings.md) · [3.0 Credentials](../Resources/Ansible/campus-evpn/docs/03-credentials.md) |
+| 3 | Device Discovery | [01-intro.md](./Ansible-Lab/catc-catcenter-3-discovery/01-intro.md) | [4.0 Device Discovery](../Resources/Ansible/campus-evpn/docs/04-device-discovery.md) · [5.0 Assign To Site](../Resources/Ansible/campus-evpn/docs/05-assign-to-site.md) |
+| 4 | Templates (Import + Composite) | [01-intro.md](./Ansible-Lab/catc-catcenter-4-templates/01-intro.md) | [6.0 Templates GitHub](../Resources/Ansible/campus-evpn/docs/06-template-gitops.md) |
+| 5 | Network Profiles | [01-intro.md](./Ansible-Lab/catc-catcenter-5-networkprofiles/01-intro.md) | [7.0 Network Profile](../Resources/Ansible/campus-evpn/docs/07-network-profile.md) |
+| 6 | Device Provisioning | [01-intro.md](./Ansible-Lab/catc-catcenter-6-provisioning/01-intro.md) | [8.0 Provision Devices](../Resources/Ansible/campus-evpn/docs/08-provision-devices.md) · [9.0 Provision Composite](../Resources/Ansible/campus-evpn/docs/09-composite-deployment.md) |
 
 ## DCLOUD as a Lab
 

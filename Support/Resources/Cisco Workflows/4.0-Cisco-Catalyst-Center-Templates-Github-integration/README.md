@@ -137,7 +137,7 @@ These parameters are entered when the workflow is launched from the Catalyst Cen
 |-----------|------|---------|-------------|
 | `GITHUB-OWNER` | string | `kebaldwi` | GitHub account or organization that owns the repository |
 | `GITHUB-REPO` | string | `TECOPS-2599` | Repository name containing the template files |
-| `GITHUB-PATH` | string | `Projects/BGP_EVPN/DayNTemplates` | Path within the repository to the folder containing `.j2`/`.vm` template files |
+| `GITHUB-PATH` | string | `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` | Path within the repository to the folder containing `.j2`/`.vm` template files |
 | `TemplateHubProjectName` | string | `BGP_EVPN` | If provided, this name is used directly as both the `ProjectName` and `CATC-ProjectName` in the Template Hub. If left empty, the name is derived from the last segment of `GITHUB-PATH` |
 | `FORCE Update` | string (`true`/`false`) | `false` | If `true`, existing templates in the project are overwritten with the GitHub version. If `false`, templates that already exist in the project are skipped |
 
@@ -213,7 +213,7 @@ These results are stored in workflow variables for use in subsequent steps.
 A Python script processes the `GITHUB-PATH` input to extract the final directory segment and strip any non-alphanumeric characters from it:
 
 ```python
-# Example: "Projects/BGP_EVPN/DayNTemplates" → "DayNTemplates"
+# Example: "Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates" → "DayNTemplates"
 last_segment = github_path.split("/")[-1]
 project_name = re.sub(r'[^a-zA-Z0-9_-]', '', last_segment)
 ```
@@ -447,7 +447,7 @@ A committed template receives an incremented version number. Re-importing and co
 3. Fill in the input parameters:
    - **GITHUB-OWNER:** `kebaldwi`
    - **GITHUB-REPO:** `TECOPS-2599`
-   - **GITHUB-PATH:** `Projects/BGP_EVPN/DayNTemplates`
+   - **GITHUB-PATH:** `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates`
    - **TemplateHubProjectName:** `BGP_EVPN`
    - **FORCE Update:** `false` (set to `true` to overwrite existing templates)
 4. Click **Execute**.
@@ -461,7 +461,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
   "inputParameters": {
     "GITHUB-OWNER": "kebaldwi",
     "GITHUB-REPO": "TECOPS-2599",
-    "GITHUB-PATH": "Projects/BGP_EVPN/DayNTemplates",
+    "GITHUB-PATH": "Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates",
     "TemplateHubProjectName": "BGP_EVPN",
     "FORCE Update": "false"
   }
@@ -475,7 +475,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
 A successful run produces the following sequence in the workflow execution log:
 
 ```
-Step 1       GitHub directory retrieved: /kebaldwi/TECOPS-2599/Projects/BGP_EVPN/DayNTemplates
+Step 1       GitHub directory retrieved: /kebaldwi/TECOPS-2599/Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
 Step 2       File list extracted: 20 files found
              GithubFileList: [BGP-EVPN-BUILD.j2, DEFN-CLIENT-PORTS.j2, ...]
 Step 3       Python script: CATC-ProjectName = BGP_EVPN

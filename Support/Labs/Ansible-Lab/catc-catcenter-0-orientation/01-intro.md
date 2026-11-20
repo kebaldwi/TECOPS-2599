@@ -44,17 +44,17 @@ For a small number of operations — `auth/token`, the v1 `network/{siteId}` set
 
 The seven lab modules map one-to-one onto the playbooks under [`Support/Resources/Ansible`](../../../Resources/Ansible/README.md). The full end-to-end data flow is shown below — input sources on the left, playbook execution in the middle, and the Catalyst Center resources produced on the right.
 
-![Provisioning Workflow](../../../Resources/Ansible/DIAGRAMS/provisioning-workflow.png)
+![Provisioning Workflow](../../../Resources/Ansible/campus-evpn/docs/diagrams/00-provisioning-workflow.png)
 
 | # | Lab Module | Playbook(s) |
 |---|------------|-------------|
 | 0 | Orientation | — (this module: install Ansible, vault setup) |
-| 1 | Building Hierarchy | [1.0 Site Hierarchy](../../../Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) |
-| 2 | Settings & Credentials | [2.0 Network Settings](../../../Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings/README.md) · [3.0 Credentials](../../../Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials/README.md) |
-| 3 | Discovery & Site Assignment | [4.0 Device Discovery](../../../Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) · [5.0 Assign To Site](../../../Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) |
-| 4 | Templates from GitHub | [6.0 Templates GitHub](../../../Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) |
-| 5 | Network Profile | [7.0 Network Profile](../../../Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) |
-| 6 | Provisioning Devices | [8.0 Provision Devices](../../../Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) · [9.0 Provision Composite](../../../Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) |
+| 1 | Building Hierarchy | [1.0 Site Hierarchy](../../../Resources/Ansible/campus-evpn/docs/01-site-hierarchy.md) |
+| 2 | Settings & Credentials | [2.0 Network Settings](../../../Resources/Ansible/campus-evpn/docs/02-network-settings.md) · [3.0 Credentials](../../../Resources/Ansible/campus-evpn/docs/03-credentials.md) |
+| 3 | Discovery & Site Assignment | [4.0 Device Discovery](../../../Resources/Ansible/campus-evpn/docs/04-device-discovery.md) · [5.0 Assign To Site](../../../Resources/Ansible/campus-evpn/docs/05-assign-to-site.md) |
+| 4 | Templates from GitHub | [6.0 Templates GitHub](../../../Resources/Ansible/campus-evpn/docs/06-template-gitops.md) |
+| 5 | Network Profile | [7.0 Network Profile](../../../Resources/Ansible/campus-evpn/docs/07-network-profile.md) |
+| 6 | Provisioning Devices | [8.0 Provision Devices](../../../Resources/Ansible/campus-evpn/docs/08-provision-devices.md) · [9.0 Provision Composite](../../../Resources/Ansible/campus-evpn/docs/09-composite-deployment.md) |
 
 ## Prerequisites
 
@@ -64,7 +64,7 @@ To effectively run the labs, install the following tools on your workstation:
 
 > **NOTE:** Google Chrome — recommended for working in the Catalyst Center UI. Download from the [Chrome website](https://www.google.com/chrome/downloads/).
 
-> **NOTE:** Ansible itself runs on the **Script Server** in the DCLOUD pod (`198.18.133.28`). You do not need to install Ansible on your laptop. Any SSH client (built-in `ssh` on macOS/Linux, PuTTY or Windows Terminal on Windows) is sufficient.
+> **NOTE:** Ansible itself runs on the **Script Server** in the DCLOUD pod (`198.18.128.50`). You do not need to install Ansible on your laptop. Any SSH client (built-in `ssh` on macOS/Linux, PuTTY or Windows Terminal on Windows) is sufficient.
 
 ### DCLOUD VPN Connection
 

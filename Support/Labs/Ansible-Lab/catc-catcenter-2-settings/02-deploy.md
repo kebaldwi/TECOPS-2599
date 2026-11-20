@@ -7,23 +7,24 @@
 
 This section runs both playbooks (2.0 then 3.0) and walks through the verification screens.
 
-> All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
+> All commands run on the Script Server using the regular DCLOUD account used during staging, with the `~/tecops-venv` activated.
 
 ## Part A — Network Settings (2.0)
 
 ### Step 1 — Encrypt the Vault
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings
-cp vault.yml.example vault.yml
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+cd ~/TECOPS-2599/Support/Resources/Ansible
+cp campus-evpn/vaults/network_settings.yml.example campus-evpn/vaults/network_settings.yml
+# Replace the placeholder AAA shared secrets before encrypting.
+ansible-vault encrypt campus-evpn/vaults/network_settings.yml --ask-vault-pass
 ```
 
 ### Step 2 — Run the Playbook
 
 ```bash
-ansible-playbook -i inventory.yml network_settings.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/02_network_settings.yml \
+    --ask-vault-pass
 ```
 
 Expect tasks for *Authenticate*, *Resolve site UUIDs*, *Build settings payload*, *PUT settings per site*, and *Poll execution status*. The recap should report `failed=0`.
@@ -55,16 +56,17 @@ Expect tasks for *Authenticate*, *Resolve site UUIDs*, *Build settings payload*,
 ### Step 4 — Encrypt the Vault
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials
-cp vault.yml.example vault.yml
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+cd ~/TECOPS-2599/Support/Resources/Ansible
+cp campus-evpn/vaults/device_credentials.yml.example campus-evpn/vaults/device_credentials.yml
+# Replace the placeholder device credential secrets before encrypting.
+ansible-vault encrypt campus-evpn/vaults/device_credentials.yml --ask-vault-pass
 ```
 
 ### Step 5 — Run the Playbook
 
 ```bash
-ansible-playbook -i inventory.yml credentials.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/03_credentials.yml \
+    --ask-vault-pass
 ```
 
 This run takes longer than 2.0 because it walks three credential types and assigns them to every site touched by `assign_credentials`. The Workflow Manager module batches its calls, so most tasks report `changed=true` once and `changed=false` on every subsequent run.

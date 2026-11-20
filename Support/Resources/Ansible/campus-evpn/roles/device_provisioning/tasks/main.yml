@@ -1,0 +1,7 @@
+---
+- name: Process device provisioning for each site
+  ansible.builtin.include_tasks: provision_site.yml
+  loop: "{{ _site_device_map | dict2items }}"
+  loop_control:
+    loop_var: site_entry
+    label: "{{ site_entry.key }}"

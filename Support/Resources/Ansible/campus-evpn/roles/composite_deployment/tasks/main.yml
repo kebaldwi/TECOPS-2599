@@ -1,0 +1,7 @@
+---
+- name: Process composite template deployment for each entry
+  ansible.builtin.include_tasks: deploy_entry.yml
+  loop: "{{ _deploy_entries }}"
+  loop_control:
+    loop_var: deploy_entry
+    label: "{{ deploy_entry.template_name }} → {{ deploy_entry.site }}"

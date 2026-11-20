@@ -1,0 +1,22 @@
+---
+- name: Create/update NETCONF credentials
+  ansible.builtin.include_tasks: netconf_create_or_update.yml
+  loop: "{{ netconf_list }}"
+  loop_control:
+    loop_var: netconf_config
+    label: "{{ netconf_config.description }}"
+  when:
+    - device_credentials_operation == 'create_or_update'
+    - (state | default('merged')) == 'merged'
+    - netconf_list | length > 0
+
+- name: Delete NETCONF credentials
+  ansible.builtin.include_tasks: netconf_delete.yml
+  loop: "{{ netconf_list }}"
+  loop_control:
+    loop_var: netconf_config
+    label: "{{ netconf_config.description }}"
+  when:
+    - device_credentials_operation == 'delete'
+    - (state | default('merged')) == 'deleted'
+    - netconf_list | length > 0

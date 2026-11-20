@@ -1,0 +1,4 @@
+**/vault.yml
+**/.vault_pass
+campus-evpn/vaults/*.yml
+campus-evpn/artifacts/

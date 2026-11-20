@@ -1,0 +1,3 @@
+---
+- name: Load and validate the shared BGP EVPN settings
+  ansible.builtin.import_tasks: load_settings.yml

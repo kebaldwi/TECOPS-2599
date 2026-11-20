@@ -1,0 +1,18 @@
+---
+- name: Process regular templates in correct order
+  ansible.builtin.include_tasks: process_template.yml
+  loop: "{{ sorted_template_files }}"
+  loop_control:
+    loop_var: template_file
+    index_var: template_idx
+  when: template_gitops_operation == 'template'
+
+- name: Process composite templates
+  ansible.builtin.include_tasks: process_composite.yml
+  loop: "{{ enriched_composite_files | default([]) }}"
+  loop_control:
+    loop_var: composite_file
+  when:
+    - template_gitops_operation == 'composite'
+    - enriched_composite_files is defined
+    - enriched_composite_files | length > 0

@@ -55,6 +55,7 @@ This resource suite addresses all five pressures through three parallel tooling 
 | Folder | Tooling | Primary Audience | Deployment Method |
 |--------|---------|-----------------|-------------------|
 | [Ansible/](Ansible/) | Ansible + cisco.catalystcenter collection | Network DevOps, CI/CD pipeline teams | `ansible-playbook` CLI or AWX/AAP |
+| [Data-Models/](Data-Models/) | Shared campus and data-center EVPN input models | All automation paths | Git-managed JSON and templates |
 | [Cisco Workflows/](Cisco%20Workflows/) | Cisco SecureX / XDR Workflow Manager | Cisco platform operators, NOC teams | Catalyst Center Workflow Manager |
 | [Python/](Python/) | Pure Python + REST | Developers, troubleshooters, API learners | Direct Python execution |
 | [CML/](CML/) | Cisco Modeling Labs | Lab engineers, training leads | CML server import |
@@ -80,7 +81,9 @@ Each playbook targets one well-scoped Catalyst Center capability. Playbooks can 
 
 ### Ansible Contents
 
-**Full documentation:** [Ansible/README.md](Ansible/README.md)
+- **Project index:** [Ansible/README.md](Ansible/README.md)
+- **Campus pipeline:** [Ansible/campus-evpn/README.md](Ansible/campus-evpn/README.md)
+- **Data-center pipeline:** [Ansible/dc-evpn/README.md](Ansible/dc-evpn/README.md)
 
 | # | Playbook | File | Catalyst Center Outcome |
 |---|----------|------|------------------------|
@@ -94,7 +97,10 @@ Each playbook targets one well-scoped Catalyst Center capability. Playbooks can 
 | 8.0 | Provision Devices | `provision_devices.yml` | Devices provisioned to site via SDA; idempotent skip for already-provisioned devices |
 | 9.0 | Composite Deployment | `deploy_composite_template.yml` | Composite Day-N templates deployed to managed devices with async task verification |
 
-The suite uses the `cisco.catalystcenter` and `cisco.dnac` Ansible collections. Folder `6.0` additionally integrates with a GitHub repository as a template source, enabling GitOps-driven template synchronization.
+The campus suite uses the `cisco.catalystcenter` and `cisco.dnac` Ansible
+collections. Stage `6.0` integrates with a GitHub repository as a template
+source, enabling GitOps-driven template synchronization. The data-center
+pipeline is a reserved scaffold for Nexus Dashboard EVPN automation.
 
 ### When to Use Ansible
 

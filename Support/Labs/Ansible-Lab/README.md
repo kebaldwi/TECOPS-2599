@@ -29,9 +29,9 @@ Cisco publishes two Ansible collections that wrap the Catalyst Center Intent API
 * **`cisco.catalystcenter`** — newer collection aligned with the modern site-hierarchy model (areas, buildings, floors as typed resources).
 * **`cisco.dnac`** — long-standing collection providing high-level **Workflow Manager** modules (discovery, credentials, templates, network profiles) that wrap multi-step API sequences into single idempotent tasks.
 
-Together with `ansible.builtin.uri` for the handful of operations not yet covered by a module, these collections are sufficient to automate the entire Day-0 → Day-N lifecycle of a Catalyst Center managed network. Every playbook in this lab is **data-driven** — it reads the shared [`settings.json`](../../Projects/BGP_EVPN/Settings/settings.json) intent file and makes Catalyst Center match.
+Together with `ansible.builtin.uri` for the handful of operations not yet covered by a module, these collections are sufficient to automate the entire Day-0 → Day-N lifecycle of a Catalyst Center managed network. Every playbook in this lab is **data-driven** — it reads the shared [`settings.json`](../../Resources/Data-Models/campus-evpn/settings.json) intent file and makes Catalyst Center match.
 
-> Reference: [Support/Resources/Ansible](../Resources/Ansible/README.md) — full as-built documentation for every playbook used in this lab.
+> Reference: [Support/Resources/Ansible](../../Resources/Ansible/README.md) — full as-built documentation for every playbook used in this lab.
 
 ## General Information
 
@@ -53,8 +53,6 @@ The use cases we will cover are the following — links open the first section o
 5. [**Templates from GitHub**](./catc-catcenter-4-templates/01-intro.md)
 6. [**Network Profile**](./catc-catcenter-5-networkprofiles/01-intro.md)
 7. [**Provisioning Devices**](./catc-catcenter-6-provisioning/01-intro.md)
-
-> A companion playbook — [10.0 Backup My Configs](../Resources/Ansible/10.0-Backup-My-Configs/README.md) — archives running configurations from all IOS-XE and NX-OS devices via SSH. It is not part of the seven lab modules but is recommended as a periodic operational task.
 
 ## Preparation Notes
 
@@ -90,11 +88,11 @@ The following diagram shows the DCLOUD topology.
 | Catalyst Center | 198.18.129.100 | admin         | C1sco12345  |
 | ISE             | 198.18.133.27  | admin         | C1sco12345  |
 | Windows AD      | 198.18.133.1   | admin         | C1sco12345  |
-| Script Server   | 198.18.133.28  | root          | C1sco12345  |
+| Script Server   | 198.18.128.50  | dcloud          | C1sco12345  |
 | vSphere Server  | 198.18.134.80  | Administrator | C1sco12345! |
 | CML Server      | 198.18.128.11  | Guest         | C1sco12345  |
 
-> All Ansible playbooks in this lab are run from the **Script Server** (`198.18.133.28`). The `install-ansible.sh` bootstrap script bundled with the playbooks installs Python 3.9, the `cisco.catalystcenter` and `cisco.dnac` collections, and creates an isolated venv at `~/tecops-venv`.
+> All Ansible playbooks in this lab are run from the **Script Server** (`198.18.128.50`). Stage it with `stage-script-server.sh` in `Support/Resources/Ansible/0.0-Cisco-Catalyst-Center-Script-Server-Bootstrap/`, then run its preflight and bootstrap playbooks. Use the `dcloud` account with sudo access; the environment is installed in `~/tecops-venv`.
 
 #### Large Branch Topology
 
@@ -158,7 +156,7 @@ Google Chrome is the optimal browser when working in the Catalyst Center UI.
 
 #### Ansible
 
-Ansible itself does **not** need to be installed on your laptop. The orientation module installs it on the DCLOUD Script Server via the bundled [`install-ansible.sh`](../Resources/Ansible/install-ansible.sh) script. If you want to inspect the playbook source locally, any text editor (VS Code recommended) works.
+Ansible itself does **not** need to be installed on your laptop. The orientation module stages it on the DCLOUD Script Server with [`stage-script-server.sh`](../../Resources/Ansible/0.0-Cisco-Catalyst-Center-Script-Server-Bootstrap/stage-script-server.sh). If you want to inspect the playbook source locally, any text editor (VS Code recommended) works.
 
 </details>
 

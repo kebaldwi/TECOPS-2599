@@ -1,0 +1,432 @@
+# ============================================================================
+# roles/composite_deployment/tasks/deploy_entry.yml
+# ============================================================================
+# Processes one composite template deploy entry from settings.json.
+#
+# Input variable (set by loop in this role's tasks/main.yml):
+#   deploy_entry.site            — site hierarchy path (informational)
+#   deploy_entry.template_name   — composite template name in Catalyst Center
+#   deploy_entry.project_name    — CatC project that owns the template
+#   deploy_entry.template_target — list of management IPs to deploy to
+#   deploy_entry.template_tag    — template tag (informational)
+#
+# Variables read from inventory / parent play scope:
+#   composite_deployment_catc_token            — short-lived JWT (set in parent play)
+#   dnac_host / dnac_port / dnac_verify
+#   force_push_template    — bool; push even when device is in-sync
+#   member_template_params — dict keyed by member template name → param dict
+#   task_poll_retries / task_poll_delay
+# ============================================================================
+---
+# ── Step A: Fetch all project templates (including versionsInfo) ────────────
+#
+# GET /dna/intent/api/v1/template-programmer/template?projectNames=<project>
+# Returns a flat list of all templates in the project.  Unlike the project
+# endpoint, each entry here includes a `versionsInfo` array.
+#
+# IMPORTANT: versionsInfo is returned in RANDOM order — not chronological.
+# The latest committed version must be found by sorting on `versionTime`
+# (a Unix-millisecond timestamp) and taking the maximum value.
+#
+#   max(versionsInfo, key=versionTime).id  → latest version UUID
+#   templateId                             → root/parent UUID
+#
+# This is important because the CatC v2 deploy API requires:
+#   top-level templateId     = version UUID  (latest committed snapshot)
+#   top-level mainTemplateId = root UUID
+#   member templateId        = member version UUID
+#   member mainTemplateId    = member root UUID
+#
+# NOTE: The newer CatC API spec defines a separate versionedTemplateId field,
+# but the TemplateDeploymentInfo DTO on this server version does NOT support it
+# (only 8 known fields: templateId, mainTemplateId, targetInfo, isComposite,
+# memberTemplateDeploymentInfo, forcePushTemplate, copyingConfig, responseMsg).
+# Sending versionedTemplateId results in HTTP 400 BAD_REQUEST.
+#
+- name: "Fetch all project templates with versionsInfo [{{ deploy_entry.template_name }}]"
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/template-programmer/template?projectNames={{ deploy_entry.project_name | urlencode }}"
+    method: GET
+    headers:
+      X-Auth-Token: "{{ composite_deployment_catc_token }}"
+    validate_certs: "{{ dnac_verify }}"
+    status_code: 200
+  register: composite_deployment_template_list_result
+
+- name: "Build template name → version/root ID map [{{ deploy_entry.template_name }}]"
+  # Builds a dict keyed by template name:
+  #   { 'TEMPLATE-NAME': { 'rootId': '<uuid>', 'versionId': '<uuid>' }, ... }
+  # versionId = the versionsInfo entry with the highest versionTime (latest committed).
+  # versionsInfo is returned in random order by CatC — sorting is required.
+  ansible.builtin.set_fact:
+    composite_deployment_template_version_map: >-
+      {%- set ns = namespace(result={}) -%} {%- for tpl in (composite_deployment_template_list_result.json | default([])) -%}
+        {%- set root_id = tpl.templateId -%}
+        {%- set sorted_versions = tpl.versionsInfo | default([]) | sort(attribute='versionTime', reverse=true) -%}
+        {%- set version_id = (sorted_versions | first | default({})).id | default(root_id) -%}
+        {%- set ns.result = ns.result | combine({tpl.name: {'rootId': root_id, 'versionId': version_id}}) -%}
+      {%- endfor -%} {{ ns.result }}
+
+- name: "Assert composite template found [{{ deploy_entry.template_name }}]"
+  ansible.builtin.assert:
+    that: deploy_entry.template_name in composite_deployment_template_version_map
+    fail_msg: >-
+      Template '{{ deploy_entry.template_name }}' not found in project
+      '{{ deploy_entry.project_name }}'.
+      Templates available: {{ composite_deployment_template_version_map.keys() | list | join(', ') }}.
+
+- name: "Extract composite template root and version IDs [{{ deploy_entry.template_name }}]"
+  ansible.builtin.set_fact:
+    composite_deployment_composite_raw_id: "{{ composite_deployment_template_version_map[deploy_entry.template_name].rootId }}"
+    composite_deployment_composite_template_id: "{{ composite_deployment_template_version_map[deploy_entry.template_name].versionId }}"
+    composite_deployment_composite_main_id: "{{ composite_deployment_template_version_map[deploy_entry.template_name].rootId }}"
+
+# ── Step B: Fetch composite template detail (for containingTemplates) ───────
+#
+# GET /dna/intent/api/v1/template-programmer/template/<rootId>
+# The list endpoint (Step A) does not return containingTemplates — we need
+# a second call to the detail endpoint to get the list of member templates.
+# IDs (version + root) are already sourced from composite_deployment_template_version_map above.
+#
+- name: "Fetch composite template detail (containingTemplates) [{{ deploy_entry.template_name }}]"
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/template-programmer/template/{{ composite_deployment_composite_raw_id }}"
+    method: GET
+    headers:
+      X-Auth-Token: "{{ composite_deployment_catc_token }}"
+    validate_certs: "{{ dnac_verify }}"
+    status_code: 200
+  register: composite_deployment_template_detail_result
+
+- name: "Extract member templates list [{{ deploy_entry.template_name }}]"
+  ansible.builtin.set_fact:
+    composite_deployment_member_templates: "{{ composite_deployment_template_detail_result.json.containingTemplates | default([]) }}"
+
+- name: "Assert member templates are defined [{{ deploy_entry.template_name }}]"
+  ansible.builtin.assert:
+    that: composite_deployment_member_templates | length > 0
+    fail_msg: >-
+      Composite template '{{ deploy_entry.template_name }}' has no
+      containingTemplates. Ensure the template is composite and has been
+      configured with member templates in Catalyst Center.
+
+# ── Step C: Resolve device UUIDs for each target management IP ──────────────
+#
+# GET /dna/intent/api/v1/network-device?managementIpAddress=<ip>
+# Returns a `response` array; first element carries `id` (device UUID)
+# and `hostname` used to populate targetInfo entries.
+#
+- name: "Resolve device UUIDs for target IPs [{{ deploy_entry.template_name }}]"
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/network-device?managementIpAddress={{ item }}"
+    method: GET
+    headers:
+      X-Auth-Token: "{{ composite_deployment_catc_token }}"
+    validate_certs: "{{ dnac_verify }}"
+    status_code: 200
+  loop: "{{ deploy_entry.template_target }}"
+  register: composite_deployment_device_results
+
+- name: "Build IP → { uuid, hostname } map [{{ deploy_entry.template_name }}]"
+  ansible.builtin.set_fact:
+    composite_deployment_device_uuid_map: >-
+      {%- set ns = namespace(result={}) -%}
+      {%- for r in composite_deployment_device_results.results -%}
+        {%- set device = (r.json.response | default([]) | first | default(none)) -%}
+        {%- if device is not none and device.id is defined -%}
+          {%- set ns.result = ns.result | combine({
+              device.managementIpAddress: {
+                'uuid':     device.id,
+                'hostname': device.hostname | default(device.managementIpAddress)
+              }
+          }) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.result }}
+
+- name: "Validate all target IPs resolved to device UUIDs [{{ deploy_entry.template_name }}]"
+  ansible.builtin.assert:
+    that: item in composite_deployment_device_uuid_map
+    fail_msg: >-
+      Device with management IP '{{ item }}' was not found in Catalyst Center.
+      Ensure the device is discovered and managed before deploying templates.
+  loop: "{{ deploy_entry.template_target }}"
+
+# ── Step D: Build targetInfo and memberTemplateDeploymentInfo payloads ──────
+#
+# The CatC v2 composite deploy API requires device targets in the top-level
+# `targetInfo` field.  Providing targets only inside `memberTemplateDeploymentInfo`
+# without a populated top-level `targetInfo` causes NCTP10028 ("At least one
+# device should data should be provided").
+#
+# Each targetInfo entry carries:
+#   id             — device UUID resolved in Step C
+#   hostName       — device hostname (informational)
+#   type           — MANAGED_DEVICE_UUID
+#   params         — template parameter key/value dict (empty {} for top-level)
+#   resourceParams — three entries matching the CatC v2 deploy API schema
+#
+# resourceParams entries per CatC Template Deploy API spec (ResourceParam object):
+#   type  — enum: MANAGED_DEVICE_UUID | MANAGED_DEVICE_IP | MANAGED_DEVICE_HOSTNAME | ...
+#   value — actual value for the param type
+#   scope — RUNTIME (provided at deploy time, may differ per deployment)
+#
+#   [{type: MANAGED_DEVICE_UUID, scope: RUNTIME, value: <uuid>}]
+#
+# Note: Only MANAGED_DEVICE_UUID is sent in resourceParams.
+- name: "Build top-level targetInfo [{{ deploy_entry.template_name }}]"
+  ansible.builtin.set_fact:
+    composite_deployment_target_info: >-
+      {%- set tns = namespace(targets=[]) -%}
+      {%- for ip in deploy_entry.template_target -%}
+        {%- if ip in composite_deployment_device_uuid_map -%}
+          {%- set d = composite_deployment_device_uuid_map[ip] -%}
+          {%- set tns.targets = tns.targets + [{
+              'id':       d.uuid,
+              'hostName': d.hostname,
+              'type':     'MANAGED_DEVICE_UUID',
+              'params':   {},
+              'resourceParams': [
+                {'type': 'MANAGED_DEVICE_UUID', 'scope': 'RUNTIME', 'value': d.uuid}
+              ]
+          }] -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ tns.targets }}
+
+# ── Step D2: Build memberTemplateDeploymentInfo ─────────────────────────────
+#
+# Per-member deployment spec with the same resourceParams structure as the
+# top-level targetInfo.  copyingConfig: true is required at both levels.
+#
+# Per-template params are keyed by template name in the inventory variable
+# `member_template_params`.  Example:
+#
+#   member_template_params:
+#     "FABRIC-LOOPBACKS.j2":
+#       loopback_ip: "192.168.100.1"
+#     "FABRIC-VRF.j2": {}
+#
+- name: "Build memberTemplateDeploymentInfo [{{ deploy_entry.template_name }}]"
+  ansible.builtin.set_fact:
+    composite_deployment_member_deployment_info: >-
+      {%- set ns = namespace(result=[]) -%}
+      {%- for member in composite_deployment_member_templates -%}
+        {%- set member_root_id  = member.templateId | default(member.id) -%}
+        {%- set member_ver_info = (composite_deployment_template_version_map[member.name] | default({})) -%}
+        {%- set member_id       = member_ver_info.versionId | default(member_root_id) -%}
+        {%- set member_main_id  = member_ver_info.rootId    | default(member_root_id) -%}
+        {%- set params         = (member_template_params | default({}))[member.name] | default({}) -%}
+        {%- set tns = namespace(targets=[]) -%}
+        {%- for ip in deploy_entry.template_target -%}
+          {%- if ip in composite_deployment_device_uuid_map -%}
+            {%- set d = composite_deployment_device_uuid_map[ip] -%}
+            {%- set tns.targets = tns.targets + [{
+                'id':       d.uuid,
+                'hostName': d.hostname,
+                'type':     'MANAGED_DEVICE_UUID',
+                'params':   params,
+                'resourceParams': [
+                  {'type': 'MANAGED_DEVICE_UUID', 'scope': 'RUNTIME', 'value': d.uuid}
+                ]
+            }] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- set ns.result = ns.result + [{
+          'templateId':        member_id,
+          'mainTemplateId':    member_main_id,
+          'targetInfo':        tns.targets,
+          'forcePushTemplate': force_push_template | bool,
+          'copyingConfig':     true,
+          'isComposite':       false
+        }] -%}
+      {%- endfor -%}
+      {{ ns.result }}
+
+# ── Step E: Deploy composite template via direct REST API call ───────────────
+#
+# POST /dna/intent/api/v2/template-programmer/template/deploy
+#
+# CRITICAL: The cisco.dnac.configuration_template_deploy_v2 Ansible module
+# CANNOT send 'copyingConfig: true' at the top level — that field is not
+# exposed as a module parameter and the SDK silently drops it.  Without
+# copyingConfig=true CatC accepts the deploy request but never pushes config
+# to the device (the task completes with no actual device config change).
+#
+# Additionally, the module declares memberTemplateDeploymentInfo as
+# 'elements: str' which may mangle the list-of-dicts payload.
+#
+# The fix: call the API directly via ansible.builtin.uri so we have full
+# control over every field, matching the known-good UX payload structure:
+#   - copyingConfig: true (top level AND each member)
+#   - isComposite: true (top level)
+#   - isComposite: false (each member)
+#   - One API call per device (single-element targetInfo)
+#
+- name: "Deploy composite template [{{ deploy_entry.template_name }}]"
+  vars:
+    composite_deployment_single_target:
+      - id: "{{ item.value.uuid }}"
+        hostName: "{{ item.value.hostname }}"
+        type: "MANAGED_DEVICE_UUID"
+        params: {}
+        resourceParams:
+          - type: "MANAGED_DEVICE_UUID"
+            scope: "RUNTIME"
+            value: "{{ item.value.uuid }}"
+    composite_deployment_single_member_info: >-
+      {%- set ns = namespace(result=[]) -%}
+      {%- for m in composite_deployment_member_deployment_info -%}
+        {%- set entry = m | combine({'targetInfo': [
+            m.targetInfo | selectattr('id','equalto', item.value.uuid) | first | default({})
+        ]}) -%}
+        {%- set ns.result = ns.result + [entry] -%}
+      {%- endfor -%}
+      {{ ns.result }}
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v2/template-programmer/template/deploy"
+    method: POST
+    headers:
+      X-Auth-Token: "{{ composite_deployment_catc_token }}"
+      Content-Type: "application/json"
+    validate_certs: "{{ dnac_verify }}"
+    body_format: json
+    body:
+      templateId: "{{ composite_deployment_composite_template_id }}"
+      mainTemplateId: "{{ composite_deployment_composite_main_id }}"
+      isComposite: true
+      forcePushTemplate: true
+      copyingConfig: true
+      targetInfo: "{{ composite_deployment_single_target }}"
+      memberTemplateDeploymentInfo: "{{ composite_deployment_single_member_info }}"
+    status_code: [200, 202]
+  loop: "{{ composite_deployment_device_uuid_map | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: composite_deployment_deploy_results
+  ignore_errors: true
+
+- name: "Extract async task IDs from deploy responses [{{ deploy_entry.template_name }}]"
+  # The v2 deploy API returns { "response": { "taskId": "...", "url": "..." } }.
+  # With ansible.builtin.uri the response is under .json (not .dnac_response).
+  ansible.builtin.set_fact:
+    composite_deployment_deploy_task_ids: >-
+      {%- set ns = namespace(ids=[]) -%}
+      {%- for r in (composite_deployment_deploy_results.results | default([])) -%}
+        {%- set tid = (r.json.response | default({})).taskId | default('') -%}
+        {%- if tid -%}
+          {%- set ns.ids = ns.ids + [{'ip': r.item.key, 'taskId': tid}] -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.ids }}
+
+# ── Step F: Poll async task status per device ────────────────────────────────
+#
+# Each device got its own deploy call and taskId — poll each independently.
+# The task `progress` field contains the Template Deployment ID once CatC has
+# registered the deployment, allowing Step F2 to poll actual push success/failure.
+# Note: CatC's own field name has a typo — "Template Deployemnt Id" (not "Deployment").
+#
+- name: "Poll async task status [{{ deploy_entry.template_name }}]"
+  ansible.builtin.uri:
+    url: "https://{{ dnac_host }}:{{ dnac_port }}/dna/intent/api/v1/task/{{ item.taskId }}"
+    method: GET
+    headers:
+      X-Auth-Token: "{{ composite_deployment_catc_token }}"
+    validate_certs: "{{ dnac_verify }}"
+    status_code: 200
+  register: composite_deployment_task_poll_results
+  loop: "{{ composite_deployment_deploy_task_ids }}"
+  loop_control:
+    label: "{{ item.ip }} → {{ item.taskId }}"
+  until: >-
+    (composite_deployment_task_poll_results.json.response | default({})).endTime is defined
+    or (composite_deployment_task_poll_results.json.response | default({})).isError | default(false) | bool
+  retries: "{{ task_poll_retries | int }}"
+  delay: "{{ task_poll_delay | int }}"
+  ignore_errors: true
+
+- name: "Extract Template Deployment IDs and failure reasons from task progress [{{ deploy_entry.template_name }}]"
+  # ── Step F2: Extract deployment result from task progress ─────────────────
+  #
+  # The CatC v2 Deploy Template API (2.3.7.9) is specified to return deploymentId
+  # directly in the POST response body.  On this server the response only includes
+  # taskId, so we read the authoritative push result from the task progress field
+  # The composite template UUID appears in the progress field as:
+  #   "Deployment of Composite Template: <uuid> Member Template: ..."
+  # Older CatC versions used "Template Deployemnt Id: <uuid> | failureReason: <reason>"
+  # (CatC's own typo: "Deployemnt"). We match both formats. An empty failureReason means SUCCESS.
+  #
+  # NOTE: CatC returns deploymentId only for the parent composite template, not for each member template.
+  # The member templates' deployment status must be inferred from the overall task success/failure and the presence of the
+  # member template names in the task progress logs.
+  ansible.builtin.set_fact:
+    composite_deployment_deployment_status_ids: >-
+      {%- set ns = namespace(result=[]) -%}
+      {%- for r in (composite_deployment_task_poll_results.results | default([])) -%}
+        {%- set resp     = r.json.response | default({}) -%}
+        {%- set progress = resp.progress | default('') -%}
+        {%- set id_match = progress | regex_search('(?:Template Deploy[a-z]+ Id:|Deployment of Composite Template:) ([a-zA-Z0-9-]+)', '\\1') -%}
+        {%- set fr_match = progress | regex_search('\| failureReason: (.*)$', '\\1') -%}
+        {%- set did = (id_match | first) if (id_match is not none and id_match | length > 0) else '' -%}
+        {%- set fr_from_progress = ((fr_match | first) | trim) if (fr_match is not none and fr_match | length > 0) else '' -%}
+        {# If isError=True but progress has no failureReason pattern, fall back to task-level failureReason field #}
+        {%- set is_err = resp.isError | default(false) | bool -%}
+        {%- set fr = fr_from_progress if fr_from_progress else (resp.failureReason | default('') if is_err else '') -%}
+        {%- set ns.result = ns.result + [{'ip': r.item.ip, 'deploymentId': did, 'failureReason': fr}] -%}
+      {%- endfor -%}
+      {{ ns.result }}
+
+- name: "Template Deployment IDs and push results [{{ deploy_entry.template_name }}]"
+  ansible.builtin.debug:
+    msg: >-
+      {%- set ns = namespace(out=[]) -%}
+      {%- for d in (composite_deployment_deployment_status_ids | default([])) -%}
+        {%- set result = 'SUCCESS' if d.failureReason | default('') | length == 0 else 'FAILURE' -%}
+        {%- set ns.out = ns.out + [
+          'Device: ' + d.ip +
+          ' | deploymentId: ' + d.deploymentId +
+          ' | result: ' + result +
+          ' | failureReason: ' + (d.failureReason | default('') | string)
+        ] -%}
+      {%- endfor -%}
+      {{ ns.out }}
+
+# ── Step G: Summary and error propagation ───────────────────────────────────
+- name: "Deployment summary - build table [{{ deploy_entry.template_name }}]"
+  ansible.builtin.set_fact:
+    composite_deployment_summary_lines: >-
+      {%- set sep = '─' -%}
+      {%- set rows = [] -%}
+      {%- set _ = rows.append(('Template', deploy_entry.template_name)) -%}
+      {%- set _ = rows.append(('Project', deploy_entry.project_name)) -%}
+      {%- set _ = rows.append(('Site', deploy_entry.site)) -%}
+      {%- set _ = rows.append(('Target devices', deploy_entry.template_target | join(', '))) -%}
+      {%- set any_err = composite_deployment_deploy_results.results
+        | selectattr('failed', 'equalto', true) | list | length > 0 -%}
+      {%- set _ = rows.append(('API errors', 'YES ✗' if any_err else 'none ✓')) -%}
+      {%- for d in composite_deployment_deployment_status_ids | default([]) -%}
+        {%- set result = '✓ SUCCESS' if d.failureReason | default('') | length == 0 else ('✗ FAILURE  ' + d.failureReason) -%}
+        {%- set _ = rows.append((d.ip, result)) -%}
+      {%- endfor -%}
+      {%- set col0w = (rows | map(attribute=0) | map('length') | max) + 2 -%}
+      {%- set col1w = (rows | map(attribute=1) | map('length') | max) + 2 -%}
+      {%- set bar = '┌' + sep * (col0w + 2)
+        + '┬' + sep * (col1w + 2) + '┐' -%}
+      {%- set mid = '├' + sep * (col0w + 2)
+        + '┼' + sep * (col1w + 2) + '┤' -%}
+      {%- set bot = '└' + sep * (col0w + 2)
+        + '┴' + sep * (col1w + 2) + '┘' -%}
+      {%- set ns = namespace(lines=[bar]) -%}
+      {%- for label, value in rows -%}
+        {%- set lpad = label.ljust(col0w) -%}
+        {%- set vpad = value.ljust(col1w) -%}
+        {%- set _ = ns.lines.append('│ ' + lpad + ' │ ' + vpad + ' │') -%}
+        {%- if not loop.last -%}{%- set _ = ns.lines.append(mid) -%}{%- endif -%}
+      {%- endfor -%}
+      {%- set _ = ns.lines.append(bot) -%}
+      {{ ns.lines }}
+
+- name: "Deployment summary [{{ deploy_entry.template_name }}]"
+  ansible.builtin.debug:
+    msg: "{{ composite_deployment_summary_lines }}"

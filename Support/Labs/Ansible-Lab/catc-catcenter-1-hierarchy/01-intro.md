@@ -1,10 +1,10 @@
 # Building Hierarchy
 
-In this module, we use the **`cisco.catalystcenter`** Ansible collection to build a network site hierarchy in Catalyst Center. Rather than clicking through the Design pages to create Areas, Buildings, and Floors one by one, we run a single Ansible playbook (`site_hierarchy.yml`) that reads the same `settings.json` file used by every other module and converges the Catalyst Center hierarchy to match.
+In this module, we use the **`cisco.catalystcenter`** Ansible collection to build a network site hierarchy in Catalyst Center. Rather than clicking through the Design pages to create Areas, Buildings, and Floors one by one, we run a single Ansible playbook (`01_site_hierarchy.yml`) that reads the same `settings.json` file used by every other module and converges the Catalyst Center hierarchy to match.
 
 This is the first module that turns the orientation work into something visible in the controller. The pattern introduced here — *GitHub `settings.json` as source of truth, Ansible as orchestration engine, Catalyst Center as system of record* — is reused in every later module.
 
-> Reference: full as-built playbook documentation at [Support/Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md](../../../Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md).
+> Reference: full as-built playbook documentation at [site hierarchy reference](../../../Resources/Ansible/campus-evpn/docs/01-site-hierarchy.md).
 
 ## Hierarchy Background
 
@@ -22,7 +22,7 @@ Catalyst Center uses this hierarchy to logically align intent against infrastruc
 
 ## Why Ansible for Hierarchy?
 
-The `site_hierarchy.yml` playbook drives Catalyst Center using three typed modules from the `cisco.catalystcenter` collection — one per resource type:
+The `01_site_hierarchy.yml` playbook drives Catalyst Center using three typed modules from the `cisco.catalystcenter` collection — one per resource type:
 
 | Resource | Module | API Endpoint(s) |
 |----------|--------|-----------------|
@@ -48,7 +48,7 @@ Because every level is checked against `site_id_map` before any write, the playb
 
 The full decision and loop structure of the playbook (including the embedded include_tasks pattern that runs per path) is shown below:
 
-![Site Hierarchy — Logical Flow](../../../Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/DIAGRAMS/logical-flow.png)
+![Site Hierarchy — Logical Flow](../../../Resources/Ansible/campus-evpn/docs/diagrams/01-site-hierarchy-logical-flow.png)
 
 ## Source of Truth — `settings.json`
 
@@ -66,16 +66,16 @@ The hierarchy that Catalyst Center will end up with is defined entirely by `sett
 ]
 ```
 
-For this lab the file lives at `Projects/BGP_EVPN/Settings/settings.json` in the cloned repository, and is the same file referenced by every other playbook in the suite via the `settings_json_path` variable in `inventory.yml`.
+For this lab the file lives at `Support/Resources/Data-Models/campus-evpn/settings.json` in the cloned repository, and is the same file referenced by every other playbook in the suite via the `settings_json_path` variable in `campus-evpn/inventories/lab/hosts.yml`.
 
 ## What You Will Do in This Module
 
 1. Confirm the Catalyst Center ↔ ISE integration is in place (prerequisite for later modules, verified here).
 2. Encrypt the playbook's `vault.yml` with your master password.
-3. Run `site_hierarchy.yml` and read the `PLAY RECAP`.
+3. Run `01_site_hierarchy.yml` and read the `PLAY RECAP`.
 4. Verify the hierarchy was created correctly in Catalyst Center under **Design → Network Hierarchy**.
 
-> **Prerequisites:** the [Orientation module](../catc-catcenter-0-orientation/01-intro.md) is complete — repository cloned on the Script Server, `~/tecops-venv` active, `~/.vault_pass` created with `0600` permissions.
+> **Prerequisites:** the [Orientation module](../catc-catcenter-0-orientation/01-intro.md) is complete — repository cloned on the Script Server, `~/tecops-venv` active, and the shared Vault password from staging available.
 
 > [**Next Section**](./02-integration.md)
 

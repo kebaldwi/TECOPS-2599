@@ -1,0 +1,8 @@
+# Optional GitHub Personal Access Token (requires repo read scope).
+# The playbook loads this file only when it exists. Catalyst Center credentials
+# are stored in the shared encrypted file at ../group_vars/all/vault.yml.
+#
+# Copy this file to campus-evpn/vaults/github.yml only for a private repository
+# or higher API rate limits, then set git_token and encrypt it with
+# `ansible-vault encrypt campus-evpn/vaults/github.yml --ask-vault-pass`
+# git_token: "your_github_pat_here"

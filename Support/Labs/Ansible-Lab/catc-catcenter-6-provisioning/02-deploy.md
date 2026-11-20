@@ -8,23 +8,22 @@
 [![Device Provisioning pt 2](https://img.youtube.com/vi/l3niI5GUvTs/0.jpg)](https://www.youtube.com/watch?v=l3niI5GUvTs)
 > 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
 
-> All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
+> All commands run on the Script Server using the regular DCLOUD account used during staging, with the `~/tecops-venv` activated.
 
 ## Part A — Provision Devices (8.0)
 
-### Step 1 — Encrypt the Vault
+### Step 1 — Confirm the Shared Vault
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices
-cp vault.yml.example vault.yml
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+cd ~/TECOPS-2599/Support/Resources/Ansible
+head -1 campus-evpn/group_vars/all/vault.yml
 ```
 
 ### Step 2 — Run the Playbook
 
 ```bash
-ansible-playbook -i inventory.yml provision_devices.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/08_provision_devices.yml \
+    --ask-vault-pass
 ```
 
 The playbook authenticates once, then loops through each site that has a `device_list`, batching all of that site's devices into a single `POST /v1/sda/provisionDevices` call. Each call is async — the playbook polls `GET /v1/task/<taskId>` until completion before moving on.
@@ -44,19 +43,18 @@ The playbook authenticates once, then loops through each site that has a `device
 
 ## Part B — Composite Template Deploy (9.0)
 
-### Step 4 — Encrypt the Vault
+### Step 4 — Confirm the Shared Vault
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite
-cp vault.yml.example vault.yml
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+cd ~/TECOPS-2599/Support/Resources/Ansible
+head -1 campus-evpn/group_vars/all/vault.yml
 ```
 
 ### Step 5 — Run the Playbook
 
 ```bash
-ansible-playbook -i inventory.yml deploy_composite_template.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/09_deploy_composite_template.yml \
+    --ask-vault-pass
 ```
 
 For each `DayNTemplateNames` entry with `DeployTemplate: true`, the playbook:

@@ -1,0 +1,20 @@
+---
+- name: "Phase B — Create/update sites — total {{ site_configs_list | length }}"
+  ansible.builtin.include_tasks: create_or_update_site.yml
+  loop: "{{ site_configs_list }}"
+  loop_control:
+    loop_var: site_config
+    label: >-
+      {{ site_config.site[site_config.site_type].parent_name
+         }}/{{ site_config.site[site_config.site_type].name }}
+  when: (state | default('merged')) == 'merged'
+
+- name: "Phase C — Delete sites — children first — total {{ site_configs_list | length }}"
+  ansible.builtin.include_tasks: delete_site.yml
+  loop: "{{ site_configs_list | reverse | list }}"
+  loop_control:
+    loop_var: site_config
+    label: >-
+      {{ site_config.site[site_config.site_type].parent_name
+         }}/{{ site_config.site[site_config.site_type].name }}
+  when: (state | default('merged')) == 'deleted'

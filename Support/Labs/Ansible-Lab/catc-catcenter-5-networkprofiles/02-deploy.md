@@ -5,21 +5,20 @@
 [![Build Network Profile](https://img.youtube.com/vi/Id4XFi3-OK4/0.jpg)](https://www.youtube.com/watch?v=Id4XFi3-OK4)
 > 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
 
-> All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
+> All commands run on the Script Server using the regular DCLOUD account used during staging, with the `~/tecops-venv` activated.
 
-## Step 1 — Encrypt the Vault
+## Step 1 — Confirm the Shared Vault
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile
-cp vault.yml.example vault.yml
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+cd ~/TECOPS-2599/Support/Resources/Ansible
+head -1 campus-evpn/group_vars/all/vault.yml
 ```
 
 ## Step 2 — Run the Playbook
 
 ```bash
-ansible-playbook -i inventory.yml network_profile.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/07_network_profile.yml \
+    --ask-vault-pass
 ```
 
 The recap should report `failed=0`. On the first run expect one `changed=true` task per profile defined in `settings.json`; on subsequent runs the same task reports `changed=false`.

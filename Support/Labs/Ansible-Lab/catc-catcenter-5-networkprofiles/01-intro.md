@@ -2,7 +2,7 @@
 
 In this module we build a **Switching Network Profile** in Catalyst Center using the **`cisco.dnac.network_profile_switching_workflow_manager`** module. A Switching Network Profile is the binding layer between the templates synced in Module 4 and the sites built in Module 1 — it tells Catalyst Center "*these templates apply to switches in these sites*".
 
-> Reference: [7.0 Network Profile — full as-built](../../../Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md)
+> Reference: [7.0 Network Profile — full as-built](../../../Resources/Ansible/campus-evpn/docs/07-network-profile.md)
 
 ## What a Network Profile Is
 
@@ -40,7 +40,7 @@ The Workflow Manager module handles the underlying CatC API set internally — c
 
 ## What You Will Do
 
-1. Encrypt the `vault.yml` for the 7.0 playbook.
+1. Use the shared Catalyst Center vault created during staging; stage 7.0 does not need a local vault.
 2. Run `network_profile.yml`.
 3. Verify the new Network Profile in **Design → Network Profiles**, including its site assignment and template binding.
 

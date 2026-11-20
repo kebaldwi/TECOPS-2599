@@ -1,0 +1,61 @@
+---
+# =============================================================================
+# roles/site_hierarchy/tasks/delete_site.yml
+#
+# Processes ONE entry from site_configs_list (reversed, deepest first).
+# Loop variable: site_config (set by the include_tasks loop in this role's
+#                             tasks/main.yml)
+#
+# Credentials are inherited from the play-level module_defaults block.
+# Sites absent from site_hierarchy_site_id_map (not found in Phase A) are silently skipped
+# via `when: site_hierarchy_exists` — safe to call repeatedly without failures.
+#
+# API paths exercised:
+#   DELETE /dna/intent/api/v1/areas/{id}      (area)
+#   DELETE /dna/intent/api/v2/buildings/{id}  (building)
+#   DELETE /dna/intent/api/v2/floors/{id}     (floor)
+# =============================================================================
+
+# ── Step 1: Extract scalars from the site_config dict ────────────────────────
+- name: "Extract type / name / parent  | {{ site_config.site_type }}"
+  ansible.builtin.set_fact:
+    site_hierarchy_type: "{{ site_config.site_type }}"
+    site_hierarchy_name: "{{ site_config.site[site_config.site_type].name }}"
+    site_hierarchy_parent: "{{ site_config.site[site_config.site_type].parent_name }}"
+
+# ── Step 2: Derive path, UUID, and existence flag ────────────────────────────
+- name: "Derive path / ID / exists: {{ [site_hierarchy_parent, site_hierarchy_name] | join(' / ') }}"
+  ansible.builtin.set_fact:
+    site_hierarchy_path: "{{ site_hierarchy_parent + '/' + site_hierarchy_name }}"
+    site_hierarchy_exists: "{{ (site_hierarchy_parent + '/' + site_hierarchy_name) in site_hierarchy_site_id_map }}"
+    site_hierarchy_site_id: "{{ site_hierarchy_site_id_map.get(site_hierarchy_parent + '/' + site_hierarchy_name, '') }}"
+
+# ── DELETE area ───────────────────────────────────────────────────────────────
+# DELETE /dna/intent/api/v1/areas/{id}
+- name: "Area     | DELETE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.areas:
+    state: absent
+    id: "{{ site_hierarchy_site_id }}"
+  when:
+    - site_hierarchy_type == 'area'
+    - site_hierarchy_exists
+
+# ── DELETE building ───────────────────────────────────────────────────────────
+# DELETE /dna/intent/api/v2/buildings/{id}
+- name: "Building | DELETE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.buildings:
+    state: absent
+    id: "{{ site_hierarchy_site_id }}"
+  when:
+    - site_hierarchy_type == 'building'
+    - site_hierarchy_exists
+
+# ── DELETE floor ──────────────────────────────────────────────────────────────
+# DELETE /dna/intent/api/v2/floors/{id}
+- name: "Floor    | DELETE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.floors:
+    state: absent
+    id: "{{ site_hierarchy_site_id }}"
+  when:
+    - site_hierarchy_type == 'floor'
+    - site_hierarchy_exists

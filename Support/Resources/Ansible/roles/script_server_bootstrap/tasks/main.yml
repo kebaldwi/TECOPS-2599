@@ -1,0 +1,73 @@
+---
+- name: Require Ubuntu
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version in ["22.04", "24.04"]
+    fail_msg: "Only Ubuntu 22.04 and 24.04 are supported by this bootstrap."
+
+- name: Install Ubuntu packages required by the automation suite
+  ansible.builtin.apt:
+    name:
+      - git
+      - python3
+      - python3-pip
+      - python3-venv
+      - libssh-dev
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Ensure the virtual environment exists
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -m
+      - venv
+      - "{{ script_server_bootstrap_venv_path }}"
+    creates: "{{ script_server_bootstrap_venv_path }}/bin/python"
+
+- name: Install pinned Python dependencies into the virtual environment
+  ansible.builtin.pip:
+    requirements: "{{ script_server_bootstrap_requirements_file }}"
+    virtualenv: "{{ script_server_bootstrap_venv_path }}"
+    virtualenv_command: python3 -m venv
+
+- name: Install pinned Ansible collections
+  ansible.builtin.command:
+    argv:
+      - "{{ script_server_bootstrap_venv_path }}/bin/ansible-galaxy"
+      - collection
+      - install
+      - -r
+      - "{{ script_server_bootstrap_collections_file }}"
+  register: script_server_bootstrap_collection_install
+  changed_when: "'Nothing to do' not in script_server_bootstrap_collection_install.stdout"
+
+- name: Add the virtual environment to shell PATH
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    line: 'export PATH="$HOME/tecops-venv/bin:$PATH"'
+    create: true
+    mode: "0644"
+  loop: "{{ script_server_bootstrap_shell_profiles }}"
+
+- name: Verify the installed Ansible version
+  ansible.builtin.command:
+    argv:
+      - "{{ script_server_bootstrap_venv_path }}/bin/ansible-playbook"
+      - --version
+  changed_when: false
+  register: script_server_bootstrap_ansible_playbook_version
+
+- name: Verify the expected Ansible core pin
+  ansible.builtin.assert:
+    that: "'2.17.14' in script_server_bootstrap_ansible_playbook_version.stdout"
+    fail_msg: "Expected ansible-core 2.17.14 in {{ script_server_bootstrap_venv_path }}."
+
+- name: Show installed Ansible version
+  ansible.builtin.debug:
+    msg: "{{ script_server_bootstrap_ansible_playbook_version.stdout_lines[0] }}"

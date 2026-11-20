@@ -1,0 +1,58 @@
+---
+- name: Validate the Ubuntu Ansible script server
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    bootstrap_root: "{{ playbook_dir | dirname }}"
+    ansible_root: "{{ bootstrap_root | dirname }}"
+  tasks:
+    - name: Require a supported Ubuntu release
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_version in ["22.04", "24.04"]
+        fail_msg: >-
+          The TECOPS Ansible bootstrap supports Ubuntu 22.04 and 24.04;
+          detected {{ ansible_distribution }} {{ ansible_distribution_version }}.
+
+    - name: Check that the bootstrap dependencies are present
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ ansible_root }}/requirements.txt"
+        - "{{ ansible_root }}/requirements.yml"
+        - "{{ ansible_root }}/roles/script_server_bootstrap/tasks/main.yml"
+      register: bootstrap_files
+
+    - name: Require a complete bootstrap checkout
+      ansible.builtin.assert:
+        that: bootstrap_files.results | map(attribute="stat.exists") | min
+        fail_msg: "The 0.0 bootstrap checkout is incomplete; re-clone or update the repository."
+
+    - name: Verify the Ansible virtual environment is active
+      ansible.builtin.assert:
+        that:
+          - ansible_playbook_python is search("tecops-venv")
+        fail_msg: >-
+          Run this playbook with ~/tecops-venv/bin/ansible-playbook, as shown
+          by stage-script-server.sh.
+
+    - name: Verify sudo access
+      ansible.builtin.command:
+        argv: [id, -u]
+      become: true
+      changed_when: false
+      register: sudo_check
+
+    - name: Confirm sudo access
+      ansible.builtin.assert:
+        that: sudo_check.stdout == "0"
+        fail_msg: "The script-server account needs sudo access."
+
+    - name: Preflight summary
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ ansible_hostname }} (Ubuntu {{ ansible_distribution_version }})"
+          - "Ansible: {{ ansible_playbook_python }}"
+          - "sudo: available"

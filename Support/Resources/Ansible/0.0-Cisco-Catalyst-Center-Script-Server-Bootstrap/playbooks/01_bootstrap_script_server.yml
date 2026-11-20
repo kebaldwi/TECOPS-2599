@@ -1,0 +1,7 @@
+---
+- name: Complete Ansible setup on the Ubuntu script server
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - script_server_bootstrap

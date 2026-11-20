@@ -5,22 +5,23 @@
 [![Import Templates](https://img.youtube.com/vi/WcByI5TBV2Q/0.jpg)](https://www.youtube.com/watch?v=WcByI5TBV2Q)
 > 💡 Tip: Ctrl/Cmd + Click the thumbnail to open the video in a new tab.
 
-> All commands run on the Script Server (`ssh root@198.18.133.28`) with the `~/tecops-venv` activated.
+> All commands run on the Script Server using the regular DCLOUD account used during staging, with the `~/tecops-venv` activated.
 
 ## Step 1 — Inspect the Playbook Directory
 
 ```bash
-cd ~/TECOPS-2599/Support/Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration
+cd ~/TECOPS-2599/Support/Resources/Ansible
 ls
 ```
 
 ```text
-ansible-git-catc.yml      process-composite.yml      requirements.yml
-ansible.cfg               process-template.yml       vault.yml.example
-inventory.yml             requirements.txt           README.md
+campus-evpn/playbooks/06_sync_templates.yml
+campus-evpn/roles/template_gitops/tasks/process_template.yml
+campus-evpn/roles/template_gitops/tasks/process_composite.yml
+campus-evpn/inventories/lab/hosts.yml
 ```
 
-The two `process-*.yml` files are include files used by the main playbook:
+The `template_gitops` role includes two task files:
 
 * `process-template.yml` — runs once per simple `.j2` template (sync to CatC).
 * `process-composite.yml` — runs once per `.yml` composite definition (resolve members, sync as one composite template).
@@ -28,7 +29,7 @@ The two `process-*.yml` files are include files used by the main playbook:
 ## Step 2 — Confirm Inventory Variables
 
 ```bash
-grep -E '^(github|template)_' inventory.yml
+grep -E '^(github|template)_' campus-evpn/inventories/lab/hosts.yml
 ```
 
 For this lab the values should be:
@@ -37,25 +38,27 @@ For this lab the values should be:
 github_owner: kebaldwi
 github_repo:  TECOPS-2599
 github_branch: main
-github_path:   Projects/BGP_EVPN/DayNTemplates
+github_path:   Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates
 template_project_name: TECOPS-2599
 ```
 
-## Step 3 — Encrypt the Vault
+## Step 3 — Optional GitHub Token
+
+The Catalyst Center credentials are read from the shared vault. The public
+`kebaldwi/TECOPS-2599` repository does not need a GitHub token. For a private
+repository or higher API rate limits, create the optional local token vault:
 
 ```bash
-cp vault.yml.example vault.yml
-# Optional: edit and add `git_token: ghp_xxxxx` to raise GitHub's anonymous rate limit (60/hr → 5,000/hr)
-ansible-vault encrypt vault.yml --vault-password-file ~/.vault_pass
+cp campus-evpn/vaults/github.yml.example campus-evpn/vaults/github.yml
+# Set git_token in the file, then encrypt with the shared Vault password.
+ansible-vault encrypt campus-evpn/vaults/github.yml --ask-vault-pass
 ```
-
-For the public `kebaldwi/TECOPS-2599` repo, anonymous access is sufficient — no `git_token` is required.
 
 ## Step 4 — Run the Playbook
 
 ```bash
-ansible-playbook -i inventory.yml ansible-git-catc.yml \
-    --vault-password-file ~/.vault_pass
+ansible-playbook campus-evpn/playbooks/06_sync_templates.yml \
+    --ask-vault-pass
 ```
 
 Expect roughly the following stages in the console:
@@ -78,9 +81,9 @@ A successful first run produces `changed > 0` (every template is being created).
 
    ![Template Editor](../../images/ansible/templates/templates.png?raw=true)
 
-2. Expand the project named `TECOPS-2599` (or whatever you configured in `inventory.yml`). You should see:
+2. Expand the project named `TECOPS-2599` (or whatever you configured in `campus-evpn/inventories/lab/hosts.yml`). You should see:
 
-    - One entry per `.j2` file under `Projects/BGP_EVPN/DayNTemplates` in the repo.
+    - One entry per `.j2` file under `Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates` in the repo.
     - One **composite** template per `.yml` file (notably `BGP-EVPN-BUILD`).
 
 3. Open one of the templates (e.g. `FABRIC-VRF`). The body should match the `.j2` source, and the description field should contain the latest commit message and author.

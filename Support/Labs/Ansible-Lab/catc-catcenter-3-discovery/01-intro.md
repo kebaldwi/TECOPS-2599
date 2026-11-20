@@ -3,8 +3,8 @@
 In this module we run two playbooks: **4.0 Device Discovery** discovers the pod devices over SSH and adds them to Catalyst Center's inventory; **5.0 Assign To Site** then moves each device from `Global` (where everything lands by default) into its correct hierarchy position.
 
 > References:
-> * [4.0 Device Discovery — full as-built](../../../Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md)
-> * [5.0 Assign To Site — full as-built](../../../Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md)
+> * [4.0 Device Discovery — full as-built](../../../Resources/Ansible/campus-evpn/docs/04-device-discovery.md)
+> * [5.0 Assign To Site — full as-built](../../../Resources/Ansible/campus-evpn/docs/05-assign-to-site.md)
 
 ## Why Two Playbooks?
 
@@ -56,7 +56,7 @@ The operation is idempotent — devices that are already at the correct site are
 
 ## What You Will Do
 
-1. Encrypt `vault.yml` in both `4.0-...-Device-Discovery` and `5.0-...-Assign-To-Site` directories.
+1. Use the shared Catalyst Center vault created during staging; stages 4.0 and 5.0 do not need local vault files.
 2. Run `device_discovery.yml`. Verify in **Provision → Inventory** that devices appear with status *Reachable* / *Managed*.
 3. Run `assign_to_site.yml`. Verify each device's site column reflects its `settings.json` position.
 

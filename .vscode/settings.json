@@ -1,5 +1,6 @@
 {
     "chat.tools.terminal.autoApprove": {
         "base64": true
-    }
+    },
+    "ansible.config.path": "${workspaceFolder}/Support/Resources/Ansible/ansible.cfg"
 }

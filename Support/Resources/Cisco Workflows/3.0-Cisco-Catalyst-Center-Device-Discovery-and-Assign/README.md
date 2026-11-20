@@ -144,7 +144,7 @@ These parameters are entered when the workflow is launched from the Catalyst Cen
 |-----------|------|---------|-------------|
 | `GITHUB-OWNER` | string | `kebaldwi` | GitHub account or organization that owns the repository |
 | `GITHUB-REPO` | string | `TECOPS-2599` | Repository name containing `settings.json` and discovery definitions |
-| `GITHUB-PATH` | string | `Projects/BGP_EVPN/Settings` | Path within the repository to the folder containing settings files |
+| `GITHUB-PATH` | string | `Support/Resources/Data-Models/campus-evpn` | Path within the repository to the folder containing settings files |
 | `GITHUB-FILE` | string | `settings.json` | Filename to retrieve from the GitHub path (the workflow scans the directory for this file) |
 | `TemplateHubProjectName` | string | `BGP_EVPN` | Project name used to scope Template Hub lookups (carried through to subworkflow context) |
 | `FORCE Update` | string (`true`/`false`) | `false` | If `true`, stale discovery jobs are deleted and recreated regardless of state. If `false`, existing jobs are still replaced when found (delete + recreate) |
@@ -564,7 +564,7 @@ The `taskId` is polled until the task progress contains a `discoveryId` and `end
 3. Fill in the input parameters:
    - **GITHUB-OWNER:** `kebaldwi`
    - **GITHUB-REPO:** `TECOPS-2599`
-   - **GITHUB-PATH:** `Projects/BGP_EVPN/Settings`
+   - **GITHUB-PATH:** `Support/Resources/Data-Models/campus-evpn`
    - **GITHUB-FILE:** `settings.json`
    - **TemplateHubProjectName:** `BGP_EVPN`
    - **FORCE Update:** `false`
@@ -581,7 +581,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
   "inputParameters": {
     "GITHUB-OWNER": "kebaldwi",
     "GITHUB-REPO": "TECOPS-2599",
-    "GITHUB-PATH": "Projects/BGP_EVPN/Settings",
+    "GITHUB-PATH": "Support/Resources/Data-Models/campus-evpn",
     "GITHUB-FILE": "settings.json",
     "TemplateHubProjectName": "BGP_EVPN",
     "FORCE Update": "false"
@@ -596,7 +596,7 @@ POST /dna/intent/api/v1/workflow-manager/workflows/{workflowId}/run
 A successful run produces the following sequence in the workflow execution log:
 
 ```
-Step 1       GitHub directory retrieved: /kebaldwi/TECOPS-2599/Projects/BGP_EVPN/Settings
+Step 1       GitHub directory retrieved: /kebaldwi/TECOPS-2599/Support/Resources/Data-Models/campus-evpn
 Step 2       File list extracted: [settings.json, ...]
              Found target file: settings.json
 Step 3       Settings file retrieved from GitHub (raw JSON response)

@@ -71,12 +71,6 @@ Teams choose the path that matches their operational model and skill set. All th
 ```
 TECOPS-2599/
 ├── Projects/
-│   ├── BGP_EVPN/                  # BGP EVPN fabric project
-│   │   ├── Configs/               # Generated device configurations
-│   │   ├── Day0Templates/         # PnP onboarding Jinja2 templates
-│   │   ├── DayNTBD/               # Day-N templates under development
-│   │   ├── DayNTemplates/         # Production Day-N Jinja2 templates
-│   │   └── Settings/              # settings.json for this project
 │   └── TRADITIONAL/               # Traditional (non-EVPN) fabric project
 │       ├── Configs/               # Generated device configurations
 │       ├── Day0Templates/         # PnP onboarding Jinja2 templates
@@ -90,7 +84,14 @@ TECOPS-2599/
     │   ├── DCLOUD.md              # DCLOUD lab environment preparation guide
     │   └── README.md              # Labs index and module map
     └── Resources/                 # Automation tooling and reference content
-        ├── Ansible/               # Ansible playbook suite (10 playbooks)
+        ├── Ansible/
+        │   ├── campus-evpn/       # Catalyst Center campus EVPN playbook suite
+        │   └── dc-evpn/           # Nexus Dashboard EVPN automation (planned)
+        ├── Data-Models/
+        │   ├── campus-evpn/
+        │   │   ├── settings.json
+        │   │   └── BGP_EVPN/      # Campus EVPN templates and related assets
+        │   └── dc-evpn/           # Data-center EVPN models (planned)
         ├── Cisco Workflows/       # Cisco Workflow JSON suite (7 workflows)
         ├── Python/                # Python REST reference scripts (12 scripts)
         ├── CML/                   # Cisco Modeling Labs topology and configs
@@ -100,23 +101,32 @@ TECOPS-2599/
 
 ---
 
-## Projects
+## Projects and Data Models
 
-The `Projects/` folder contains the network configuration intent for each fabric deployment model supported by this suite. Each project is a self-contained GitOps source of truth consumed by the automation tooling in `Support/Resources/`.
+The campus EVPN data model is under `Support/Resources/Data-Models/campus-evpn/`.
+The existing traditional fabric project remains under `Projects/TRADITIONAL/`.
 
-### BGP\_EVPN
+### Campus BGP EVPN
 
-**Path:** [Projects/BGP\_EVPN/](Projects/BGP_EVPN/)
+**Path:** [Data-Models/campus-evpn/](Support/Resources/Data-Models/campus-evpn/)
 
-The BGP EVPN project provides configuration templates and settings for a BGP EVPN campus fabric deployment on Cisco Catalyst 9000 series switches.
+The campus EVPN model provides `settings.json` and configuration templates for
+a BGP EVPN campus fabric deployment on Cisco Catalyst 9000 series switches.
 
-| Subfolder | Purpose |
+| Path | Purpose |
 |-----------|---------|
-| [Configs/](Projects/BGP_EVPN/Configs/) | Generated device configurations produced after provisioning runs |
-| [Day0Templates/](Projects/BGP_EVPN/Day0Templates/) | PnP onboarding Jinja2 templates for zero-touch device commissioning |
-| [DayNTBD/](Projects/BGP_EVPN/DayNTBD/) | Day-N templates under active development (not yet production) |
-| [DayNTemplates/](Projects/BGP_EVPN/DayNTemplates/) | Production Day-N Jinja2 templates for post-onboarding configuration |
-| [Settings/](Projects/BGP_EVPN/Settings/) | `settings.json` — site hierarchy, network settings, discovery, and credential intent |
+| [settings.json](Support/Resources/Data-Models/campus-evpn/settings.json) | Site hierarchy, network settings, discovery, and credential intent |
+| [BGP_EVPN/](Support/Resources/Data-Models/campus-evpn/BGP_EVPN/) | Existing template and related asset folder |
+| [Day0Templates/](Support/Resources/Data-Models/campus-evpn/BGP_EVPN/Day0Templates/) | PnP onboarding Jinja2 templates for zero-touch device commissioning |
+| [DayNTBD/](Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTBD/) | Day-N templates under active development (not yet production) |
+| [DayNTemplates/](Support/Resources/Data-Models/campus-evpn/BGP_EVPN/DayNTemplates/) | Production Day-N Jinja2 templates for post-onboarding configuration |
+
+### Traditional Fabric
+
+**Path:** [Projects/TRADITIONAL/](Projects/TRADITIONAL/)
+
+The existing traditional (non-EVPN) fabric model remains in the `Projects/`
+tree.
 
 **Day0 templates** cover L2/L3 PnP onboarding for Catalyst switches with EIGRP, OSPF, and seed automation variants.
 
@@ -202,14 +212,14 @@ A seven-module guided lab that teaches the same Catalyst Center automation use c
 | # | Module | Lab Walkthrough | Playbook Reference |
 |---|--------|-----------------|--------------------|
 | 0 | Orientation | [Module 0](Support/Labs/Ansible-Lab/catc-catcenter-0-orientation/01-intro.md) | — |
-| 1 | Building Hierarchy | [Module 1](Support/Labs/Ansible-Lab/catc-catcenter-1-hierarchy/01-intro.md) | [1.0 Site Hierarchy](Support/Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) |
-| 2 | Settings & Credentials | [Module 2](Support/Labs/Ansible-Lab/catc-catcenter-2-settings/01-intro.md) | [2.0 Settings](Support/Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings/README.md) · [3.0 Credentials](Support/Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials/README.md) |
-| 3 | Device Discovery | [Module 3](Support/Labs/Ansible-Lab/catc-catcenter-3-discovery/01-intro.md) | [4.0 Device Discovery](Support/Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) · [5.0 Assign To Site](Support/Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) |
-| 4 | Templates (Import + Composite) | [Module 4](Support/Labs/Ansible-Lab/catc-catcenter-4-templates/01-intro.md) | [6.0 Templates GitHub](Support/Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) |
-| 5 | Network Profiles | [Module 5](Support/Labs/Ansible-Lab/catc-catcenter-5-networkprofiles/01-intro.md) | [7.0 Network Profile](Support/Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) |
-| 6 | Device Provisioning | [Module 6](Support/Labs/Ansible-Lab/catc-catcenter-6-provisioning/01-intro.md) | [8.0 Provision Devices](Support/Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) · [9.0 Provision Composite](Support/Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) |
+| 1 | Building Hierarchy | [Module 1](Support/Labs/Ansible-Lab/catc-catcenter-1-hierarchy/01-intro.md) | [1.0 Site Hierarchy](Support/Resources/Ansible/campus-evpn/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) |
+| 2 | Settings & Credentials | [Module 2](Support/Labs/Ansible-Lab/catc-catcenter-2-settings/01-intro.md) | [2.0 Settings](Support/Resources/Ansible/campus-evpn/2.0-Cisco-Catalyst-Center-Settings/README.md) · [3.0 Credentials](Support/Resources/Ansible/campus-evpn/3.0-Cisco-Catalyst-Center-Credentials/README.md) |
+| 3 | Device Discovery | [Module 3](Support/Labs/Ansible-Lab/catc-catcenter-3-discovery/01-intro.md) | [4.0 Device Discovery](Support/Resources/Ansible/campus-evpn/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) · [5.0 Assign To Site](Support/Resources/Ansible/campus-evpn/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) |
+| 4 | Templates (Import + Composite) | [Module 4](Support/Labs/Ansible-Lab/catc-catcenter-4-templates/01-intro.md) | [6.0 Templates GitHub](Support/Resources/Ansible/campus-evpn/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) |
+| 5 | Network Profiles | [Module 5](Support/Labs/Ansible-Lab/catc-catcenter-5-networkprofiles/01-intro.md) | [7.0 Network Profile](Support/Resources/Ansible/campus-evpn/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) |
+| 6 | Device Provisioning | [Module 6](Support/Labs/Ansible-Lab/catc-catcenter-6-provisioning/01-intro.md) | [8.0 Provision Devices](Support/Resources/Ansible/campus-evpn/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) · [9.0 Provision Composite](Support/Resources/Ansible/campus-evpn/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) |
 
-**Outcome:** Engineers can execute the full ten-playbook Ansible suite end-to-end and understand how each step interacts with the Catalyst Center API. Companion playbook [10.0 Backup My Configs](Support/Resources/Ansible/10.0-Backup-My-Configs/README.md) archives running configurations (no matching lab module).
+**Outcome:** Engineers can execute the nine-playbook Ansible suite end-to-end and understand how each step interacts with the Catalyst Center API.
 
 #### DCLOUD Lab Environment
 
@@ -240,7 +250,7 @@ The Resources folder is the complete automation implementation suite. It contain
 
 | Folder | Tooling | Contents |
 |--------|---------|---------|
-| [Ansible/](Support/Resources/Ansible/README.md) | Ansible playbooks | 10 ordered playbooks covering the full provisioning lifecycle plus config backup |
+| [Ansible/](Support/Resources/Ansible/README.md) | Ansible playbooks | 9 ordered playbooks covering the full provisioning lifecycle |
 | [Cisco Workflows/](Support/Resources/Cisco%20Workflows/README.md) | Cisco Workflow JSON | 7 GitOps workflows importable into Catalyst Center Workflow Manager |
 | [Python/](Support/Resources/Python/README.md) | Python REST scripts | 12 numbered scripts mirroring the Ansible operations with raw API calls |
 | [CML/](Support/Resources/CML/README.md) | CML topology and configs | EVPN campus topology files, startup configs, and normalization script |
@@ -251,16 +261,15 @@ The Resources folder is the complete automation implementation suite. It contain
 
 | # | Playbook | Catalyst Center Outcome |
 |---|----------|------------------------|
-| 1.0 | [Site Hierarchy](Support/Resources/Ansible/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) | Areas, Buildings, and Floors created in correct parent-before-child order |
-| 2.0 | [Settings](Support/Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings/README.md) | DNS, NTP, Syslog, SNMP, AAA, and banner applied per site |
-| 3.0 | [Credentials](Support/Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials/README.md) | CLI, SNMP v2c R/W, and NETCONF global credentials created and assigned |
-| 4.0 | [Device Discovery](Support/Resources/Ansible/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) | Devices discovered and added to inventory |
-| 5.0 | [Assign To Site](Support/Resources/Ansible/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) | Devices placed under their designated site in the hierarchy |
-| 6.0 | [Templates GitHub](Support/Resources/Ansible/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) | Jinja2 and composite templates synced from GitHub into the Template Hub |
-| 7.0 | [Network Profile](Support/Resources/Ansible/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) | Switching Network Profile created and bound to sites with Day-N templates |
-| 8.0 | [Provision Devices](Support/Resources/Ansible/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) | Devices provisioned to site; idempotent skip for already-provisioned devices |
-| 9.0 | [Provision Composite](Support/Resources/Ansible/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) | Composite Day-N templates deployed with async task verification |
-| 10.0 | [Backup My Configs](Support/Resources/Ansible/10.0-Backup-My-Configs/README.md) | Running configurations archived from Catalyst Center–managed devices |
+| 1.0 | [Site Hierarchy](Support/Resources/Ansible/campus-evpn/1.0-Cisco-Catalyst-Center-Site-Hierarchy/README.md) | Areas, Buildings, and Floors created in correct parent-before-child order |
+| 2.0 | [Settings](Support/Resources/Ansible/campus-evpn/2.0-Cisco-Catalyst-Center-Settings/README.md) | DNS, NTP, Syslog, SNMP, AAA, and banner applied per site |
+| 3.0 | [Credentials](Support/Resources/Ansible/campus-evpn/3.0-Cisco-Catalyst-Center-Credentials/README.md) | CLI, SNMP v2c R/W, and NETCONF global credentials created and assigned |
+| 4.0 | [Device Discovery](Support/Resources/Ansible/campus-evpn/4.0-Cisco-Catalyst-Center-Device-Discovery/README.md) | Devices discovered and added to inventory |
+| 5.0 | [Assign To Site](Support/Resources/Ansible/campus-evpn/5.0-Cisco-Catalyst-Center-Assign-To-Site/README.md) | Devices placed under their designated site in the hierarchy |
+| 6.0 | [Templates GitHub](Support/Resources/Ansible/campus-evpn/6.0-Cisco-Catalyst-Center-Templates-Github-integration/README.md) | Jinja2 and composite templates synced from GitHub into the Template Hub |
+| 7.0 | [Network Profile](Support/Resources/Ansible/campus-evpn/7.0-Cisco-Catalyst-Center-Network-Profile/README.md) | Switching Network Profile created and bound to sites with Day-N templates |
+| 8.0 | [Provision Devices](Support/Resources/Ansible/campus-evpn/8.0-Cisco-Catalyst-Center-Provision-Devices/README.md) | Devices provisioned to site; idempotent skip for already-provisioned devices |
+| 9.0 | [Provision Composite](Support/Resources/Ansible/campus-evpn/9.0-Cisco-Catalyst-Center-Provision-Composite/README.md) | Composite Day-N templates deployed with async task verification |
 
 #### Cisco Workflows
 
@@ -313,10 +322,11 @@ A pre-built EVPN campus fabric (spine, leaf, border, core, firewall, DHCP, DMZ) 
 
 | If your fabric uses... | Use project... |
 |------------------------|---------------|
-| BGP EVPN with VXLAN underlay | [Projects/BGP\_EVPN/](Projects/BGP_EVPN/) |
+| BGP EVPN with VXLAN underlay | [Campus EVPN data model](Support/Resources/Data-Models/campus-evpn/) |
 | Traditional routed access (EIGRP/OSPF) | [Projects/TRADITIONAL/](Projects/TRADITIONAL/) |
 
-Update `Settings/settings.json` in your chosen project with your site topology and connectivity parameters before running any tooling path.
+Update the chosen project's `settings.json` with site topology and connectivity
+parameters before running any tooling path.
 
 ---
 

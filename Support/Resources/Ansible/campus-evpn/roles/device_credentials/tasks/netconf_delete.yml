@@ -1,0 +1,37 @@
+---
+# =============================================================================
+# roles/device_credentials/tasks/netconf_delete.yml
+#
+# Deletes ONE NETCONF global credential from Catalyst Center.
+# Loop variable: netconf_config (set by the include_tasks loop in this role's
+#                                tasks/main.yml)
+#
+# Connection params are inherited from the play-level module_defaults block in
+# playbooks/03_credentials.yml
+# (cisco.dnac.global_credential_delete: *catc_auth).
+#
+# Credentials absent from netconf_id_map (not found in the Phase C query)
+# are silently skipped via `when: device_credentials_nc_exists` — safe to run repeatedly.
+#
+# WARNING: Deleting a NETCONF credential that is still assigned to sites or
+# actively used by discovered devices will interrupt device management in
+# Catalyst Center.  Confirm all devices are decommissioned before running
+# with state=deleted.
+#
+# API path:
+#   DELETE /dna/intent/api/v1/global-credential/{globalCredentialId}
+# =============================================================================
+
+# ── Step 1: Derive existence flag and UUID ────────────────────────────────────
+- name: "Derive exists / id  | {{ netconf_config.description }}"
+  ansible.builtin.set_fact:
+    device_credentials_nc_exists: "{{ netconf_config.description in netconf_id_map }}"
+    device_credentials_nc_id: "{{ netconf_id_map.get(netconf_config.description, '') }}"
+
+# ── DELETE NETCONF credential ─────────────────────────────────────────────────
+# DELETE /dna/intent/api/v1/global-credential/{globalCredentialId}
+- name: "NETCONF | DELETE  | {{ netconf_config.description }}"
+  cisco.dnac.global_credential_delete:
+    globalCredentialId: "{{ device_credentials_nc_id }}"
+  register: device_credentials_nc_delete
+  when: device_credentials_nc_exists

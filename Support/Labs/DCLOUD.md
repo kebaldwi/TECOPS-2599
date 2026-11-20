@@ -40,7 +40,7 @@ The following diagram shows the DCLOUD topology.
 | Catalyst Center | 198.18.129.100 | admin         | C1sco12345  |
 | ISE             | 198.18.133.27  | admin         | C1sco12345  |
 | Windows AD      | 198.18.133.1   | admin         | C1sco12345  |
-| Script Server   | 198.18.133.28  | root          | C1sco12345  |
+| Script Server   | 198.18.128.50  | dcloud          | C1sco12345  |
 | vSphere Server  | 198.18.134.80  | Administrator | C1sco12345! |
 | CML Server      | 198.18.128.11  | Guest         | C1sco12345  |
 

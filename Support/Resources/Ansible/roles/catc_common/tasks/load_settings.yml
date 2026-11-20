@@ -1,0 +1,34 @@
+---
+- name: Require settings_json_path
+  ansible.builtin.assert:
+    that:
+      - settings_json_path is defined
+      - settings_json_path is string
+      - settings_json_path | length > 0
+    fail_msg: "Set settings_json_path in the stage inventory or at the command line."
+
+- name: Resolve settings path
+  ansible.builtin.set_fact:
+    catc_common_resolved_json_path: >-
+      {{ settings_json_path if settings_json_path.startswith('/')
+         else (inventory_dir + '/' + settings_json_path) }}
+
+- name: Load settings JSON
+  ansible.builtin.set_fact:
+    catc_common_settings_data: "{{ lookup('ansible.builtin.file', catc_common_resolved_json_path) | from_json }}"
+
+- name: Validate project settings
+  ansible.builtin.assert:
+    that:
+      - catc_common_settings_data.project is defined
+      - catc_common_settings_data.project is sequence
+      - catc_common_settings_data.project is not string
+      - catc_common_settings_data.project is not mapping
+      - catc_common_settings_data.project | length > 0
+      - catc_common_settings_data.project | select('mapping') | list | length == catc_common_settings_data.project | length
+      - catc_common_settings_data.project | selectattr('HierarchyParent', 'defined') | list | length == catc_common_settings_data.project | length
+      - catc_common_settings_data.project | selectattr('device_list', 'defined') | list | length == catc_common_settings_data.project | length
+    fail_msg: >-
+      {{ catc_common_resolved_json_path }} must contain a non-empty project list, with
+      HierarchyParent and device_list in each project entry.
+    success_msg: "Loaded {{ catc_common_settings_data.project | length }} project settings entry/entries."

@@ -1,0 +1,211 @@
+---
+# =============================================================================
+# roles/site_hierarchy/tasks/create_or_update_site.yml
+#
+# Processes ONE entry from site_configs_list.
+# Loop variable: site_config (set by the include_tasks loop in this role's
+#                             tasks/main.yml)
+#
+# Credentials are NOT declared here — they are inherited from the play-level
+# module_defaults block in playbooks/01_site_hierarchy.yml:
+#   cisco.catalystcenter.{sites_info,areas,buildings,floors}
+#   all receive catalystcenter_* params automatically.
+#
+# site_hierarchy_site_id_map is a play-scope fact updated with set_fact after each CREATE so
+# the next include_tasks iteration can look up the UUID of a just-created parent
+# before creating a child.  This is why include_tasks is used instead of a
+# plain `loop:` — set_fact inside a loop only takes effect after the loop ends,
+# but set_fact inside include_tasks takes effect immediately, before the next
+# iteration runs.
+#
+# API paths exercised:
+#   Create area    → POST /dna/intent/api/v1/areas
+#   Update area    → PUT  /dna/intent/api/v1/areas/{id}
+#   Create building→ POST /dna/intent/api/v2/buildings
+#   Update building→ PUT  /dna/intent/api/v2/buildings/{id}
+#   Create floor   → POST /dna/intent/api/v2/floors    (cisco.catalystcenter.floors, no id: → POST)
+#   Update floor   → PUT  /dna/intent/api/v2/floors/{id}
+#   ID resolution  → GET  /dna/intent/api/v1/sites?nameHierarchy=<path>
+# =============================================================================
+
+# ── Step 1: Extract scalars from the site_config dict ────────────────────────
+# site_config.site_type      → "area" | "building" | "floor"
+# site_config.site.<type>    → the typed sub-dict with name, parent_name, ...
+- name: "Extract type / name / parent  | {{ site_config.site_type }}"
+  ansible.builtin.set_fact:
+    site_hierarchy_type: "{{ site_config.site_type }}"
+    site_hierarchy_name: "{{ site_config.site[site_config.site_type].name }}"
+    site_hierarchy_parent: "{{ site_config.site[site_config.site_type].parent_name }}"
+
+# ── Step 2: Derive full path, parent UUID, existence flag ────────────────────
+# These cannot be set in the same task as Step 1 because Ansible resolves all
+# set_fact values in a single template pass — site_hierarchy_type/site_hierarchy_name/site_hierarchy_parent would be
+# undefined if referenced in the same task.
+- name: "Derive path / IDs / exists: {{ [site_hierarchy_parent, site_hierarchy_name] | join(' / ') }}"
+  ansible.builtin.set_fact:
+    site_hierarchy_path: "{{ site_hierarchy_parent + '/' + site_hierarchy_name }}"
+    site_hierarchy_parent_id: "{{ site_hierarchy_site_id_map.get(site_hierarchy_parent, '') }}"
+    site_hierarchy_exists: "{{ (site_hierarchy_parent + '/' + site_hierarchy_name) in site_hierarchy_site_id_map }}"
+    site_hierarchy_site_id: "{{ site_hierarchy_site_id_map.get(site_hierarchy_parent + '/' + site_hierarchy_name, '') }}"
+
+# =============================================================================
+# AREAS
+# =============================================================================
+
+# ── CREATE new area ───────────────────────────────────────────────────────────
+# POST /dna/intent/api/v1/areas
+# parentId  = UUID of the parent site (must already be in site_hierarchy_site_id_map).
+# No id: supplied → the action plugin's exists() returns False → POST fires.
+- name: "Area     | CREATE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.areas:
+    state: present
+    name: "{{ site_hierarchy_name }}"
+    parentId: "{{ site_hierarchy_parent_id }}"
+  register: site_hierarchy_area_create
+  when:
+    - site_hierarchy_type == 'area'
+    - not site_hierarchy_exists
+
+# ── UPDATE existing area ──────────────────────────────────────────────────────
+# PUT /dna/intent/api/v1/areas/{id}
+# Supplying id: makes the action plugin call get_object_by_id → issues PUT.
+# Result is "Object already present" when name/parentId haven't changed.
+- name: "Area     | UPDATE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.areas:
+    state: present
+    id: "{{ site_hierarchy_site_id }}"
+    name: "{{ site_hierarchy_name }}"
+    parentId: "{{ site_hierarchy_parent_id }}"
+  register: site_hierarchy_area_update
+  when:
+    - site_hierarchy_type == 'area'
+    - site_hierarchy_exists
+
+# =============================================================================
+# BUILDINGS
+# =============================================================================
+
+# ── CREATE new building ───────────────────────────────────────────────────────
+# POST /dna/intent/api/v2/buildings
+- name: "Building | CREATE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.buildings:
+    state: present
+    name: "{{ site_hierarchy_name }}"
+    parentId: "{{ site_hierarchy_parent_id }}"
+    address: "{{ site_config.site.building.address }}"
+    country: "{{ site_config.site.building.country }}"
+    latitude: "{{ site_config.site.building.latitude }}"
+    longitude: "{{ site_config.site.building.longitude }}"
+  register: site_hierarchy_building_create
+  when:
+    - site_hierarchy_type == 'building'
+    - not site_hierarchy_exists
+
+# ── UPDATE existing building ──────────────────────────────────────────────────
+# PUT /dna/intent/api/v2/buildings/{id}
+- name: "Building | UPDATE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.buildings:
+    state: present
+    id: "{{ site_hierarchy_site_id }}"
+    name: "{{ site_hierarchy_name }}"
+    parentId: "{{ site_hierarchy_parent_id }}"
+    address: "{{ site_config.site.building.address }}"
+    country: "{{ site_config.site.building.country }}"
+    latitude: "{{ site_config.site.building.latitude }}"
+    longitude: "{{ site_config.site.building.longitude }}"
+  register: site_hierarchy_building_update
+  when:
+    - site_hierarchy_type == 'building'
+    - site_hierarchy_exists
+
+# =============================================================================
+# FLOORS
+# =============================================================================
+
+# ── CREATE new floor ──────────────────────────────────────────────────────────
+# POST /dna/intent/api/v2/floors  (cisco.catalystcenter.floors, no id: → POST)
+# parentId (UUID of the parent building) is looked up from site_hierarchy_site_id_map.
+# Uses the same module as UPDATE for consistency; no id: causes the action
+# plugin to POST rather than PUT.
+# Note: numeric fields (floorNumber/width/length/height) are passed as
+# Jinja2 expressions so the module's own argspec coerces them to the
+# correct type — avoiding the MalformedRequest raised by cisco.dnac.site
+# when nested dict values are rendered as strings by Ansible's templating.
+- name: "Floor    | CREATE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.floors:
+    state: present
+    name: "{{ site_hierarchy_name }}"
+    parentId: "{{ site_hierarchy_parent_id }}"
+    rfModel: "{{ site_config.site.floor.rf_model }}"
+    unitsOfMeasure: "{{ site_config.site.floor.units_of_measure }}"
+    floorNumber: "{{ site_config.site.floor.floor_number | int }}"
+    width: "{{ site_config.site.floor.width | float }}"
+    length: "{{ site_config.site.floor.length | float }}"
+    height: "{{ site_config.site.floor.height | float }}"
+  register: site_hierarchy_floor_create
+  when:
+    - site_hierarchy_type == 'floor'
+    - not site_hierarchy_exists
+
+# ── UPDATE existing floor ─────────────────────────────────────────────────────
+# PUT /dna/intent/api/v2/floors/{id}
+# Both id: (floor UUID) and parentId: (building UUID) are required for updates.
+- name: "Floor    | UPDATE | {{ site_hierarchy_path }}"
+  cisco.catalystcenter.floors:
+    state: present
+    id: "{{ site_hierarchy_site_id }}"
+    name: "{{ site_hierarchy_name }}"
+    parentId: "{{ site_hierarchy_parent_id }}"
+    rfModel: "{{ site_config.site.floor.rf_model }}"
+    unitsOfMeasure: "{{ site_config.site.floor.units_of_measure }}"
+    floorNumber: "{{ site_config.site.floor.floor_number }}"
+    width: "{{ site_config.site.floor.width }}"
+    length: "{{ site_config.site.floor.length }}"
+    height: "{{ site_config.site.floor.height }}"
+  register: site_hierarchy_floor_update
+  when:
+    - site_hierarchy_type == 'floor'
+    - site_hierarchy_exists
+
+# =============================================================================
+# POST-CREATE: resolve the new site's UUID via sites_info
+# =============================================================================
+#
+# The CREATE modules return a taskId (async operation), NOT the new site UUID.
+# We must query sites_info to obtain the UUID before the next iteration runs —
+# a child site needs its parent's UUID as parentId.
+#
+# retries + until provides resilience: CatC may take a few seconds to commit
+# the newly created site before it becomes visible in GET /v1/sites.
+#
+- name: "Query ID for newly created site: {{ [site_hierarchy_type, site_hierarchy_path] | join(' / ') }}"
+  # GET /dna/intent/api/v1/sites?nameHierarchy=<path>
+  cisco.catalystcenter.sites_info:
+    nameHierarchy: "{{ site_hierarchy_path }}"
+  register: site_hierarchy_new_site_info
+  until: >-
+    site_hierarchy_new_site_info.catalystcenter_response is defined and
+    site_hierarchy_new_site_info.catalystcenter_response.response is defined and
+    site_hierarchy_new_site_info.catalystcenter_response.response | length > 0
+  retries: 10
+  delay: 3
+  when: not site_hierarchy_exists
+
+- name: "Validate resolved site ID: {{ site_hierarchy_path }}"
+  ansible.builtin.assert:
+    that:
+      - site_hierarchy_new_site_info.catalystcenter_response.response[0].id | default('') | length > 0
+    fail_msg: "Catalyst Center returned no ID for {{ site_hierarchy_path }}."
+  when: not site_hierarchy_exists
+
+# ── Add new UUID to site_hierarchy_site_id_map ───────────────────────────────────────────────
+# Because this is inside include_tasks (not a plain loop), this set_fact takes
+# effect immediately: the NEXT iteration of the include_tasks loop sees the
+# updated map, making the UUID available as parentId for any children.
+- name: "Add site path to site ID map: {{ site_hierarchy_path }}"
+  ansible.builtin.set_fact:
+    site_hierarchy_site_id_map: >-
+      {{ site_hierarchy_site_id_map | combine(
+           { site_hierarchy_path: site_hierarchy_new_site_info.catalystcenter_response.response[0].id }
+         ) }}
+  when: not site_hierarchy_exists

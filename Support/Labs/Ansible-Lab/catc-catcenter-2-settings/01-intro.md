@@ -3,8 +3,8 @@
 In this module we apply two playbooks back-to-back: **2.0 Network Settings** and **3.0 Device Credentials**. Together they finish the *design* phase of Catalyst Center — every site in the hierarchy you built in Module 1 ends up with DNS/NTP/Syslog/SNMP/AAA/banner applied, and the global credential store gains the CLI, SNMPv2c, and NETCONF entries that Catalyst Center will use to log in to discovered devices.
 
 > References:
-> * [2.0 Network Settings — full as-built](../../../Resources/Ansible/2.0-Cisco-Catalyst-Center-Settings/README.md)
-> * [3.0 Device Credentials — full as-built](../../../Resources/Ansible/3.0-Cisco-Catalyst-Center-Credentials/README.md)
+> * [2.0 Network Settings — full as-built](../../../Resources/Ansible/campus-evpn/docs/02-network-settings.md)
+> * [3.0 Device Credentials — full as-built](../../../Resources/Ansible/campus-evpn/docs/03-credentials.md)
 
 ## Why Two Playbooks?
 
@@ -12,14 +12,14 @@ The Catalyst Center API splits "site design" across two surfaces:
 
 | Concept | Where it lives in CatC | Driven by |
 |---------|------------------------|-----------|
-| Network infrastructure settings (DNS, DHCP, NTP, Syslog, SNMP, AAA, banner) | Per-site (`/v1/network/{siteId}`) | **2.0** `network_settings.yml` |
-| Device authentication credentials (CLI, SNMPv2c R/W, NETCONF) | Global credential store, then assigned to sites | **3.0** `credentials.yml` |
+| Network infrastructure settings (DNS, DHCP, NTP, Syslog, SNMP, AAA, banner) | Per-site (`/v1/network/{siteId}`) | **2.0** `02_network_settings.yml` |
+| Device authentication credentials (CLI, SNMPv2c R/W, NETCONF) | Global credential store, then assigned to sites | **3.0** `03_credentials.yml` |
 
 The two are independent — running them in either order works — but the *recommended* order is settings first, credentials second, because the credential assignment in 3.0 references site UUIDs that the 1.0 hierarchy run already created.
 
 ## What 2.0 Network Settings Does
 
-`network_settings.yml` is built around the v1 site-scoped settings API. The core flow is:
+`02_network_settings.yml` is built around the v1 site-scoped settings API. The core flow is:
 
 | Step | Mechanism |
 |------|-----------|
@@ -45,7 +45,7 @@ Operations are fully idempotent — pushing the same payload twice returns succe
 
 ## What 3.0 Device Credentials Does
 
-`credentials.yml` uses two complementary surfaces:
+`03_credentials.yml` uses two complementary surfaces:
 
 | Credential type | Module | Why |
 |-----------------|--------|-----|
@@ -71,9 +71,9 @@ Re-running with the same data is a no-op. Removing an entry and re-running with 
 
 ## What You Will Do
 
-1. Encrypt `vault.yml` in both the `2.0-...-Settings` and `3.0-...-Credentials` directories (same `admin / C1sco12345`).
-2. Run `network_settings.yml`, then verify in **Design → Network Settings**.
-3. Run `credentials.yml`, then verify in **Design → Network Settings → Device Credentials**.
+1. Add and encrypt network AAA secrets in the 2.0 vault and device CLI/SNMP secrets in the 3.0 vault. Catalyst Center API credentials are already in the shared vault created during staging.
+2. Run `02_network_settings.yml`, then verify in **Design → Network Settings**.
+3. Run `03_credentials.yml`, then verify in **Design → Network Settings → Device Credentials**.
 
 > **Prerequisites:** Module 1 (Hierarchy) is complete — every site in `settings.json` exists in Catalyst Center.
 

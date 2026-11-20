@@ -191,12 +191,17 @@ Each tooling path is a complete, self-contained implementation that:
 | Folder | Tooling | Primary Audience | Deployment Method |
 |--------|---------|-----------------|-------------------|
 | [Ansible/](Resources/Ansible/) | Ansible + cisco.catalystcenter collection | Network DevOps, CI/CD pipeline teams | `ansible-playbook` CLI or AWX/AAP |
+| [Data-Models/](Resources/Data-Models/) | Shared campus and data-center EVPN input models | All automation paths | Git-managed JSON and templates |
 | [Cisco Workflows/](Resources/Cisco%20Workflows/) | Cisco SecureX / XDR Workflow Manager | Cisco platform operators, NOC teams | Catalyst Center Workflow Manager |
 | [Python/](Resources/Python/) | Pure Python + REST | Developers, troubleshooters, API learners | Direct Python execution |
 | [CML/](Resources/CML/) | Cisco Modeling Labs | Lab engineers, training leads | CML server import |
 | [Docs/](Resources/Docs/) | Reference documentation | All personas | Reference only |
 
-#### Ansible — 10 Playbook Folders
+#### Ansible — Campus EVPN Pipeline
+
+The existing Catalyst Center pipeline is under `Resources/Ansible/campus-evpn/`.
+`Resources/Ansible/dc-evpn/` is reserved for the future Nexus Dashboard
+automation.
 
 | # | Playbook | Catalyst Center Outcome |
 |---|----------|------------------------|
@@ -209,9 +214,9 @@ Each tooling path is a complete, self-contained implementation that:
 | 7.0 | `network_profile.yml` | Switching Network Profile created and bound to sites with Day-N templates |
 | 8.0 | `provision_devices.yml` | Devices provisioned to site; idempotent skip for already-provisioned devices |
 | 9.0 | `deploy_composite_template.yml` | Composite Day-N templates deployed with async task verification |
-| 10.0 | `backup_my_configs.yml` | Running configurations archived from Catalyst Center–managed devices |
 
-The Ansible folder also includes `install-ansible.sh`, a `DIAGRAMS/` reference set, and a `Recordings/` walk-through library.
+The campus pipeline includes the script-server bootstrap, a `DIAGRAMS/`
+reference set, and a `Recordings/` walk-through library.
 
 #### Cisco Workflows — 7 GitOps Workflows
 
@@ -267,8 +272,6 @@ The Cisco Workflows folder also includes a `DIAGRAMS/` reference set.
 | Need a safe lab environment to test against | [Resources/CML/](Resources/CML/) |
 | Evaluating which tooling path to use | [Resources/README.md — Tooling Comparison](Resources/README.md#tooling-comparison) |
 
-> Resources/Ansible includes a 10th folder, [10.0 Backup My Configs](Resources/Ansible/10.0-Backup-My-Configs/), with no matching guided lab module — it is a companion playbook for archiving running configurations.
-
 ---
 
 ## Recommended Learning Path
@@ -285,4 +288,4 @@ For teams new to this project the following sequence builds understanding progre
 
 5. **Run the production tooling** — Execute your chosen tooling path (Ansible playbooks or Cisco Workflows) against the CML environment end-to-end. See [Resources/README.md](Resources/README.md) for the full tooling comparison and when-to-use guidance.
 
-6. **Adapt to your environment** — Update `settings.json` with your production topology and credential references in the relevant project folder ([BGP\_EVPN](../Projects/BGP_EVPN/Settings/) or [TRADITIONAL](../Projects/TRADITIONAL/Settings/)), then run the tooling path that matches your operational model.
+6. **Adapt to your environment** — Update `settings.json` with your production topology and credential references in the relevant model folder ([campus-evpn](Resources/Data-Models/campus-evpn/) or [TRADITIONAL](../Projects/TRADITIONAL/Settings/)), then run the tooling path that matches your operational model.

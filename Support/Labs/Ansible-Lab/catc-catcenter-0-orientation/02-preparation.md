@@ -2,7 +2,7 @@
 
 ## Module Overview
 
-In this section we make sure you can reach the **Script Server** — the Ubuntu host (`198.18.133.28`) where every Ansible playbook in this lab will be executed. The Script Server already has Python and Git available; the next module ([Orientation](./03-orientation.md)) installs Ansible and the Cisco collections on top of it.
+In this section we make sure you can reach the **Script Server** — the Ubuntu host (`198.18.128.50`) where every Ansible playbook in this lab will be executed. In the next module ([Orientation](./03-orientation.md)), you will stage the pinned Ansible environment and Cisco collections.
 
 ## Step 1 — Schedule the DCLOUD Demo
 
@@ -26,34 +26,36 @@ Once scheduled, DCLOUD will issue session details including:
 
    ```bash
    ping 198.18.129.100   # Catalyst Center
-   ping 198.18.133.28    # Script Server
+   ping 198.18.128.50    # Script Server
    ```
 
 > [!TIP]
-> If pings fail, confirm AnyConnect is reporting *Connected* and that your local firewall is not blocking ICMP. The lab IP range is `198.18.0.0/16` — all traffic to that range must transit the AnyConnect tunnel.
+> If pings fail, confirm AnyConnect is reporting *Connected* and that your local firewall is not blocking ICMP. Traffic to the lab range (`198.18.0.0/16`) and the Script Server (`198.18.128.50`) must transit the AnyConnect tunnel.
 
 ## Step 3 — SSH to the Script Server
 
-Open a terminal and SSH into the Script Server. **All subsequent commands in the orientation and module deployment guides run inside this SSH session.**
+Open a terminal and SSH into the Script Server using the regular DCLOUD account with sudo access. SSH for `dcloud` is passwordless. The bootstrap script cannot run as root. **All subsequent commands in the orientation and module deployment guides run inside this SSH session.**
 
 ```bash
-ssh root@198.18.133.28
-# Password: C1sco12345
+ssh dcloud@198.18.128.50
 ```
 
-You should land in `/root` with a standard Ubuntu shell.
+You should land in your home directory with a standard Ubuntu shell.
 
 ```bash
 $ uname -a
 Linux script-server 5.15.0-... x86_64 GNU/Linux
 $ python3 --version
-Python 3.10.12
+Python 3.x
 $ git --version
-git version 2.34.1
+git version 2.x
 ```
 
+The bootstrap installs Python and Git if needed. It supports Ubuntu 22.04 and
+24.04.
+
 > [!IMPORTANT]
-> Everything from this point onward is performed on the Script Server (`198.18.133.28`), not on your laptop. Your laptop is only the means of opening that SSH session and a browser to Catalyst Center for verification.
+> Everything from this point onward is performed on the Script Server (`198.18.128.50`), not on your laptop. Your laptop is only the means of opening that SSH session and a browser to Catalyst Center for verification.
 
 ## Step 4 — Verify Catalyst Center is Reachable
 
